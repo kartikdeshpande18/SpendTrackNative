@@ -48,7 +48,11 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     var overlay by rememberSaveable { mutableStateOf(Overlay.NONE) }
     var editingTransactionId by rememberSaveable { mutableLongStateOf(0L) }
     var floatingControlsHeightPx by remember { mutableIntStateOf(0) }
-    val floatingControlsHeight = with(LocalDensity.current) { floatingControlsHeightPx.toDp() }
+    val measuredControlsHeight = with(LocalDensity.current) { floatingControlsHeightPx.toDp() }
+    val navBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val estimatedControlsHeight = 120.dp + navBarsBottom
+    val floatingControlsHeight = if (measuredControlsHeight > 0.dp) measuredControlsHeight else estimatedControlsHeight
+    val bottomContentPadding = floatingControlsHeight + 24.dp
     val accounts by viewModel.accounts.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
@@ -80,10 +84,10 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 Overlay.CARD_PAYMENT -> CardPaymentScreen(accounts, onBack = { overlay = Overlay.NONE }, onPay = { cardId, sourceId, amount -> viewModel.payCard(cardId, sourceId, amount, LocalDate.now().toEpochDay()); overlay = Overlay.NONE })
                 else -> Box(Modifier.fillMaxSize().statusBarsPadding()) {
                 when (route) {
-                    "home" -> Dashboard(transactions, accounts, loans.filter { it.includeInNetWorth }.sumOf { it.currentOutstandingPaise }, owed.sumOf { if (it.direction == OwedDirection.OWED_TO_ME) it.amountPaise else -it.amountPaise }, floatingControlsHeight)
-                    "spending" -> Spending(transactions, categories, accounts, viewModel::deleteTransaction, floatingControlsHeight, onEdit = { editingTransactionId = it.id; overlay = Overlay.EDIT_TRANSACTION })
-                    "loans_owed" -> LoansOwed(loans, owed, floatingControlsHeight, onUpdateLoan = viewModel::updateLoan, onDeleteLoan = viewModel::deleteLoan, onUpdateOwed = viewModel::updateOwed, onDeleteOwed = viewModel::deleteOwed, onSettleOwed = viewModel::settleOwed)
-                    else -> Settings(accounts.size, categories.size, floatingControlsHeight, onAccounts = { overlay = Overlay.ACCOUNTS }, onCategories = { overlay = Overlay.CATEGORIES }, onBudgets = { overlay = Overlay.BUDGETS }, onData = { overlay = Overlay.DATA }, onReminders = { overlay = Overlay.REMINDERS })
+                    "home" -> Dashboard(transactions, accounts, loans.filter { it.includeInNetWorth }.sumOf { it.currentOutstandingPaise }, owed.sumOf { if (it.direction == OwedDirection.OWED_TO_ME) it.amountPaise else -it.amountPaise }, bottomContentPadding)
+                    "spending" -> Spending(transactions, categories, accounts, viewModel::deleteTransaction, bottomContentPadding, onEdit = { editingTransactionId = it.id; overlay = Overlay.EDIT_TRANSACTION })
+                    "loans_owed" -> LoansOwed(loans, owed, bottomContentPadding, onUpdateLoan = viewModel::updateLoan, onDeleteLoan = viewModel::deleteLoan, onUpdateOwed = viewModel::updateOwed, onDeleteOwed = viewModel::deleteOwed, onSettleOwed = viewModel::settleOwed)
+                    else -> Settings(accounts.size, categories.size, bottomContentPadding, onAccounts = { overlay = Overlay.ACCOUNTS }, onCategories = { overlay = Overlay.CATEGORIES }, onBudgets = { overlay = Overlay.BUDGETS }, onData = { overlay = Overlay.DATA }, onReminders = { overlay = Overlay.REMINDERS })
                 }
                 if (overlay == Overlay.LOAN_OWED_CHOOSER) LoanOwedActionDialog(onLoan = { overlay = Overlay.ADD_LOAN }, onOwed = { overlay = Overlay.ADD_OWED }, onDismiss = { overlay = Overlay.NONE })
                 FloatingControls(
@@ -114,8 +118,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     val spending = inMonth.filter { it.type == TransactionType.EXPENSE }.sumOf { it.mySharePaise ?: it.amountPaise }
     val income = inMonth.filter { it.type == TransactionType.INCOME }.sumOf { it.amountPaise }
     val cash = accounts.filterNot { it.isCreditCard }.sumOf { it.balancePaise }; val cards = accounts.filter { it.isCreditCard }.sumOf { it.balancePaise }
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp), contentPadding = PaddingValues(bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Text("SpendTrack", style = MaterialTheme.typography.displaySmall); Text(month.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp), contentPadding = PaddingValues(top = 8.dp, bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item { Text("SpendTrack", style = MaterialTheme.typography.displaySmall); Text(displayMonth(month), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         item { SummaryCard("Net Worth", money(cash + owed - cards - loans), "") }
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric("This Month", money(spending), Modifier.weight(1f)); SmallMetric("Income", money(income), Modifier.weight(1f)) } }
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric("Savings", money(cash), Modifier.weight(1f)); SmallMetric("Card dues", money(cards), Modifier.weight(1f)) } }
@@ -156,10 +160,10 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                     }
                 }
                 Box {
-                    FilterChip(selected = monthFilter != null, onClick = { monthExpanded = true }, label = { Text(monthFilter ?: "All months", maxLines = 1) })
+                    FilterChip(selected = monthFilter != null, onClick = { monthExpanded = true }, label = { Text(monthFilter?.let { displayMonth(it) } ?: "All months", maxLines = 1) })
                     DropdownMenu(monthExpanded, { monthExpanded = false }) {
                         DropdownMenuItem({ Text("All months") }, { monthFilter = null; monthExpanded = false })
-                        months.forEach { month -> DropdownMenuItem({ Text(month) }, { monthFilter = month; monthExpanded = false }) }
+                        months.forEach { month -> DropdownMenuItem({ Text(displayMonth(month)) }, { monthFilter = month; monthExpanded = false }) }
                     }
                 }
             }
@@ -287,6 +291,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     var name by remember { mutableStateOf("") }
     var income by remember { mutableStateOf(false) }
     var managing by remember { mutableStateOf<CategoryEntity?>(null) }
+    val incomeCategories = categories.filter { it.isIncomeCategory }
+    val expenseCategories = categories.filterNot { it.isIncomeCategory }
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Categories", style = MaterialTheme.typography.displaySmall) }
         if (adding) item {
@@ -296,7 +302,12 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 Button(onClick = { onAdd(name.trim(), income); name = ""; income = false; adding = false }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Save category") }
             } }
         } else item { Button({ adding = true }, Modifier.fillMaxWidth()) { Text("Add category") } }
-        items(categories) { category -> ManageableCard(category.name, if (category.isIncomeCategory) "Income" else "Expense", "") { managing = category } }
+        item { Text("Income categories", style = MaterialTheme.typography.titleLarge) }
+        if (incomeCategories.isEmpty()) item { Text("No income categories", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        items(incomeCategories) { category -> ManageableCard(category.name, "Income", "") { managing = category } }
+        item { Text("Expense categories", style = MaterialTheme.typography.titleLarge) }
+        if (expenseCategories.isEmpty()) item { Text("No expense categories", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        items(expenseCategories) { category -> ManageableCard(category.name, "Expense", "") { managing = category } }
     }
     managing?.let { CategoryManageDialog(it, onDismiss = { managing = null }, onSave = { onUpdate(it); managing = null }, onDelete = { onDelete(it); managing = null }) }
 }
@@ -314,16 +325,18 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
 
 @Composable private fun AccountManageDialog(account: AccountEntity, onDismiss: () -> Unit, onSave: (AccountEntity) -> Unit, onDelete: () -> Unit, onPayCard: () -> Unit) {
     var name by remember(account.id) { mutableStateOf(account.name) }
+    var balance by remember(account.id) { mutableStateOf("%.2f".format(Locale.US, account.balancePaise / 100.0)) }
     var lastFour by remember(account.id) { mutableStateOf(account.maskedNumber) }; var limit by remember(account.id) { mutableStateOf(account.creditLimitPaise?.let { "%.2f".format(Locale.US, it / 100.0) }.orEmpty()) }; var cycle by remember(account.id) { mutableStateOf(account.statementCycleDay?.toString().orEmpty()) }; var due by remember(account.id) { mutableStateOf(account.dueDay?.toString().orEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Manage account") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Name") }, singleLine = true)
-            if (account.isCreditCard) { OutlinedTextField(lastFour, { lastFour = it.take(4) }, Modifier.fillMaxWidth(), label = { Text("Last four digits") }, singleLine = true); OutlinedTextField(limit, { limit = it }, Modifier.fillMaxWidth(), label = { Text("Credit limit (₹)") }, singleLine = true); Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { OutlinedTextField(cycle, { cycle = it }, Modifier.weight(1f), label = { Text("Statement day") }, singleLine = true); OutlinedTextField(due, { due = it }, Modifier.weight(1f), label = { Text("Due day") }, singleLine = true) } } else Text("Savings account", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedTextField(balance, { balance = it }, Modifier.fillMaxWidth(), label = { Text(if (account.isCreditCard) "Current outstanding (₹)" else "Current balance (₹)") }, singleLine = true)
+            if (account.isCreditCard) { OutlinedTextField(lastFour, { lastFour = it.take(4) }, Modifier.fillMaxWidth(), label = { Text("Last four digits") }, singleLine = true); OutlinedTextField(limit, { limit = it }, Modifier.fillMaxWidth(), label = { Text("Credit limit (₹)") }, singleLine = true); Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { OutlinedTextField(cycle, { cycle = it }, Modifier.weight(1f), label = { Text("Statement day") }, singleLine = true); OutlinedTextField(due, { due = it }, Modifier.weight(1f), label = { Text("Due day") }, singleLine = true) } }
             Text("Accounts with transactions cannot be deleted.", style = MaterialTheme.typography.bodySmall)
         } },
-        confirmButton = { TextButton({ onSave(account.copy(name = name.trim(), maskedNumber = lastFour, creditLimitPaise = ((limit.toDoubleOrNull() ?: 0.0) * 100).toLong().takeIf { account.isCreditCard && it > 0 }, statementCycleDay = cycle.toIntOrNull()?.takeIf { account.isCreditCard && it in 1..31 }, dueDay = due.toIntOrNull()?.takeIf { account.isCreditCard && it in 1..31 })) }, enabled = name.isNotBlank()) { Text("Save") } },
+        confirmButton = { TextButton({ onSave(account.copy(name = name.trim(), balancePaise = ((balance.toDoubleOrNull() ?: 0.0) * 100).toLong(), maskedNumber = lastFour, creditLimitPaise = ((limit.toDoubleOrNull() ?: 0.0) * 100).toLong().takeIf { account.isCreditCard && it > 0 }, statementCycleDay = cycle.toIntOrNull()?.takeIf { account.isCreditCard && it in 1..31 }, dueDay = due.toIntOrNull()?.takeIf { account.isCreditCard && it in 1..31 })) }, enabled = name.isNotBlank()) { Text("Save") } },
         dismissButton = { Row { if (account.isCreditCard) ActionIcon(Icons.Default.Payments, "Pay card bill", onClick = onPayCard); ActionIcon(Icons.Default.Delete, "Delete account", MaterialTheme.colorScheme.error, onDelete); ActionIcon(Icons.Default.Close, "Close", onClick = onDismiss) } },
     )
 }
@@ -354,7 +367,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     var limit by remember { mutableStateOf("") }
     val current = budgets.filter { it.monthKey == month }
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Budget", style = MaterialTheme.typography.displaySmall); Text(month, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Budget", style = MaterialTheme.typography.displaySmall); Text(displayMonth(month), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if (adding) item {
             Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.fillMaxWidth()) {
@@ -369,7 +382,11 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         items(current) { budget ->
             val category = categories.find { it.id == budget.categoryId }?.name ?: "Category"
             val used = transactions.filter { it.type == TransactionType.EXPENSE && it.categoryId == budget.categoryId && YearMonth.from(LocalDate.ofEpochDay(it.dateEpochDay)).toString() == month }.sumOf { it.mySharePaise ?: it.amountPaise }
-            Card(Modifier.fillMaxWidth()) { Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(category, style = MaterialTheme.typography.titleMedium); Text("${money(used)} / ${money(budget.limitPaise)}", style = MaterialTheme.typography.titleLarge) }; ActionIcon(Icons.Default.Delete, "Delete budget", MaterialTheme.colorScheme.error) { onDelete(budget) } } }
+            val progress = if (budget.limitPaise > 0) (used.toFloat() / budget.limitPaise.toFloat()).coerceIn(0f, 1f) else 0f
+            Card(Modifier.fillMaxWidth()) { Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(category, style = MaterialTheme.typography.titleMedium); Text("${money(used)} / ${money(budget.limitPaise)}", style = MaterialTheme.typography.titleLarge) }; ActionIcon(Icons.Default.Delete, "Delete budget", MaterialTheme.colorScheme.error) { onDelete(budget) } }
+                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+            } }
         }
     }
 }
@@ -517,3 +534,5 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     }
 }
 private fun money(paise: Long) = "₹" + String.format(Locale.US, "%,.2f", paise / 100.0)
+private fun displayMonth(ym: YearMonth): String = "${ym.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.getDefault())} ${ym.year}"
+private fun displayMonth(ymString: String): String = runCatching { displayMonth(YearMonth.parse(ymString)) }.getOrDefault(ymString)
