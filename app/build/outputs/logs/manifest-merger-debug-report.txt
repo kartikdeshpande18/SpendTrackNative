@@ -1,0 +1,521 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:2:1-27:12
+INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:2:1-27:12
+INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:2:1-27:12
+INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:2:1-27:12
+MERGED from [androidx.navigation:navigation-runtime-android:2.10.0] /home/kartik/.gradle/caches/9.6.0/transforms/cd4e0b5c5f74bf69c94366bd4c1892a1/transformed/navigation-runtime/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigation:navigation-common-android:2.10.0] /home/kartik/.gradle/caches/9.6.0/transforms/8f048aba5cbbf53c8fc9aa5e68d271c9/transformed/navigation-common/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigation:navigation-compose-android:2.10.0] /home/kartik/.gradle/caches/9.6.0/transforms/85510ddf3900f2ce12d4ad7cb6437f3b/transformed/navigation-compose/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material3:material3-ripple-android:1.5.0-alpha27] /home/kartik/.gradle/caches/9.6.0/transforms/c75775d126bf20806e7abc0f0c13181d/transformed/material3-ripple/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material3:material3-android:1.5.0-alpha27] /home/kartik/.gradle/caches/9.6.0/transforms/09d985833700f666975b8d2b7f024104/transformed/material3/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.work:work-runtime-ktx:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/d977c9ea442afba43dbabba743e45e47/transformed/work-runtime-ktx-2.11.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:17:1-83:12
+MERGED from [androidx.activity:activity-ktx:1.13.0] /home/kartik/.gradle/caches/9.6.0/transforms/98a808eead9bf3ca71205b8681b7a25a/transformed/activity-ktx-1.13.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/b3c2d63a51ceae576eadb1352ac3442e/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:17:1-23:12
+MERGED from [androidx.compose.material:material-ripple-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/b85d62e194db14a8080ebb974a7c12b1/transformed/material-ripple/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/6aa56c8fb9a1da9ef71fde37fe0a90d6/transformed/foundation/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/9f24215c6a2f43414eab5e1b2c1b1a63/transformed/foundation-layout/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-core-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/68289750381b4bef591cfb935664c69f/transformed/animation-core/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.animation:animation-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/0795fd44c2353a859a43090add8c3105/transformed/animation/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-unit-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/72b7a87e3bc6bae96c43e2ee6c40c387/transformed/ui-unit/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-graphics-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/5773976a0fe34619353369ceb4f5f554/transformed/ui-graphics/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-geometry-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/26c511f190a9235f8b43cf1c12b74c0a/transformed/ui-geometry/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/4d0e8a258fd8909baee224dba6949925/transformed/ui-tooling-data/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-util-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/a085bf124f10517c6d689935901f96c8/transformed/ui-util/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-text-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/bc1be622261337f0ceacafde50f6ec0c/transformed/ui-text/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/0687c9f371aea81e8e1c74423982fb05/transformed/emoji2-1.4.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-process:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/cc7a8af5b6fc76d7990a7e98d033541c/transformed/lifecycle-process-2.11.0/AndroidManifest.xml:17:1-35:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/04de492d9e75237be4690bd433e222be/transformed/lifecycle-livedata-core-ktx-2.11.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f211e8496ea74e1391b3d3de7ff1bf8/transformed/lifecycle-livedata-core-2.11.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/ffd89809466ceac3c850569df3fd14fb/transformed/lifecycle-runtime-ktx/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/78b90e5ed2f045e530e139f2dd075588/transformed/lifecycle-viewmodel/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.navigationevent:navigationevent-android:1.1.2] /home/kartik/.gradle/caches/9.6.0/transforms/decd6e95a71ff1a30bce3f977723dfae/transformed/navigationevent/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.navigationevent:navigationevent-compose-android:1.1.2] /home/kartik/.gradle/caches/9.6.0/transforms/2c1e217df45eac1833117ab9b2c2f8b4/transformed/navigationevent-compose/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-retain-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/e3b1826f4dfa2d233bfc8de151830ba4/transformed/runtime-retain/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-annotation-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/5357492e6fb28994bbf4d0f269ebc8cd/transformed/runtime-annotation/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/0d33e93e80c4dd90f96e1db3b3b8062a/transformed/runtime/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/894e04242a838eb1d7a5065df3c00fed/transformed/runtime-saveable/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.savedstate:savedstate-compose-android:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/ec1ed20dbc59bb57086f60edfdf9617b/transformed/savedstate-compose/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.savedstate:savedstate-ktx:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/f36425a863a5d8908dedb9e7094f3e74/transformed/savedstate-ktx-1.5.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.savedstate:savedstate-android:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/cd8323d8065f987ad50eb0ea6cb5635f/transformed/savedstate/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/d7912ba782f294f4939f1b862d207ef7/transformed/lifecycle-viewmodel-savedstate/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.graphics:graphics-shapes-android:1.0.1] /home/kartik/.gradle/caches/9.6.0/transforms/ed0c942e52dd87151b24d2d8a141a847/transformed/graphics-shapes-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.core:core-ktx:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/b70b27bfafa568fa4cbd6051b4636447/transformed/core-ktx-1.18.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.autofill:autofill:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/7091faafd72ed9c7d13421d73244acef/transformed/autofill-1.0.0/AndroidManifest.xml:17:1-24:12
+MERGED from [androidx.window:window-core-android:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/c23c691763cd168314c0c8c3c05a5faa/transformed/window-core/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:17:1-31:12
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/kartik/.gradle/caches/9.6.0/transforms/daeca761b4a4595a7a9b1413d6337bee/transformed/graphics-path-1.0.1/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:17:1-30:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/15eea01e18b850c8fe403a7f25f249f8/transformed/lifecycle-runtime/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/7866037863aeab6b9484dc2bca060f2d/transformed/lifecycle-viewmodel-ktx-2.11.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-service:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/f284e61b55fbd2d0851fc5935dcc3df2/transformed/lifecycle-service-2.11.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/70b14259568c31bc1cd438a76d8c7190/transformed/lifecycle-livedata-2.11.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/6d194feaede14a5a3b7eee62e85e1ecc/transformed/lifecycle-viewmodel-compose/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/3207ad3866b87e8d1d6a9d887d93f4a2/transformed/lifecycle-runtime-compose/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.8] /home/kartik/.gradle/caches/9.6.0/transforms/da9cca28abbe999c1888dd57aaeaf982/transformed/material-icons-extended-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.8] /home/kartik/.gradle/caches/9.6.0/transforms/75a46925692cc2644be3fbb5739c94d2/transformed/material-icons-core-release/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/aa0dcd6e2c0597a8b90872ed2d7dc354/transformed/ui/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/a9ff315a29e7b37cab17e2db7871e1a8/transformed/ui-tooling-preview/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.compose.ui:ui-tooling-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f96ad00893cd5979848d82742542641/transformed/ui-tooling/AndroidManifest.xml:17:1-28:12
+MERGED from [androidx.compose.ui:ui-test-manifest:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/ae788dd5a5f4f85b0873226a120c471b/transformed/ui-test-manifest-1.12.0/AndroidManifest.xml:17:1-29:12
+MERGED from [androidx.activity:activity:1.13.0] /home/kartik/.gradle/caches/9.6.0/transforms/b9b993cb48a28c3219f619a4958f54c3/transformed/activity-1.13.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.activity:activity-compose:1.13.0] /home/kartik/.gradle/caches/9.6.0/transforms/81cf81228603736b25a802dcec8fd6ff/transformed/activity-compose-1.13.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.room:room-runtime-android:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/16cfe80bdcaaf67b1a1d44cf27d5db4d/transformed/room-runtime/AndroidManifest.xml:17:1-31:12
+MERGED from [androidx.room:room-ktx:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/f1751762a606b869719f034131810e7b/transformed/room-ktx-2.8.4/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.core:core-viewtree:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/75701416d4747cd307fe883891c2468f/transformed/core-viewtree-1.0.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.annotation:annotation-experimental:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/de3109b23fb16d2e625e694e13167540/transformed/annotation-experimental-1.5.0/AndroidManifest.xml:2:1-7:12
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:17:1-55:12
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/f369b4e0285d09a453f6ea9cc9e584a6/transformed/startup-runtime-1.1.1/AndroidManifest.xml:17:1-33:12
+MERGED from [androidx.tracing:tracing:1.2.0] /home/kartik/.gradle/caches/9.6.0/transforms/0bca37cac7624de6c2b0bc9c515de002/transformed/tracing-1.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.tracing:tracing-ktx:1.2.0] /home/kartik/.gradle/caches/9.6.0/transforms/ca386f0ae8053d3ed9d4aff392674cfc/transformed/tracing-ktx-1.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/kartik/.gradle/caches/9.6.0/transforms/e3419529c68e3383fc567b72ac211dec/transformed/core-runtime-2.2.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/4626dd9b097caae8d9160531aa28f611/transformed/interpolator-1.0.0/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/7242d7c8b24cbed6e699ecb8b31bf4da/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:17:1-27:12
+MERGED from [androidx.sqlite:sqlite-framework-android:2.6.2] /home/kartik/.gradle/caches/9.6.0/transforms/d6f7b27ed4aa376b625658222d9b2055/transformed/sqlite-framework/AndroidManifest.xml:17:1-22:12
+MERGED from [androidx.sqlite:sqlite-android:2.6.2] /home/kartik/.gradle/caches/9.6.0/transforms/90668f92428d3003b0591694cc8473b1/transformed/sqlite/AndroidManifest.xml:17:1-22:12
+	package
+		INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml
+	android:versionCode
+		INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.POST_NOTIFICATIONS
+ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:4:5-77
+	android:name
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:4:22-74
+application
+ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:6:5-25:19
+INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:6:5-25:19
+MERGED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:28:5-81:19
+MERGED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:28:5-81:19
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/0687c9f371aea81e8e1c74423982fb05/transformed/emoji2-1.4.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/0687c9f371aea81e8e1c74423982fb05/transformed/emoji2-1.4.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/cc7a8af5b6fc76d7990a7e98d033541c/transformed/lifecycle-process-2.11.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.lifecycle:lifecycle-process:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/cc7a8af5b6fc76d7990a7e98d033541c/transformed/lifecycle-process-2.11.0/AndroidManifest.xml:23:5-33:19
+MERGED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:22:5-29:19
+MERGED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:22:5-29:19
+MERGED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:28:5-89
+MERGED from [androidx.compose.ui:ui-tooling-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f96ad00893cd5979848d82742542641/transformed/ui-tooling/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.compose.ui:ui-tooling-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f96ad00893cd5979848d82742542641/transformed/ui-tooling/AndroidManifest.xml:22:5-26:19
+MERGED from [androidx.compose.ui:ui-test-manifest:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/ae788dd5a5f4f85b0873226a120c471b/transformed/ui-test-manifest-1.12.0/AndroidManifest.xml:22:5-27:19
+MERGED from [androidx.compose.ui:ui-test-manifest:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/ae788dd5a5f4f85b0873226a120c471b/transformed/ui-test-manifest-1.12.0/AndroidManifest.xml:22:5-27:19
+MERGED from [androidx.room:room-runtime-android:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/16cfe80bdcaaf67b1a1d44cf27d5db4d/transformed/room-runtime/AndroidManifest.xml:23:5-29:19
+MERGED from [androidx.room:room-runtime-android:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/16cfe80bdcaaf67b1a1d44cf27d5db4d/transformed/room-runtime/AndroidManifest.xml:23:5-29:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:23:5-53:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/f369b4e0285d09a453f6ea9cc9e584a6/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/f369b4e0285d09a453f6ea9cc9e584a6/transformed/startup-runtime-1.1.1/AndroidManifest.xml:25:5-31:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/7242d7c8b24cbed6e699ecb8b31bf4da/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/7242d7c8b24cbed6e699ecb8b31bf4da/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:24:5-25:19
+	android:extractNativeLibs
+		INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml
+	android:appComponentFactory
+		ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:28:18-86
+	android:supportsRtl
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:11:9-35
+	android:label
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:9:9-35
+	android:roundIcon
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:10:9-56
+	android:icon
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:8:9-45
+	android:allowBackup
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:7:9-35
+	android:theme
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:12:9-48
+activity#com.spendtrack.app.MainActivity
+ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:14:9-23:20
+	android:exported
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:16:13-36
+	android:name
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:15:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:18:13-21:29
+action#android.intent.action.MAIN
+ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:19:17-69
+	android:name
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:19:25-66
+category#android.intent.category.LAUNCHER
+ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:20:17-77
+	android:name
+		ADDED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml:20:27-74
+uses-sdk
+INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml
+INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml
+MERGED from [androidx.navigation:navigation-runtime-android:2.10.0] /home/kartik/.gradle/caches/9.6.0/transforms/cd4e0b5c5f74bf69c94366bd4c1892a1/transformed/navigation-runtime/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-runtime-android:2.10.0] /home/kartik/.gradle/caches/9.6.0/transforms/cd4e0b5c5f74bf69c94366bd4c1892a1/transformed/navigation-runtime/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-common-android:2.10.0] /home/kartik/.gradle/caches/9.6.0/transforms/8f048aba5cbbf53c8fc9aa5e68d271c9/transformed/navigation-common/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-common-android:2.10.0] /home/kartik/.gradle/caches/9.6.0/transforms/8f048aba5cbbf53c8fc9aa5e68d271c9/transformed/navigation-common/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigation:navigation-compose-android:2.10.0] /home/kartik/.gradle/caches/9.6.0/transforms/85510ddf3900f2ce12d4ad7cb6437f3b/transformed/navigation-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigation:navigation-compose-android:2.10.0] /home/kartik/.gradle/caches/9.6.0/transforms/85510ddf3900f2ce12d4ad7cb6437f3b/transformed/navigation-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material3:material3-ripple-android:1.5.0-alpha27] /home/kartik/.gradle/caches/9.6.0/transforms/c75775d126bf20806e7abc0f0c13181d/transformed/material3-ripple/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material3:material3-ripple-android:1.5.0-alpha27] /home/kartik/.gradle/caches/9.6.0/transforms/c75775d126bf20806e7abc0f0c13181d/transformed/material3-ripple/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material3:material3-android:1.5.0-alpha27] /home/kartik/.gradle/caches/9.6.0/transforms/09d985833700f666975b8d2b7f024104/transformed/material3/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.material3:material3-android:1.5.0-alpha27] /home/kartik/.gradle/caches/9.6.0/transforms/09d985833700f666975b8d2b7f024104/transformed/material3/AndroidManifest.xml:20:5-44
+MERGED from [androidx.work:work-runtime-ktx:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/d977c9ea442afba43dbabba743e45e47/transformed/work-runtime-ktx-2.11.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.work:work-runtime-ktx:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/d977c9ea442afba43dbabba743e45e47/transformed/work-runtime-ktx-2.11.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.activity:activity-ktx:1.13.0] /home/kartik/.gradle/caches/9.6.0/transforms/98a808eead9bf3ca71205b8681b7a25a/transformed/activity-ktx-1.13.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-ktx:1.13.0] /home/kartik/.gradle/caches/9.6.0/transforms/98a808eead9bf3ca71205b8681b7a25a/transformed/activity-ktx-1.13.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/b3c2d63a51ceae576eadb1352ac3442e/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.customview:customview-poolingcontainer:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/b3c2d63a51ceae576eadb1352ac3442e/transformed/customview-poolingcontainer-1.0.0/AndroidManifest.xml:20:5-21:38
+MERGED from [androidx.compose.material:material-ripple-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/b85d62e194db14a8080ebb974a7c12b1/transformed/material-ripple/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-ripple-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/b85d62e194db14a8080ebb974a7c12b1/transformed/material-ripple/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/6aa56c8fb9a1da9ef71fde37fe0a90d6/transformed/foundation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/6aa56c8fb9a1da9ef71fde37fe0a90d6/transformed/foundation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/9f24215c6a2f43414eab5e1b2c1b1a63/transformed/foundation-layout/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.foundation:foundation-layout-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/9f24215c6a2f43414eab5e1b2c1b1a63/transformed/foundation-layout/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/68289750381b4bef591cfb935664c69f/transformed/animation-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-core-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/68289750381b4bef591cfb935664c69f/transformed/animation-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/0795fd44c2353a859a43090add8c3105/transformed/animation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.animation:animation-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/0795fd44c2353a859a43090add8c3105/transformed/animation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/72b7a87e3bc6bae96c43e2ee6c40c387/transformed/ui-unit/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-unit-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/72b7a87e3bc6bae96c43e2ee6c40c387/transformed/ui-unit/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/5773976a0fe34619353369ceb4f5f554/transformed/ui-graphics/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-graphics-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/5773976a0fe34619353369ceb4f5f554/transformed/ui-graphics/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/26c511f190a9235f8b43cf1c12b74c0a/transformed/ui-geometry/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-geometry-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/26c511f190a9235f8b43cf1c12b74c0a/transformed/ui-geometry/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/4d0e8a258fd8909baee224dba6949925/transformed/ui-tooling-data/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-data-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/4d0e8a258fd8909baee224dba6949925/transformed/ui-tooling-data/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/a085bf124f10517c6d689935901f96c8/transformed/ui-util/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-util-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/a085bf124f10517c6d689935901f96c8/transformed/ui-util/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/bc1be622261337f0ceacafde50f6ec0c/transformed/ui-text/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-text-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/bc1be622261337f0ceacafde50f6ec0c/transformed/ui-text/AndroidManifest.xml:5:5-44
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/0687c9f371aea81e8e1c74423982fb05/transformed/emoji2-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/0687c9f371aea81e8e1c74423982fb05/transformed/emoji2-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/cc7a8af5b6fc76d7990a7e98d033541c/transformed/lifecycle-process-2.11.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-process:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/cc7a8af5b6fc76d7990a7e98d033541c/transformed/lifecycle-process-2.11.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/04de492d9e75237be4690bd433e222be/transformed/lifecycle-livedata-core-ktx-2.11.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core-ktx:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/04de492d9e75237be4690bd433e222be/transformed/lifecycle-livedata-core-ktx-2.11.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f211e8496ea74e1391b3d3de7ff1bf8/transformed/lifecycle-livedata-core-2.11.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata-core:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f211e8496ea74e1391b3d3de7ff1bf8/transformed/lifecycle-livedata-core-2.11.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/ffd89809466ceac3c850569df3fd14fb/transformed/lifecycle-runtime-ktx/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-ktx-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/ffd89809466ceac3c850569df3fd14fb/transformed/lifecycle-runtime-ktx/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/78b90e5ed2f045e530e139f2dd075588/transformed/lifecycle-viewmodel/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/78b90e5ed2f045e530e139f2dd075588/transformed/lifecycle-viewmodel/AndroidManifest.xml:20:5-44
+MERGED from [androidx.navigationevent:navigationevent-android:1.1.2] /home/kartik/.gradle/caches/9.6.0/transforms/decd6e95a71ff1a30bce3f977723dfae/transformed/navigationevent/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigationevent:navigationevent-android:1.1.2] /home/kartik/.gradle/caches/9.6.0/transforms/decd6e95a71ff1a30bce3f977723dfae/transformed/navigationevent/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigationevent:navigationevent-compose-android:1.1.2] /home/kartik/.gradle/caches/9.6.0/transforms/2c1e217df45eac1833117ab9b2c2f8b4/transformed/navigationevent-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.navigationevent:navigationevent-compose-android:1.1.2] /home/kartik/.gradle/caches/9.6.0/transforms/2c1e217df45eac1833117ab9b2c2f8b4/transformed/navigationevent-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-retain-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/e3b1826f4dfa2d233bfc8de151830ba4/transformed/runtime-retain/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-retain-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/e3b1826f4dfa2d233bfc8de151830ba4/transformed/runtime-retain/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-annotation-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/5357492e6fb28994bbf4d0f269ebc8cd/transformed/runtime-annotation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-annotation-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/5357492e6fb28994bbf4d0f269ebc8cd/transformed/runtime-annotation/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/0d33e93e80c4dd90f96e1db3b3b8062a/transformed/runtime/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/0d33e93e80c4dd90f96e1db3b3b8062a/transformed/runtime/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/894e04242a838eb1d7a5065df3c00fed/transformed/runtime-saveable/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.runtime:runtime-saveable-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/894e04242a838eb1d7a5065df3c00fed/transformed/runtime-saveable/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-compose-android:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/ec1ed20dbc59bb57086f60edfdf9617b/transformed/savedstate-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-compose-android:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/ec1ed20dbc59bb57086f60edfdf9617b/transformed/savedstate-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/f36425a863a5d8908dedb9e7094f3e74/transformed/savedstate-ktx-1.5.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-ktx:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/f36425a863a5d8908dedb9e7094f3e74/transformed/savedstate-ktx-1.5.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.savedstate:savedstate-android:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/cd8323d8065f987ad50eb0ea6cb5635f/transformed/savedstate/AndroidManifest.xml:20:5-44
+MERGED from [androidx.savedstate:savedstate-android:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/cd8323d8065f987ad50eb0ea6cb5635f/transformed/savedstate/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/d7912ba782f294f4939f1b862d207ef7/transformed/lifecycle-viewmodel-savedstate/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-savedstate-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/d7912ba782f294f4939f1b862d207ef7/transformed/lifecycle-viewmodel-savedstate/AndroidManifest.xml:20:5-44
+MERGED from [androidx.graphics:graphics-shapes-android:1.0.1] /home/kartik/.gradle/caches/9.6.0/transforms/ed0c942e52dd87151b24d2d8a141a847/transformed/graphics-shapes-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.graphics:graphics-shapes-android:1.0.1] /home/kartik/.gradle/caches/9.6.0/transforms/ed0c942e52dd87151b24d2d8a141a847/transformed/graphics-shapes-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/b70b27bfafa568fa4cbd6051b4636447/transformed/core-ktx-1.18.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-ktx:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/b70b27bfafa568fa4cbd6051b4636447/transformed/core-ktx-1.18.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.autofill:autofill:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/7091faafd72ed9c7d13421d73244acef/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.autofill:autofill:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/7091faafd72ed9c7d13421d73244acef/transformed/autofill-1.0.0/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.window:window-core-android:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/c23c691763cd168314c0c8c3c05a5faa/transformed/window-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.window:window-core-android:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/c23c691763cd168314c0c8c3c05a5faa/transformed/window-core/AndroidManifest.xml:5:5-44
+MERGED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/kartik/.gradle/caches/9.6.0/transforms/daeca761b4a4595a7a9b1413d6337bee/transformed/graphics-path-1.0.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.graphics:graphics-path:1.0.1] /home/kartik/.gradle/caches/9.6.0/transforms/daeca761b4a4595a7a9b1413d6337bee/transformed/graphics-path-1.0.1/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/15eea01e18b850c8fe403a7f25f249f8/transformed/lifecycle-runtime/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/15eea01e18b850c8fe403a7f25f249f8/transformed/lifecycle-runtime/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/7866037863aeab6b9484dc2bca060f2d/transformed/lifecycle-viewmodel-ktx-2.11.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-ktx:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/7866037863aeab6b9484dc2bca060f2d/transformed/lifecycle-viewmodel-ktx-2.11.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-service:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/f284e61b55fbd2d0851fc5935dcc3df2/transformed/lifecycle-service-2.11.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-service:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/f284e61b55fbd2d0851fc5935dcc3df2/transformed/lifecycle-service-2.11.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/70b14259568c31bc1cd438a76d8c7190/transformed/lifecycle-livedata-2.11.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-livedata:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/70b14259568c31bc1cd438a76d8c7190/transformed/lifecycle-livedata-2.11.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/6d194feaede14a5a3b7eee62e85e1ecc/transformed/lifecycle-viewmodel-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-viewmodel-compose-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/6d194feaede14a5a3b7eee62e85e1ecc/transformed/lifecycle-viewmodel-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/3207ad3866b87e8d1d6a9d887d93f4a2/transformed/lifecycle-runtime-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.lifecycle:lifecycle-runtime-compose-android:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/3207ad3866b87e8d1d6a9d887d93f4a2/transformed/lifecycle-runtime-compose/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.8] /home/kartik/.gradle/caches/9.6.0/transforms/da9cca28abbe999c1888dd57aaeaf982/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-extended-android:1.7.8] /home/kartik/.gradle/caches/9.6.0/transforms/da9cca28abbe999c1888dd57aaeaf982/transformed/material-icons-extended-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.8] /home/kartik/.gradle/caches/9.6.0/transforms/75a46925692cc2644be3fbb5739c94d2/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.material:material-icons-core-android:1.7.8] /home/kartik/.gradle/caches/9.6.0/transforms/75a46925692cc2644be3fbb5739c94d2/transformed/material-icons-core-release/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/aa0dcd6e2c0597a8b90872ed2d7dc354/transformed/ui/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/aa0dcd6e2c0597a8b90872ed2d7dc354/transformed/ui/AndroidManifest.xml:5:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/a9ff315a29e7b37cab17e2db7871e1a8/transformed/ui-tooling-preview/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-preview-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/a9ff315a29e7b37cab17e2db7871e1a8/transformed/ui-tooling-preview/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f96ad00893cd5979848d82742542641/transformed/ui-tooling/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-tooling-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f96ad00893cd5979848d82742542641/transformed/ui-tooling/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-test-manifest:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/ae788dd5a5f4f85b0873226a120c471b/transformed/ui-test-manifest-1.12.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.compose.ui:ui-test-manifest:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/ae788dd5a5f4f85b0873226a120c471b/transformed/ui-test-manifest-1.12.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.13.0] /home/kartik/.gradle/caches/9.6.0/transforms/b9b993cb48a28c3219f619a4958f54c3/transformed/activity-1.13.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity:1.13.0] /home/kartik/.gradle/caches/9.6.0/transforms/b9b993cb48a28c3219f619a4958f54c3/transformed/activity-1.13.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.activity:activity-compose:1.13.0] /home/kartik/.gradle/caches/9.6.0/transforms/81cf81228603736b25a802dcec8fd6ff/transformed/activity-compose-1.13.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.activity:activity-compose:1.13.0] /home/kartik/.gradle/caches/9.6.0/transforms/81cf81228603736b25a802dcec8fd6ff/transformed/activity-compose-1.13.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.room:room-runtime-android:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/16cfe80bdcaaf67b1a1d44cf27d5db4d/transformed/room-runtime/AndroidManifest.xml:21:5-44
+MERGED from [androidx.room:room-runtime-android:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/16cfe80bdcaaf67b1a1d44cf27d5db4d/transformed/room-runtime/AndroidManifest.xml:21:5-44
+MERGED from [androidx.room:room-ktx:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/f1751762a606b869719f034131810e7b/transformed/room-ktx-2.8.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.room:room-ktx:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/f1751762a606b869719f034131810e7b/transformed/room-ktx-2.8.4/AndroidManifest.xml:20:5-44
+MERGED from [androidx.core:core-viewtree:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/75701416d4747cd307fe883891c2468f/transformed/core-viewtree-1.0.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.core:core-viewtree:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/75701416d4747cd307fe883891c2468f/transformed/core-viewtree-1.0.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/de3109b23fb16d2e625e694e13167540/transformed/annotation-experimental-1.5.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.annotation:annotation-experimental:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/de3109b23fb16d2e625e694e13167540/transformed/annotation-experimental-1.5.0/AndroidManifest.xml:5:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:21:5-44
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/f369b4e0285d09a453f6ea9cc9e584a6/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/f369b4e0285d09a453f6ea9cc9e584a6/transformed/startup-runtime-1.1.1/AndroidManifest.xml:21:5-23:41
+MERGED from [androidx.tracing:tracing:1.2.0] /home/kartik/.gradle/caches/9.6.0/transforms/0bca37cac7624de6c2b0bc9c515de002/transformed/tracing-1.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing:1.2.0] /home/kartik/.gradle/caches/9.6.0/transforms/0bca37cac7624de6c2b0bc9c515de002/transformed/tracing-1.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing-ktx:1.2.0] /home/kartik/.gradle/caches/9.6.0/transforms/ca386f0ae8053d3ed9d4aff392674cfc/transformed/tracing-ktx-1.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.tracing:tracing-ktx:1.2.0] /home/kartik/.gradle/caches/9.6.0/transforms/ca386f0ae8053d3ed9d4aff392674cfc/transformed/tracing-ktx-1.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/kartik/.gradle/caches/9.6.0/transforms/e3419529c68e3383fc567b72ac211dec/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.arch.core:core-runtime:2.2.0] /home/kartik/.gradle/caches/9.6.0/transforms/e3419529c68e3383fc567b72ac211dec/transformed/core-runtime-2.2.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/4626dd9b097caae8d9160531aa28f611/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.interpolator:interpolator:1.0.0] /home/kartik/.gradle/caches/9.6.0/transforms/4626dd9b097caae8d9160531aa28f611/transformed/interpolator-1.0.0/AndroidManifest.xml:20:5-44
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/7242d7c8b24cbed6e699ecb8b31bf4da/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.versionedparcelable:versionedparcelable:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/7242d7c8b24cbed6e699ecb8b31bf4da/transformed/versionedparcelable-1.1.1/AndroidManifest.xml:20:5-22:41
+MERGED from [androidx.sqlite:sqlite-framework-android:2.6.2] /home/kartik/.gradle/caches/9.6.0/transforms/d6f7b27ed4aa376b625658222d9b2055/transformed/sqlite-framework/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite-framework-android:2.6.2] /home/kartik/.gradle/caches/9.6.0/transforms/d6f7b27ed4aa376b625658222d9b2055/transformed/sqlite-framework/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite-android:2.6.2] /home/kartik/.gradle/caches/9.6.0/transforms/90668f92428d3003b0591694cc8473b1/transformed/sqlite/AndroidManifest.xml:20:5-44
+MERGED from [androidx.sqlite:sqlite-android:2.6.2] /home/kartik/.gradle/caches/9.6.0/transforms/90668f92428d3003b0591694cc8473b1/transformed/sqlite/AndroidManifest.xml:20:5-44
+	android:targetSdkVersion
+		INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/AndroidManifest.xml
+uses-permission#android.permission.WAKE_LOCK
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:23:5-68
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:23:22-65
+uses-permission#android.permission.ACCESS_NETWORK_STATE
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:24:5-79
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:24:22-76
+uses-permission#android.permission.RECEIVE_BOOT_COMPLETED
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:25:5-81
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:25:22-78
+uses-permission#android.permission.FOREGROUND_SERVICE
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:26:5-77
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:26:22-74
+provider#androidx.startup.InitializationProvider
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:29:9-37:20
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/0687c9f371aea81e8e1c74423982fb05/transformed/emoji2-1.4.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.emoji2:emoji2:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/0687c9f371aea81e8e1c74423982fb05/transformed/emoji2-1.4.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/cc7a8af5b6fc76d7990a7e98d033541c/transformed/lifecycle-process-2.11.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.lifecycle:lifecycle-process:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/cc7a8af5b6fc76d7990a7e98d033541c/transformed/lifecycle-process-2.11.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:24:9-32:20
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/f369b4e0285d09a453f6ea9cc9e584a6/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+MERGED from [androidx.startup:startup-runtime:1.1.1] /home/kartik/.gradle/caches/9.6.0/transforms/f369b4e0285d09a453f6ea9cc9e584a6/transformed/startup-runtime-1.1.1/AndroidManifest.xml:26:9-30:34
+	tools:node
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:33:13-31
+	android:authorities
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:31:13-68
+	android:exported
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:32:13-37
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:30:13-67
+meta-data#androidx.work.WorkManagerInitializer
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:34:13-36:52
+	android:value
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:36:17-49
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:35:17-68
+service#androidx.work.impl.background.systemjob.SystemJobService
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:39:9-45:35
+	android:enabled
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:42:13-70
+	android:exported
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:43:13-36
+	android:permission
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:44:13-69
+	tools:targetApi
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:45:13-32
+	android:directBootAware
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:41:13-44
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:40:13-84
+service#androidx.work.impl.foreground.SystemForegroundService
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:46:9-52:35
+	android:enabled
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:49:13-77
+	android:exported
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:50:13-37
+	tools:ignore
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:51:13-60
+	tools:targetApi
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:52:13-32
+	android:directBootAware
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:48:13-44
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:47:13-81
+receiver#androidx.work.impl.utils.ForceStopRunnable$BroadcastReceiver
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:54:9-59:35
+	android:enabled
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:57:13-35
+	android:exported
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:58:13-37
+	tools:targetApi
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:59:13-32
+	android:directBootAware
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:56:13-44
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:55:13-88
+receiver#androidx.work.impl.background.systemalarm.RescheduleReceiver
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:60:9-69:20
+	android:enabled
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:63:13-36
+	android:exported
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:64:13-37
+	tools:targetApi
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:65:13-32
+	android:directBootAware
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:62:13-44
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:61:13-88
+intent-filter#action:name:android.intent.action.BOOT_COMPLETED
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:66:13-68:29
+action#android.intent.action.BOOT_COMPLETED
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:67:17-79
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:67:25-76
+receiver#androidx.work.impl.diagnostics.DiagnosticsReceiver
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:70:9-80:20
+	android:enabled
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:73:13-35
+	android:exported
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:74:13-36
+	android:permission
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:75:13-57
+	tools:targetApi
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:76:13-32
+	android:directBootAware
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:72:13-44
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:71:13-78
+intent-filter#action:name:androidx.work.diagnostics.REQUEST_DIAGNOSTICS
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:77:13-79:29
+action#androidx.work.diagnostics.REQUEST_DIAGNOSTICS
+ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:78:17-88
+	android:name
+		ADDED from [androidx.work:work-runtime:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/c097852d6599fb4e22929526b415cec6/transformed/work-runtime-2.11.0/AndroidManifest.xml:78:25-85
+meta-data#androidx.emoji2.text.EmojiCompatInitializer
+ADDED from [androidx.emoji2:emoji2:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/0687c9f371aea81e8e1c74423982fb05/transformed/emoji2-1.4.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/0687c9f371aea81e8e1c74423982fb05/transformed/emoji2-1.4.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.emoji2:emoji2:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/0687c9f371aea81e8e1c74423982fb05/transformed/emoji2-1.4.0/AndroidManifest.xml:30:17-75
+meta-data#androidx.lifecycle.ProcessLifecycleInitializer
+ADDED from [androidx.lifecycle:lifecycle-process:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/cc7a8af5b6fc76d7990a7e98d033541c/transformed/lifecycle-process-2.11.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.lifecycle:lifecycle-process:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/cc7a8af5b6fc76d7990a7e98d033541c/transformed/lifecycle-process-2.11.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.lifecycle:lifecycle-process:2.11.0] /home/kartik/.gradle/caches/9.6.0/transforms/cc7a8af5b6fc76d7990a7e98d033541c/transformed/lifecycle-process-2.11.0/AndroidManifest.xml:30:17-78
+uses-library#androidx.window.extensions
+ADDED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:23:9-25:40
+	android:required
+		ADDED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:25:13-37
+	android:name
+		ADDED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:24:13-54
+uses-library#androidx.window.sidecar
+ADDED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:26:9-28:40
+	android:required
+		ADDED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:28:13-37
+	android:name
+		ADDED from [androidx.window:window:1.5.0] /home/kartik/.gradle/caches/9.6.0/transforms/b24559eb7e43758101fd494585aca333/transformed/window-1.5.0/AndroidManifest.xml:27:13-51
+permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:23:9-81
+permission#com.spendtrack.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:22:5-24:47
+	android:protectionLevel
+		ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:24:9-44
+	android:name
+		ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:23:9-81
+uses-permission#${applicationId}.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:26:22-94
+uses-permission#com.spendtrack.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION
+ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:26:5-97
+	android:name
+		ADDED from [androidx.core:core:1.18.0] /home/kartik/.gradle/caches/9.6.0/transforms/04734fb57ff59ce3b5dd3900c32f8666/transformed/core-1.18.0/AndroidManifest.xml:26:22-94
+activity#androidx.compose.ui.tooling.PreviewActivity
+ADDED from [androidx.compose.ui:ui-tooling-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f96ad00893cd5979848d82742542641/transformed/ui-tooling/AndroidManifest.xml:23:9-25:39
+	android:exported
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f96ad00893cd5979848d82742542641/transformed/ui-tooling/AndroidManifest.xml:25:13-36
+	android:name
+		ADDED from [androidx.compose.ui:ui-tooling-android:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/1f96ad00893cd5979848d82742542641/transformed/ui-tooling/AndroidManifest.xml:24:13-71
+activity#androidx.activity.ComponentActivity
+ADDED from [androidx.compose.ui:ui-test-manifest:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/ae788dd5a5f4f85b0873226a120c471b/transformed/ui-test-manifest-1.12.0/AndroidManifest.xml:23:9-26:79
+	android:exported
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/ae788dd5a5f4f85b0873226a120c471b/transformed/ui-test-manifest-1.12.0/AndroidManifest.xml:25:13-36
+	android:theme
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/ae788dd5a5f4f85b0873226a120c471b/transformed/ui-test-manifest-1.12.0/AndroidManifest.xml:26:13-76
+	android:name
+		ADDED from [androidx.compose.ui:ui-test-manifest:1.12.0] /home/kartik/.gradle/caches/9.6.0/transforms/ae788dd5a5f4f85b0873226a120c471b/transformed/ui-test-manifest-1.12.0/AndroidManifest.xml:24:13-63
+service#androidx.room.MultiInstanceInvalidationService
+ADDED from [androidx.room:room-runtime-android:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/16cfe80bdcaaf67b1a1d44cf27d5db4d/transformed/room-runtime/AndroidManifest.xml:24:9-28:63
+	android:exported
+		ADDED from [androidx.room:room-runtime-android:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/16cfe80bdcaaf67b1a1d44cf27d5db4d/transformed/room-runtime/AndroidManifest.xml:27:13-37
+	tools:ignore
+		ADDED from [androidx.room:room-runtime-android:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/16cfe80bdcaaf67b1a1d44cf27d5db4d/transformed/room-runtime/AndroidManifest.xml:28:13-60
+	android:directBootAware
+		ADDED from [androidx.room:room-runtime-android:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/16cfe80bdcaaf67b1a1d44cf27d5db4d/transformed/room-runtime/AndroidManifest.xml:26:13-43
+	android:name
+		ADDED from [androidx.room:room-runtime-android:2.8.4] /home/kartik/.gradle/caches/9.6.0/transforms/16cfe80bdcaaf67b1a1d44cf27d5db4d/transformed/room-runtime/AndroidManifest.xml:25:13-74
+meta-data#androidx.profileinstaller.ProfileInstallerInitializer
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:29:13-31:52
+	android:value
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:31:17-49
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:30:17-85
+receiver#androidx.profileinstaller.ProfileInstallReceiver
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:34:9-52:20
+	android:enabled
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:37:13-35
+	android:exported
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:38:13-36
+	android:permission
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:39:13-57
+	android:directBootAware
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:36:13-44
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:35:13-76
+intent-filter#action:name:androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:40:13-42:29
+action#androidx.profileinstaller.action.INSTALL_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:17-91
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:41:25-88
+intent-filter#action:name:androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:43:13-45:29
+action#androidx.profileinstaller.action.SKIP_FILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:17-85
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:44:25-82
+intent-filter#action:name:androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:46:13-48:29
+action#androidx.profileinstaller.action.SAVE_PROFILE
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:17-88
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:47:25-85
+intent-filter#action:name:androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:49:13-51:29
+action#androidx.profileinstaller.action.BENCHMARK_OPERATION
+ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:17-95
+	android:name
+		ADDED from [androidx.profileinstaller:profileinstaller:1.4.0] /home/kartik/.gradle/caches/9.6.0/transforms/e02a36d58594a4ba936cf264c24396ad/transformed/profileinstaller-1.4.0/AndroidManifest.xml:50:25-92

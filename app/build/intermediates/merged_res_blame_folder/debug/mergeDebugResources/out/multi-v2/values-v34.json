@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.spendtrack.app-mergeDebugResources-45:/values-v34/values-v34.xml",
+            "map": [
+                {
+                    "source": "/home/kartik/.gradle/caches/9.6.0/transforms/09d985833700f666975b8d2b7f024104/transformed/material3/res/values-v34/values-v34.xml",
+                    "from": {
+                        "startLines": "2,47",
+                        "startColumns": "4,4",
+                        "startOffsets": "55,4020",
+                        "endLines": "46,91",
+                        "endColumns": "12,12",
+                        "endOffsets": "4015,8006"
+                    }
+                }
+            ]
+        }
+    ]
+}

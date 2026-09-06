@@ -1,0 +1,8 @@
+com.spendtrack.app
+drawable ic_spendtrack
+drawable ic_spendtrack_background
+drawable ic_spendtrack_foreground
+mipmap ic_spendtrack
+mipmap ic_spendtrack_round
+string app_name
+style Theme_SpendTrack

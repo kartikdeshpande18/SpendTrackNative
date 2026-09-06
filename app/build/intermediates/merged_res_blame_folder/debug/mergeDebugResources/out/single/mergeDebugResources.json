@@ -1,0 +1,122 @@
+[
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/drawable_ic_spendtrack.xml.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/drawable/ic_spendtrack.xml"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap_ic_spendtrack.xml.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap/ic_spendtrack.xml"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/mipmap-hdpi_ic_spendtrack.png.flat",
+        "source": "com.spendtrack.app-main-49:/mipmap-hdpi/ic_spendtrack.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-xxxhdpi_ic_spendtrack.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-xxxhdpi/ic_spendtrack.png"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/mipmap-xxhdpi_ic_spendtrack.png.flat",
+        "source": "com.spendtrack.app-main-49:/mipmap-xxhdpi/ic_spendtrack.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-xhdpi_ic_spendtrack_round.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-xhdpi/ic_spendtrack_round.png"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/mipmap-mdpi_ic_spendtrack.png.flat",
+        "source": "com.spendtrack.app-main-49:/mipmap-mdpi/ic_spendtrack.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/drawable_ic_spendtrack_background.xml.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/drawable/ic_spendtrack_background.xml"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/mipmap-xxxhdpi_ic_spendtrack_round.png.flat",
+        "source": "com.spendtrack.app-main-49:/mipmap-xxxhdpi/ic_spendtrack_round.png"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/mipmap-xxhdpi_ic_spendtrack_round.png.flat",
+        "source": "com.spendtrack.app-main-49:/mipmap-xxhdpi/ic_spendtrack_round.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-anydpi-v26_ic_spendtrack.xml.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-anydpi-v26/ic_spendtrack.xml"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/drawable-nodpi_ic_spendtrack_foreground.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/drawable-nodpi/ic_spendtrack_foreground.png"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/mipmap-xxxhdpi_ic_spendtrack.png.flat",
+        "source": "com.spendtrack.app-main-49:/mipmap-xxxhdpi/ic_spendtrack.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-xxhdpi_ic_spendtrack_round.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-xxhdpi/ic_spendtrack_round.png"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/drawable-nodpi_ic_spendtrack_foreground.png.flat",
+        "source": "com.spendtrack.app-main-49:/drawable-nodpi/ic_spendtrack_foreground.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-xhdpi_ic_spendtrack.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-xhdpi/ic_spendtrack.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/drawable_ic_spendtrack_foreground.xml.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/drawable/ic_spendtrack_foreground.xml"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-xxhdpi_ic_spendtrack.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-xxhdpi/ic_spendtrack.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-hdpi_ic_spendtrack.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-hdpi/ic_spendtrack.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-hdpi_ic_spendtrack_round.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-hdpi/ic_spendtrack_round.png"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/mipmap-mdpi_ic_spendtrack_round.png.flat",
+        "source": "com.spendtrack.app-main-49:/mipmap-mdpi/ic_spendtrack_round.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap_ic_spendtrack_round.xml.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap/ic_spendtrack_round.xml"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/mipmap-xhdpi_ic_spendtrack_round.png.flat",
+        "source": "com.spendtrack.app-main-49:/mipmap-xhdpi/ic_spendtrack_round.png"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/mipmap-hdpi_ic_spendtrack_round.png.flat",
+        "source": "com.spendtrack.app-main-49:/mipmap-hdpi/ic_spendtrack_round.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-mdpi_ic_spendtrack_round.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-mdpi/ic_spendtrack_round.png"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/mipmap-xhdpi_ic_spendtrack.png.flat",
+        "source": "com.spendtrack.app-main-49:/mipmap-xhdpi/ic_spendtrack.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-xxxhdpi_ic_spendtrack_round.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-xxxhdpi/ic_spendtrack_round.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-mdpi_ic_spendtrack.png.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-mdpi/ic_spendtrack.png"
+    },
+    {
+        "merged": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-debug-47:/mipmap-anydpi-v26_ic_spendtrack_round.xml.flat",
+        "source": "/home/kartik/.gradle/daemon/9.6.0/com.spendtrack.app-main-49:/mipmap-anydpi-v26/ic_spendtrack_round.xml"
+    },
+    {
+        "merged": "com.spendtrack.app-debug-47:/drawable_ic_spendtrack.xml.flat",
+        "source": "com.spendtrack.app-main-49:/drawable/ic_spendtrack.xml"
+    }
+]
