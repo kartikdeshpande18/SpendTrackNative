@@ -11,6 +11,7 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.spendtrack.app.data.local.DatabaseProvider
+import com.spendtrack.app.data.repository.FinanceRepository
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
@@ -20,6 +21,9 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
     override suspend fun doWork(): Result {
         val today = LocalDate.now()
         val database = DatabaseProvider.get(applicationContext)
+        val repository = FinanceRepository(database)
+        repository.matureDueDeposits(today.toEpochDay())
+        repository.processDueRecurringTransactions(today.toEpochDay())
         val cardLeadTimes = ReminderPreferences.cardLeadTimes(applicationContext)
         val loanLeadTimes = ReminderPreferences.loanLeadTimes(applicationContext)
         database.accounts().observeAll().first().filter { it.isCreditCard && it.dueDay != null }.forEach { card ->

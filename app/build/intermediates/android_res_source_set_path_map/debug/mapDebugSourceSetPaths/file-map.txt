@@ -1,8 +1,0 @@
-com.spendtrack.app-pngs-0 /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/build/generated/res/pngs/debug
-com.spendtrack.app-updated_navigation_xml-1 /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/build/generated/updated_navigation_xml/debug
-com.spendtrack.app-packageDebugResources-2 /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/build/intermediates/incremental/debug/packageDebugResources/merged.dir
-com.spendtrack.app-packageDebugResources-3 /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/build/intermediates/incremental/debug/packageDebugResources/stripped.dir
-com.spendtrack.app-debug-4 /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/build/intermediates/merged_res/debug/mergeDebugResources
-com.spendtrack.app-debug-5 /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/debug/res
-com.spendtrack.app-main-6 /home/kartik/Downloads/SpendTrackNative-v0.1.0/SpendTrackNative/app/src/main/res
-gradleHome-0 /home/kartik/.gradle

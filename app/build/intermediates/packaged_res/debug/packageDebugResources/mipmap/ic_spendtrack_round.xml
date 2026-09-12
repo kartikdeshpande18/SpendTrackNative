@@ -1,4 +1,0 @@
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@drawable/ic_spendtrack_background" />
-    <item android:drawable="@drawable/ic_spendtrack_foreground" />
-</layer-list>

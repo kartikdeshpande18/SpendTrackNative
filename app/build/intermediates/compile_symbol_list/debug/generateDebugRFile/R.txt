@@ -1,7 +1,0 @@
-int drawable ic_spendtrack 0x0
-int drawable ic_spendtrack_background 0x0
-int drawable ic_spendtrack_foreground 0x0
-int mipmap ic_spendtrack 0x0
-int mipmap ic_spendtrack_round 0x0
-int string app_name 0x0
-int style Theme_SpendTrack 0x0

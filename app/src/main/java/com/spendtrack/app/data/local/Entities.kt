@@ -1,6 +1,7 @@
 package com.spendtrack.app.data.local
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 /** Money is stored in minor units (paise) to avoid floating-point accounting errors. */
@@ -15,6 +16,7 @@ data class AccountEntity(
     val creditLimitPaise: Long? = null,
     val statementCycleDay: Int? = null,
     val dueDay: Int? = null,
+    val minimumBalancePaise: Long = 0,
 )
 
 @Entity(tableName = "categories")
@@ -37,9 +39,10 @@ data class TransactionEntity(
     val isShared: Boolean = false,
     val mySharePaise: Long? = null,
     val sharedWith: String = "",
+    val destinationAccountId: Long? = null,
 )
 
-enum class TransactionType { EXPENSE, INCOME }
+enum class TransactionType { EXPENSE, INCOME, TRANSFER }
 
 @Entity(tableName = "budgets")
 data class BudgetEntity(
@@ -84,4 +87,71 @@ data class CardPaymentEntity(
     val sourceAccountId: Long,
     val amountPaise: Long,
     val dateEpochDay: Long,
+)
+
+enum class FixedDepositStatus {
+    ACTIVE,
+    MATURED
+}
+
+enum class CompoundingFrequency(val periodsPerYear: Int, val displayName: String) {
+    MONTHLY(12, "Monthly"),
+    QUARTERLY(4, "Quarterly"),
+    HALF_YEARLY(2, "Half-yearly"),
+    YEARLY(1, "Yearly")
+}
+
+@Entity(tableName = "fixed_deposits")
+data class FixedDepositEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val linkedAccountId: Long,
+    val principalPaise: Long,
+    val interestRateBps: Int,
+    val startDateEpochDay: Long,
+    val maturityDateEpochDay: Long,
+    val maturityAmountPaise: Long,
+    val description: String = "",
+    val status: FixedDepositStatus = FixedDepositStatus.ACTIVE,
+    val compoundingFrequency: CompoundingFrequency = CompoundingFrequency.QUARTERLY,
+    val isExisting: Boolean = false,
+)
+
+enum class RecurrenceFrequency(val displayName: String) {
+    DAILY("Daily"),
+    WEEKLY("Weekly"),
+    MONTHLY("Monthly"),
+    YEARLY("Yearly")
+}
+
+@Entity(tableName = "recurring_transactions")
+data class RecurringTransactionEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val description: String,
+    val amountPaise: Long,
+    val categoryId: Long,
+    val accountId: Long,
+    val type: TransactionType = TransactionType.EXPENSE,
+    val frequency: RecurrenceFrequency = RecurrenceFrequency.MONTHLY,
+    val startDateEpochDay: Long,
+    val endDateEpochDay: Long? = null,
+    val nextOccurrenceEpochDay: Long,
+    val isEnabled: Boolean = true,
+    val isShared: Boolean = false,
+    val mySharePaise: Long? = null,
+    val sharedWith: String = "",
+    val destinationAccountId: Long? = null,
+)
+
+@Entity(
+    tableName = "recurring_occurrences",
+    indices = [
+        Index(value = ["scheduleId", "occurrenceEpochDay"], unique = true)
+    ]
+)
+data class RecurringOccurrenceEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val scheduleId: Long,
+    val occurrenceEpochDay: Long,
+    val transactionId: Long,
 )

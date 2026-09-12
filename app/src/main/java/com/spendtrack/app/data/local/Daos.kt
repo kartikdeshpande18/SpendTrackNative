@@ -17,7 +17,8 @@ interface AccountDao {
     @Update suspend fun update(entity: AccountEntity)
     @Delete suspend fun delete(entity: AccountEntity)
     @Query("DELETE FROM accounts") suspend fun clear()
-    @Query("SELECT COUNT(*) FROM transactions WHERE accountId = :accountId") suspend fun transactionCount(accountId: Long): Int
+    @Query("SELECT COUNT(*) FROM transactions WHERE accountId = :accountId OR destinationAccountId = :accountId") suspend fun transactionCount(accountId: Long): Int
+    @Query("SELECT COUNT(*) FROM recurring_transactions WHERE accountId = :accountId OR destinationAccountId = :accountId") suspend fun recurringCount(accountId: Long): Int
 }
 
 @Dao
@@ -32,6 +33,7 @@ interface CategoryDao {
     @Query("DELETE FROM categories") suspend fun clear()
     @Query("SELECT COUNT(*) FROM transactions WHERE categoryId = :categoryId") suspend fun transactionCount(categoryId: Long): Int
     @Query("SELECT COUNT(*) FROM budgets WHERE categoryId = :categoryId") suspend fun budgetCount(categoryId: Long): Int
+    @Query("SELECT COUNT(*) FROM recurring_transactions WHERE categoryId = :categoryId") suspend fun recurringCount(categoryId: Long): Int
 }
 
 @Dao
@@ -93,4 +95,58 @@ interface CardPaymentDao {
     @Insert suspend fun insert(entity: CardPaymentEntity): Long
     @Insert suspend fun insertAll(entities: List<CardPaymentEntity>)
     @Query("DELETE FROM card_payments") suspend fun clear()
+}
+
+@Dao
+interface FixedDepositDao {
+    @Query("SELECT * FROM fixed_deposits ORDER BY status ASC, maturityDateEpochDay ASC")
+    fun observeAll(): Flow<List<FixedDepositEntity>>
+    @Query("SELECT * FROM fixed_deposits WHERE id = :id") suspend fun getById(id: Long): FixedDepositEntity?
+    @Query("SELECT * FROM fixed_deposits WHERE status = 'ACTIVE' AND maturityDateEpochDay <= :todayEpochDay")
+    suspend fun getDueActiveDeposits(todayEpochDay: Long): List<FixedDepositEntity>
+    @Query("SELECT COUNT(*) FROM fixed_deposits WHERE linkedAccountId = :accountId AND status = 'ACTIVE'")
+    suspend fun activeCountForAccount(accountId: Long): Int
+    @Insert suspend fun insert(entity: FixedDepositEntity): Long
+    @Insert suspend fun insertAll(entities: List<FixedDepositEntity>)
+    @Update suspend fun update(entity: FixedDepositEntity)
+    @Delete suspend fun delete(entity: FixedDepositEntity)
+    @Query("DELETE FROM fixed_deposits") suspend fun clear()
+}
+
+@Dao
+interface RecurringTransactionDao {
+    @Query("SELECT * FROM recurring_transactions ORDER BY isEnabled DESC, nextOccurrenceEpochDay ASC, id DESC")
+    fun observeAll(): Flow<List<RecurringTransactionEntity>>
+
+    @Query("SELECT * FROM recurring_transactions WHERE id = :id")
+    suspend fun getById(id: Long): RecurringTransactionEntity?
+
+    @Query("SELECT * FROM recurring_transactions WHERE isEnabled = 1 AND nextOccurrenceEpochDay <= :todayEpochDay ORDER BY nextOccurrenceEpochDay ASC, id ASC")
+    suspend fun getDueSchedules(todayEpochDay: Long): List<RecurringTransactionEntity>
+
+    @Query("SELECT COUNT(*) FROM recurring_transactions WHERE isEnabled = 1")
+    suspend fun activeCount(): Int
+
+    @Insert suspend fun insert(entity: RecurringTransactionEntity): Long
+    @Insert suspend fun insertAll(entities: List<RecurringTransactionEntity>)
+    @Update suspend fun update(entity: RecurringTransactionEntity)
+    @Delete suspend fun delete(entity: RecurringTransactionEntity)
+    @Query("DELETE FROM recurring_transactions") suspend fun clear()
+}
+
+@Dao
+interface RecurringOccurrenceDao {
+    @Query("SELECT COUNT(*) > 0 FROM recurring_occurrences WHERE scheduleId = :scheduleId AND occurrenceEpochDay = :occurrenceEpochDay")
+    suspend fun hasOccurrence(scheduleId: Long, occurrenceEpochDay: Long): Boolean
+
+    @Insert suspend fun insert(entity: RecurringOccurrenceEntity): Long
+    @Insert suspend fun insertAll(entities: List<RecurringOccurrenceEntity>)
+    @Query("SELECT * FROM recurring_occurrences WHERE scheduleId = :scheduleId ORDER BY occurrenceEpochDay ASC")
+    suspend fun forSchedule(scheduleId: Long): List<RecurringOccurrenceEntity>
+    @Query("SELECT * FROM recurring_occurrences")
+    suspend fun getAll(): List<RecurringOccurrenceEntity>
+    @Query("DELETE FROM recurring_occurrences WHERE scheduleId = :scheduleId")
+    suspend fun deleteForSchedule(scheduleId: Long)
+    @Query("DELETE FROM recurring_occurrences")
+    suspend fun clear()
 }

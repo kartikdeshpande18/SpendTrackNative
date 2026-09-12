@@ -1,0 +1,26 @@
+# Gradle
+.gradle/
+**/build/
+
+# Local configuration
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Build outputs
+*.apk
+*.aab
+
+# Kotlin
+.kotlin/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Generated reports
+**/build/reports/
