@@ -42,6 +42,7 @@ import com.spendtrack.app.data.local.TransactionEntity
 import com.spendtrack.app.data.local.TransactionType
 import com.spendtrack.app.ui.animation.SpendTrackMotion
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.max
@@ -169,15 +170,36 @@ fun CategorySpendingDonut(
 }
 
 @Composable
-fun DailyTransactionBarChart(transactions: List<TransactionEntity>, modifier: Modifier = Modifier) {
+fun DailyTransactionBarChart(
+    transactions: List<TransactionEntity>,
+    selectedMonth: YearMonth = YearMonth.now(),
+    modifier: Modifier = Modifier
+) {
+    val currentMonth = YearMonth.now()
     val today = LocalDate.now()
-    val dates = (6 downTo 0).map { today.minusDays(it.toLong()) }
+    val isCurrentMonth = selectedMonth == currentMonth
+    val isFutureMonth = selectedMonth > currentMonth
+
+    val dates = when {
+        isCurrentMonth -> (6 downTo 0).map { today.minusDays(it.toLong()) }
+        isFutureMonth -> emptyList()
+        else -> {
+            val lastDay = selectedMonth.atEndOfMonth()
+            (6 downTo 0).map { lastDay.minusDays(it.toLong()) }
+        }
+    }
     val values = dates.map { date ->
         transactions.filter { it.type == TransactionType.EXPENSE && LocalDate.ofEpochDay(it.dateEpochDay) == date }
             .sumOf { it.mySharePaise ?: it.amountPaise }
     }
     val maxValue = max(values.maxOrNull() ?: 0L, 1L)
     val labelFormatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
+    val monthName = selectedMonth.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.getDefault()) + " " + selectedMonth.year
+    val subLabel = when {
+        isCurrentMonth -> "Last 7 Days"
+        isFutureMonth -> "Future Month"
+        else -> "Final 7 Days of $monthName"
+    }
     val primary = MaterialTheme.colorScheme.primary
     val inactiveBar = MaterialTheme.colorScheme.secondaryContainer
     val onSurface = MaterialTheme.colorScheme.onSurface
@@ -190,9 +212,11 @@ fun DailyTransactionBarChart(transactions: List<TransactionEntity>, modifier: Mo
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Expenses In The Last 7 Days", style = MaterialTheme.typography.titleLarge)
-            Text("Last 7 Days", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (values.all { it == 0L }) {
-                Text("No transactions in the last 7 days", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(subLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (isFutureMonth) {
+                Text("No transactions for $monthName", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else if (values.all { it == 0L }) {
+                Text(if (isCurrentMonth) "No transactions in the last 7 days" else "No transactions in the final 7 days of $monthName", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
                 val animatable = remember { Animatable(0f) }
                 val chartKey = remember(transactions) { values.joinToString(",") }

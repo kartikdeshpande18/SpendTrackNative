@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.spendtrack.app.data.local.*
+import com.spendtrack.app.ui.parsePaise
 import com.spendtrack.app.ui.haptics.rememberSpendTrackHaptics
 import com.spendtrack.app.ui.recurring.RecurrenceFrequencySelector
 import java.time.LocalDate
@@ -61,7 +62,7 @@ fun AddTransactionScreen(
     val filtered = categories.filter { it.isIncomeCategory == isIncome }
     val account = accounts.getOrNull(accountIndex); val category = filtered.getOrNull(categoryIndex)
     val fromAccount = accounts.getOrNull(fromAccountIndex); val toAccount = accounts.getOrNull(toAccountIndex)
-    val paise = ((amount.toDoubleOrNull() ?: 0.0) * 100).toLong()
+    val paise = parsePaise(amount)
 
     val canSave = if (isTransfer) {
         paise > 0 && fromAccount != null && toAccount != null && fromAccount.id != toAccount.id && (!isRecurring || !hasEndDate || endDateEpochDay >= dateEpochDay)
@@ -196,7 +197,7 @@ fun AddTransactionScreen(
                     nextOccurrenceEpochDay = dateEpochDay,
                     isEnabled = true,
                     isShared = shared && !isIncome && !isTransfer,
-                    mySharePaise = if (shared && !isIncome && !isTransfer) ((share.toDoubleOrNull() ?: 0.0) * 100).toLong() else null,
+                    mySharePaise = if (shared && !isIncome && !isTransfer) parsePaise(share) else null,
                     sharedWith = if (shared && !isIncome && !isTransfer) sharedWith.trim() else "",
                     destinationAccountId = if (isTransfer) toAccount!!.id else null,
                 )
@@ -204,7 +205,7 @@ fun AddTransactionScreen(
             } else if (isTransfer) {
                 onSaved(TransactionEntity(id = initial?.id ?: 0, dateEpochDay = dateEpochDay, description = description.trim(), amountPaise = paise, categoryId = 0, accountId = fromAccount!!.id, type = TransactionType.TRANSFER, destinationAccountId = toAccount!!.id))
             } else {
-                onSaved(TransactionEntity(id = initial?.id ?: 0, dateEpochDay = dateEpochDay, description = description.trim(), amountPaise = paise, categoryId = category!!.id, accountId = account!!.id, type = if (isIncome) TransactionType.INCOME else TransactionType.EXPENSE, isShared = shared && !isIncome, mySharePaise = if (shared && !isIncome) ((share.toDoubleOrNull() ?: 0.0) * 100).toLong() else null, sharedWith = if (shared && !isIncome) sharedWith.trim() else ""))
+                onSaved(TransactionEntity(id = initial?.id ?: 0, dateEpochDay = dateEpochDay, description = description.trim(), amountPaise = paise, categoryId = category!!.id, accountId = account!!.id, type = if (isIncome) TransactionType.INCOME else TransactionType.EXPENSE, isShared = shared && !isIncome, mySharePaise = if (shared && !isIncome) parsePaise(share) else null, sharedWith = if (shared && !isIncome) sharedWith.trim() else ""))
             }
         }, Modifier.fillMaxWidth(), enabled = canSave) {
             Text(

@@ -19,9 +19,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.spendtrack.app.data.local.*
+import com.spendtrack.app.ui.formatIndianMoney
+import com.spendtrack.app.ui.formatEpochDate
+import com.spendtrack.app.ui.parsePaise
 import com.spendtrack.app.ui.haptics.rememberSpendTrackHaptics
 import java.time.Instant
 import java.time.LocalDate
@@ -153,14 +157,25 @@ fun RecurringTransactionsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(schedule.description.ifBlank { "Recurring Transaction" }, style = MaterialTheme.typography.titleLarge)
+                        Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                            Text(
+                                schedule.description.ifBlank { "Recurring Transaction" },
+                                style = MaterialTheme.typography.titleLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                             val subtitle = when (schedule.type) {
                                 TransactionType.TRANSFER -> "Transfer: ${account?.name ?: "Account"} → ${destAccount?.name ?: "Account"}"
                                 TransactionType.INCOME -> "Income · ${account?.name ?: "Account"} · ${category?.name ?: "Category"}"
                                 TransactionType.EXPENSE -> "Expense · ${account?.name ?: "Account"} · ${category?.name ?: "Category"}"
                             }
-                            Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                subtitle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                style = MaterialTheme.typography.bodyMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                         Text(
                             money(schedule.amountPaise),
@@ -169,7 +184,9 @@ fun RecurringTransactionsScreen(
                                 TransactionType.INCOME -> MaterialTheme.colorScheme.primary
                                 TransactionType.EXPENSE -> MaterialTheme.colorScheme.onSurface
                                 TransactionType.TRANSFER -> MaterialTheme.colorScheme.secondary
-                            }
+                            },
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
 
@@ -303,7 +320,7 @@ private fun EditRecurringScheduleDialog(
     }
     var showEndDatePicker by remember { mutableStateOf(false) }
 
-    val amountPaise = ((amountText.toDoubleOrNull() ?: 0.0) * 100).toLong()
+    val amountPaise = parsePaise(amountText)
     val canSave = description.isNotBlank() && amountPaise > 0 && (!hasEndDate || endDateEpochDay >= schedule.startDateEpochDay)
 
     Dialog(
@@ -445,9 +462,6 @@ private fun EditRecurringScheduleDialog(
     }
 }
 
-private fun money(paise: Long) = "₹" + String.format(Locale.US, "%,.2f", paise / 100.0)
+private fun money(paise: Long) = formatIndianMoney(paise)
 
-private fun formatDate(epochDay: Long): String = runCatching {
-    val d = LocalDate.ofEpochDay(epochDay)
-    "${d.dayOfMonth} ${d.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault())} ${d.year}"
-}.getOrDefault(LocalDate.ofEpochDay(epochDay).toString())
+private fun formatDate(epochDay: Long): String = formatEpochDate(epochDay)

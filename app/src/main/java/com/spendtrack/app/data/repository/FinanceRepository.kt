@@ -179,26 +179,26 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
         database.accounts().update(account.copy(minimumBalancePaise = sanitizedMinBalance))
     }
 
-    suspend fun deleteAccount(account: AccountEntity): Boolean {
+    suspend fun deleteAccount(account: AccountEntity): Boolean = database.withTransaction {
         if (database.accounts().transactionCount(account.id) > 0 ||
             database.fixedDeposits().activeCountForAccount(account.id) > 0 ||
-            database.accounts().recurringCount(account.id) > 0) return false
+            database.accounts().recurringCount(account.id) > 0) return@withTransaction false
         database.accounts().delete(account)
-        return true
+        true
     }
 
     suspend fun updateCategory(category: CategoryEntity) = database.categories().update(category)
 
-    suspend fun deleteCategory(category: CategoryEntity): Boolean {
+    suspend fun deleteCategory(category: CategoryEntity): Boolean = database.withTransaction {
         if (category.isSystemFallback ||
             database.categories().transactionCount(category.id) > 0 ||
             database.categories().budgetCount(category.id) > 0 ||
-            database.categories().recurringCount(category.id) > 0) return false
+            database.categories().recurringCount(category.id) > 0) return@withTransaction false
         database.categories().delete(category)
-        return true
+        true
     }
 
-    suspend fun saveBudget(categoryId: Long, monthKey: String, limitPaise: Long) {
+    suspend fun saveBudget(categoryId: Long, monthKey: String, limitPaise: Long) = database.withTransaction {
         val existing = database.budgets().find(categoryId, monthKey)
         if (existing == null) database.budgets().insert(com.spendtrack.app.data.local.BudgetEntity(categoryId = categoryId, monthKey = monthKey, limitPaise = limitPaise))
         else database.budgets().update(existing.copy(limitPaise = limitPaise))
@@ -222,7 +222,7 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
     suspend fun deleteLoan(loan: com.spendtrack.app.data.local.LoanEntity) = database.loans().delete(loan)
     suspend fun updateOwed(owed: com.spendtrack.app.data.local.OwedEntity) = database.owed().update(owed)
     suspend fun deleteOwed(owed: com.spendtrack.app.data.local.OwedEntity) = database.owed().delete(owed)
-    suspend fun settleOwed(owed: com.spendtrack.app.data.local.OwedEntity, amountPaise: Long) {
+    suspend fun settleOwed(owed: com.spendtrack.app.data.local.OwedEntity, amountPaise: Long) = database.withTransaction {
         val remaining = (owed.amountPaise - amountPaise).coerceAtLeast(0)
         if (remaining == 0L) database.owed().delete(owed) else database.owed().update(owed.copy(amountPaise = remaining))
     }

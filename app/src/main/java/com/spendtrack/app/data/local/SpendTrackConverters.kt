@@ -4,11 +4,14 @@ import androidx.room.TypeConverter
 
 class SpendTrackConverters {
     @TypeConverter fun transactionTypeToString(value: TransactionType): String = value.name
-    @TypeConverter fun stringToTransactionType(value: String): TransactionType = TransactionType.valueOf(value)
+    @TypeConverter fun stringToTransactionType(value: String): TransactionType =
+        runCatching { TransactionType.valueOf(value) }.getOrDefault(TransactionType.EXPENSE)
     @TypeConverter fun owedDirectionToString(value: OwedDirection): String = value.name
-    @TypeConverter fun stringToOwedDirection(value: String): OwedDirection = OwedDirection.valueOf(value)
+    @TypeConverter fun stringToOwedDirection(value: String): OwedDirection =
+        runCatching { OwedDirection.valueOf(value) }.getOrDefault(OwedDirection.OWED_TO_ME)
     @TypeConverter fun fixedDepositStatusToString(value: FixedDepositStatus): String = value.name
-    @TypeConverter fun stringToFixedDepositStatus(value: String): FixedDepositStatus = FixedDepositStatus.valueOf(value)
+    @TypeConverter fun stringToFixedDepositStatus(value: String): FixedDepositStatus =
+        runCatching { FixedDepositStatus.valueOf(value) }.getOrDefault(FixedDepositStatus.ACTIVE)
     @TypeConverter fun compoundingFrequencyToString(value: CompoundingFrequency): String = value.name
     @TypeConverter fun stringToCompoundingFrequency(value: String): CompoundingFrequency =
         runCatching { CompoundingFrequency.valueOf(value) }.getOrDefault(CompoundingFrequency.QUARTERLY)

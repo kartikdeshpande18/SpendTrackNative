@@ -25,6 +25,9 @@ import com.spendtrack.app.data.local.CompoundingFrequency
 import com.spendtrack.app.data.local.FixedDepositCalculator
 import com.spendtrack.app.data.local.FixedDepositEntity
 import com.spendtrack.app.data.local.FixedDepositStatus
+import com.spendtrack.app.ui.formatIndianMoney
+import com.spendtrack.app.ui.formatEpochDate
+import com.spendtrack.app.ui.parsePaise
 import com.spendtrack.app.ui.haptics.rememberSpendTrackHaptics
 import java.time.Instant
 import java.time.LocalDate
@@ -334,15 +337,15 @@ fun FixedDepositFormScreen(
 
     val selectedAccount = accounts.getOrNull(accountIndex)
 
-    val principalPaise = ((principal.toDoubleOrNull() ?: 0.0) * 100).toLong()
+    val principalPaise = parsePaise(principal)
     val rateBps = ((interestRate.toDoubleOrNull() ?: 0.0) * 100).toInt()
-    val maturityAmountPaise = ((maturityAmount.toDoubleOrNull() ?: 0.0) * 100).toLong()
+    val maturityAmountPaise = parsePaise(maturityAmount)
 
     val calculatedMaturityAmountPaise = remember(principal, interestRate, startDateEpochDay, maturityDateEpochDay, frequency, isMatured) {
         if (isMatured && initial != null) {
             initial.maturityAmountPaise
         } else {
-            val p = ((principal.toDoubleOrNull() ?: 0.0) * 100).toLong()
+            val p = parsePaise(principal)
             val r = ((interestRate.toDoubleOrNull() ?: 0.0) * 100).toInt()
             FixedDepositCalculator.calculateMaturityAmountPaise(
                 principalPaise = p,
@@ -712,11 +715,8 @@ fun FixedDepositFormScreen(
     }
 }
 
-private fun money(paise: Long) = "₹" + String.format(Locale.US, "%,.2f", paise / 100.0)
+private fun money(paise: Long) = formatIndianMoney(paise)
 
 private fun formatMaturityAmount(paise: Long) = FixedDepositCalculator.formatMaturityAmount(paise)
 
-private fun formatDate(epochDay: Long): String = runCatching {
-    val d = LocalDate.ofEpochDay(epochDay)
-    "${d.dayOfMonth} ${d.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault())} ${d.year}"
-}.getOrDefault(LocalDate.ofEpochDay(epochDay).toString())
+private fun formatDate(epochDay: Long): String = formatEpochDate(epochDay)

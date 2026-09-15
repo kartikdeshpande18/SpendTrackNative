@@ -24,7 +24,15 @@ import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
+import androidx.compose.ui.text.style.TextOverflow
+import com.spendtrack.app.ui.spending.DateFilterType
+import com.spendtrack.app.ui.spending.TransactionDateFilter
+import com.spendtrack.app.ui.spending.CustomDateRangeDialog
+import com.spendtrack.app.ui.spending.MonthSelectorDialog
 
 import androidx.compose.runtime.*
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -70,12 +78,20 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     var route by rememberSaveable { mutableStateOf("home") }
     var overlay by rememberSaveable { mutableStateOf(Overlay.NONE) }
     var editingTransactionId by rememberSaveable { mutableLongStateOf(0L) }
+    var dashboardMonthStr by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
+    val spendingListState = rememberLazyListState()
+    var spendingQuery by rememberSaveable { mutableStateOf("") }
+    var spendingCategoryFilter by rememberSaveable { mutableStateOf<Long?>(null) }
+    var spendingDateFilterType by rememberSaveable { mutableStateOf(DateFilterType.ALL_DATES.name) }
+    var spendingCustomStartDay by rememberSaveable { mutableStateOf<Long?>(null) }
+    var spendingCustomEndDay by rememberSaveable { mutableStateOf<Long?>(null) }
+
     var floatingControlsHeightPx by remember { mutableIntStateOf(0) }
     val measuredControlsHeight = with(LocalDensity.current) { floatingControlsHeightPx.toDp() }
     val navBarsBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val estimatedControlsHeight = 72.dp + navBarsBottom
-    val floatingControlsHeight = if (measuredControlsHeight > 0.dp) measuredControlsHeight else estimatedControlsHeight
-    val bottomContentPadding = floatingControlsHeight + 24.dp
+    val minControlsHeight = 72.dp + 12.dp + navBarsBottom
+    val floatingControlsHeight = maxOf(measuredControlsHeight, minControlsHeight)
+    val bottomContentPadding = floatingControlsHeight + 28.dp
     val accounts by viewModel.accounts.collectAsState()
     val categories by viewModel.categories.collectAsState()
     val transactions by viewModel.transactions.collectAsState()
@@ -147,9 +163,49 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                             when (currentRoute) {
                                 "home" -> {
                                     val activeFdPrincipal = fixedDeposits.filter { it.status == FixedDepositStatus.ACTIVE }.sumOf { it.principalPaise }
-                                    Dashboard(transactions, accounts, categories, budgets, loans.filter { it.includeInNetWorth }.sumOf { it.currentOutstandingPaise }, owed.sumOf { if (it.direction == OwedDirection.OWED_TO_ME) it.amountPaise else -it.amountPaise }, activeFdPrincipal, bottomContentPadding, onSettings = { route = "settings" })
+                                    val currentDashboardMonth = runCatching { YearMonth.parse(dashboardMonthStr) }.getOrDefault(YearMonth.now())
+                                    Dashboard(
+                                        transactions = transactions,
+                                        accounts = accounts,
+                                        categories = categories,
+                                        budgets = budgets,
+                                        loans = loans.filter { it.includeInNetWorth }.sumOf { it.currentOutstandingPaise },
+                                        owed = owed.sumOf { if (it.direction == OwedDirection.OWED_TO_ME) it.amountPaise else -it.amountPaise },
+                                        activeFdPrincipal = activeFdPrincipal,
+                                        bottomContentPadding = bottomContentPadding,
+                                        selectedMonth = currentDashboardMonth,
+                                        onMonthSelected = { dashboardMonthStr = it.toString() },
+                                        onSettings = { route = "settings" }
+                                    )
                                 }
-                                "spending" -> Spending(transactions, categories, accounts, viewModel::deleteTransaction, bottomContentPadding, onEdit = { editingTransactionId = it.id; overlay = Overlay.EDIT_TRANSACTION }, onSettings = { route = "settings" })
+                                "spending" -> {
+                                    val currentFilterType = runCatching { DateFilterType.valueOf(spendingDateFilterType) }.getOrDefault(DateFilterType.ALL_DATES)
+                                    val currentDateFilter = TransactionDateFilter(
+                                        type = currentFilterType,
+                                        customStartDateEpochDay = spendingCustomStartDay,
+                                        customEndDateEpochDay = spendingCustomEndDay
+                                    )
+                                    Spending(
+                                        transactions = transactions,
+                                        categories = categories,
+                                        accounts = accounts,
+                                        remove = viewModel::deleteTransaction,
+                                        bottomContentPadding = bottomContentPadding,
+                                        listState = spendingListState,
+                                        query = spendingQuery,
+                                        onQueryChange = { spendingQuery = it },
+                                        categoryFilter = spendingCategoryFilter,
+                                        onCategoryFilterChange = { spendingCategoryFilter = it },
+                                        dateFilter = currentDateFilter,
+                                        onDateFilterChange = { newFilter ->
+                                            spendingDateFilterType = newFilter.type.name
+                                            spendingCustomStartDay = newFilter.customStartDateEpochDay
+                                            spendingCustomEndDay = newFilter.customEndDateEpochDay
+                                        },
+                                        onEdit = { editingTransactionId = it.id; overlay = Overlay.EDIT_TRANSACTION },
+                                        onSettings = { route = "settings" }
+                                    )
+                                }
                                 "accounts" -> AccountsScreen(
                                     accounts = accounts,
                                     bottomContentPadding = bottomContentPadding,
@@ -331,17 +387,32 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     owed: Long,
     activeFdPrincipal: Long,
     bottomContentPadding: Dp,
+    selectedMonth: YearMonth,
+    onMonthSelected: (YearMonth) -> Unit,
     onSettings: () -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
-    val month = YearMonth.now()
-    val inMonth = transactions.filter { YearMonth.from(LocalDate.ofEpochDay(it.dateEpochDay)) == month }
+    var showMonthPicker by remember { mutableStateOf(false) }
+    val isCurrentMonth = selectedMonth == YearMonth.now()
+    val inMonth = transactions.filter { YearMonth.from(LocalDate.ofEpochDay(it.dateEpochDay)) == selectedMonth }
     val spending = inMonth.filter { it.type == TransactionType.EXPENSE }.sumOf { it.mySharePaise ?: it.amountPaise }
     val income = inMonth.filter { it.type == TransactionType.INCOME }.sumOf { it.amountPaise }
     val cash = accounts.filterNot { it.isCreditCard }.sumOf { it.balancePaise }
     val availableSavings = SavingsCalculator.calculateAvailableSavingsPaise(accounts)
     val cards = accounts.filter { it.isCreditCard }.sumOf { it.balancePaise }
-    val topBudgets = TopBudgetsCalculator.calculateTopBudgetCategories(budgets, categories, transactions, month.toString())
+    val topBudgets = TopBudgetsCalculator.calculateTopBudgetCategories(budgets, categories, transactions, selectedMonth.toString())
+
+    if (showMonthPicker) {
+        MonthSelectorDialog(
+            selectedMonth = selectedMonth,
+            onDismiss = { showMonthPicker = false },
+            onSelectMonth = { newMonth ->
+                onMonthSelected(newMonth)
+                showMonthPicker = false
+            }
+        )
+    }
+
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp), contentPadding = PaddingValues(top = 8.dp, bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(
@@ -351,7 +422,31 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
             ) {
                 Column {
                     Text("SpendTrack", style = MaterialTheme.typography.displaySmall)
-                    Text(displayMonth(month), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Surface(
+                        onClick = {
+                            haptics.selection()
+                            showMonthPicker = true
+                        },
+                        shape = MaterialTheme.shapes.small,
+                        color = Color.Transparent
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = displayMonth(selectedMonth),
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = "Select Month",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
                 }
                 IconButton(onClick = { haptics.selection(); onSettings() }) {
                     Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -359,9 +454,10 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
             }
         }
         item { SummaryCard("Net Worth", money(cash + activeFdPrincipal + owed - cards - loans), "") }
-        item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric("This Month", money(spending), Modifier.weight(1f)); SmallMetric("Income", money(income), Modifier.weight(1f)) } }
+        item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric(if (isCurrentMonth) "This Month" else "Spending", money(spending), Modifier.weight(1f)); SmallMetric("Income", money(income), Modifier.weight(1f)) } }
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric("Savings", money(availableSavings), Modifier.weight(1f)); SmallMetric("Card Dues", money(cards), Modifier.weight(1f)) } }
         item { CategorySpendingDonut(inMonth, categories) }
+        item { DailyTransactionBarChart(transactions, selectedMonth = selectedMonth) }
         item { Text("Top 3 Budget Categories", style = MaterialTheme.typography.titleLarge) }
         if (topBudgets.isEmpty()) {
             item { TopBudgetCategoriesEmptyCard() }
@@ -370,23 +466,16 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 TopBudgetCategoryCard(item)
             }
         }
-        item { DailyTransactionBarChart(transactions) }
         item { Text("Recent Transactions", style = MaterialTheme.typography.titleLarge) }
         if (transactions.isEmpty()) {
-            item { SummaryCard("No transactions yet", "", "Tap + to record one") }
+            item { SummaryCard("No Transactions Yet", "", "Tap + to record your first transaction") }
         } else {
             items(transactions.take(5), key = { it.id }) { t ->
-                val isTransfer = t.type == TransactionType.TRANSFER
-                val dateText = formatDate(t.dateEpochDay)
-                if (isTransfer) {
-                    val src = accounts.find { it.id == t.accountId }?.name ?: "Account"
-                    val dst = accounts.find { it.id == t.destinationAccountId }?.name ?: "Account"
-                    val desc = if (t.description.isNotBlank()) " · ${t.description}" else ""
-                    SummaryCard("Transfer: $src → $dst", money(t.amountPaise), "$dateText$desc")
-                } else {
-                    val prefix = if (t.type == TransactionType.INCOME) "+" else "−"
-                    SummaryCard(t.description.ifBlank { "Transaction" }, prefix + money(t.amountPaise), dateText)
-                }
+                TransactionCard(
+                    transaction = t,
+                    accounts = accounts,
+                    categories = categories
+                )
             }
         }
     }
@@ -398,34 +487,63 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     accounts: List<AccountEntity>,
     remove: (Long) -> Unit,
     bottomContentPadding: Dp,
+    listState: LazyListState,
+    query: String,
+    onQueryChange: (String) -> Unit,
+    categoryFilter: Long?,
+    onCategoryFilterChange: (Long?) -> Unit,
+    dateFilter: TransactionDateFilter,
+    onDateFilterChange: (TransactionDateFilter) -> Unit,
     onEdit: (TransactionEntity) -> Unit,
     onSettings: () -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
-    var query by remember { mutableStateOf("") }
-    var categoryFilter by remember { mutableStateOf<Long?>(null) }
-    var filterExpanded by remember { mutableStateOf(false) }
-    var monthFilter by remember { mutableStateOf<String?>(null) }
-    var monthExpanded by remember { mutableStateOf(false) }
-    val months = transactions.map { YearMonth.from(LocalDate.ofEpochDay(it.dateEpochDay)).toString() }.distinct().sortedDescending()
-    val visible = transactions.filter { transaction ->
-        (categoryFilter == null || (transaction.type != TransactionType.TRANSFER && transaction.categoryId == categoryFilter)) &&
-            (monthFilter == null || YearMonth.from(LocalDate.ofEpochDay(transaction.dateEpochDay)).toString() == monthFilter) &&
-            (query.isBlank() ||
-                transaction.description.contains(query, ignoreCase = true) ||
-                (transaction.type != TransactionType.TRANSFER && categories.find { it.id == transaction.categoryId }?.name?.contains(query, ignoreCase = true) == true) ||
-                (transaction.type == TransactionType.TRANSFER && (
-                    "transfer".contains(query, ignoreCase = true) ||
-                    accounts.find { it.id == transaction.accountId }?.name?.contains(query, ignoreCase = true) == true ||
-                    accounts.find { it.id == transaction.destinationAccountId }?.name?.contains(query, ignoreCase = true) == true
-                ))
-            )
+    var categoryExpanded by remember { mutableStateOf(false) }
+    var dateExpanded by remember { mutableStateOf(false) }
+    var showCustomDateRangeDialog by remember { mutableStateOf(false) }
+
+    val visible = remember(transactions, query, categoryFilter, dateFilter, categories, accounts) {
+        TransactionDateFilter.filterTransactions(
+            transactions = transactions,
+            categoryFilter = categoryFilter,
+            dateFilter = dateFilter,
+            query = query,
+            categories = categories,
+            accounts = accounts
+        )
     }
-    val classification = transactions.filter { transaction ->
-        (categoryFilter == null || transaction.categoryId == categoryFilter) &&
-            (monthFilter == null || YearMonth.from(LocalDate.ofEpochDay(transaction.dateEpochDay)).toString() == monthFilter)
+    val classification = remember(transactions, categoryFilter, dateFilter) {
+        TransactionDateFilter.filterForChart(
+            transactions = transactions,
+            categoryFilter = categoryFilter,
+            dateFilter = dateFilter
+        )
     }
-    LazyColumn(Modifier.fillMaxSize().padding(20.dp), contentPadding = PaddingValues(bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+
+    if (showCustomDateRangeDialog) {
+        CustomDateRangeDialog(
+            initialStartEpochDay = dateFilter.customStartDateEpochDay,
+            initialEndEpochDay = dateFilter.customEndDateEpochDay,
+            onDismiss = { showCustomDateRangeDialog = false },
+            onApply = { startEpochDay, endEpochDay ->
+                onDateFilterChange(
+                    TransactionDateFilter(
+                        type = DateFilterType.CUSTOM_RANGE,
+                        customStartDateEpochDay = startEpochDay,
+                        customEndDateEpochDay = endEpochDay
+                    )
+                )
+                showCustomDateRangeDialog = false
+            }
+        )
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = bottomContentPadding),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
         item {
             Row(
                 Modifier.fillMaxWidth(),
@@ -438,57 +556,282 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 }
             }
         }
-        item { OutlinedTextField(query, { query = it }, Modifier.fillMaxWidth(), label = { Text("Search transactions") }, singleLine = true, shape = MaterialTheme.shapes.large) }
+        item {
+            OutlinedTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Search Transactions") },
+                singleLine = true,
+                shape = MaterialTheme.shapes.large
+            )
+        }
         item { IncomeVsExpenseChart(classification) }
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Box {
-                    FilterChip(selected = categoryFilter != null, onClick = { haptics.selection(); filterExpanded = true }, label = { Text(categories.find { it.id == categoryFilter }?.name ?: "All categories", maxLines = 1) })
-                    DropdownMenu(filterExpanded, { filterExpanded = false }) {
-                        DropdownMenuItem({ Text("All categories") }, { haptics.selection(); categoryFilter = null; filterExpanded = false })
-                        categories.filterNot { it.isIncomeCategory }.forEach { category -> DropdownMenuItem({ Text(category.name) }, { haptics.selection(); categoryFilter = category.id; filterExpanded = false }) }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(Modifier.weight(1f)) {
+                    FilterChip(
+                        selected = categoryFilter != null,
+                        onClick = { haptics.selection(); categoryExpanded = true },
+                        label = {
+                            Text(
+                                categories.find { it.id == categoryFilter }?.name ?: "All Categories",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        trailingIcon = {
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DropdownMenu(
+                        expanded = categoryExpanded,
+                        onDismissRequest = { categoryExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("All Categories") },
+                            onClick = {
+                                haptics.selection()
+                                onCategoryFilterChange(null)
+                                categoryExpanded = false
+                            }
+                        )
+                        categories.filterNot { it.isIncomeCategory }.forEach { category ->
+                            DropdownMenuItem(
+                                text = { Text(category.name) },
+                                onClick = {
+                                    haptics.selection()
+                                    onCategoryFilterChange(category.id)
+                                    categoryExpanded = false
+                                }
+                            )
+                        }
                     }
                 }
-                Box {
-                    FilterChip(selected = monthFilter != null, onClick = { haptics.selection(); monthExpanded = true }, label = { Text(monthFilter?.let { displayMonth(it) } ?: "All months", maxLines = 1) })
-                    DropdownMenu(monthExpanded, { monthExpanded = false }) {
-                        DropdownMenuItem({ Text("All months") }, { haptics.selection(); monthFilter = null; monthExpanded = false })
-                        months.forEach { month -> DropdownMenuItem({ Text(displayMonth(month)) }, { haptics.selection(); monthFilter = month; monthExpanded = false }) }
+                Box(Modifier.weight(1f)) {
+                    FilterChip(
+                        selected = dateFilter.type != DateFilterType.ALL_DATES,
+                        onClick = { haptics.selection(); dateExpanded = true },
+                        label = {
+                            Text(
+                                dateFilter.label(),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        trailingIcon = {
+                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DropdownMenu(
+                        expanded = dateExpanded,
+                        onDismissRequest = { dateExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("All Dates") },
+                            onClick = {
+                                haptics.selection()
+                                onDateFilterChange(TransactionDateFilter(DateFilterType.ALL_DATES))
+                                dateExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("This Month") },
+                            onClick = {
+                                haptics.selection()
+                                onDateFilterChange(TransactionDateFilter(DateFilterType.THIS_MONTH))
+                                dateExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Last 7 Days") },
+                            onClick = {
+                                haptics.selection()
+                                onDateFilterChange(TransactionDateFilter(DateFilterType.LAST_7_DAYS))
+                                dateExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Last 30 Days") },
+                            onClick = {
+                                haptics.selection()
+                                onDateFilterChange(TransactionDateFilter(DateFilterType.LAST_30_DAYS))
+                                dateExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Custom Range…") },
+                            onClick = {
+                                haptics.selection()
+                                dateExpanded = false
+                                showCustomDateRangeDialog = true
+                            }
+                        )
                     }
                 }
             }
         }
-        if (visible.isEmpty()) item { SummaryCard(if (transactions.isEmpty()) "No transactions yet" else "No matches", "", "") }
+        if (visible.isEmpty()) {
+            item {
+                SummaryCard(
+                    if (transactions.isEmpty()) "No Transactions Yet" else "No Matching Transactions",
+                    "",
+                    if (transactions.isEmpty()) "Tap + to record your first transaction" else "Try adjusting your search or filters"
+                )
+            }
+        }
         items(visible, key = { it.id }) { t ->
-            val isTransfer = t.type == TransactionType.TRANSFER
-            val dateText = formatDate(t.dateEpochDay)
-            Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-                Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        if (isTransfer) {
-                            val src = accounts.find { it.id == t.accountId }?.name ?: "Account"
-                            val dst = accounts.find { it.id == t.destinationAccountId }?.name ?: "Account"
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Transfer", style = MaterialTheme.typography.titleMedium)
-                                Text(money(t.amountPaise), style = MaterialTheme.typography.titleLarge)
-                            }
-                            Text("$src → $dst", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
-                            Text(dateText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (t.description.isNotBlank()) {
-                                Text(t.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            }
-                        } else {
-                            val prefix = if (t.type == TransactionType.INCOME) "+" else "−"
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text(t.description.ifBlank { "Transaction" }, style = MaterialTheme.typography.titleMedium)
-                                Text(prefix + money(t.amountPaise), style = MaterialTheme.typography.titleLarge)
-                            }
-                            Text("${categories.find { it.id == t.categoryId }?.name ?: "Other"} · ${accounts.find { it.id == t.accountId }?.name ?: "Account"} · $dateText", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TransactionCard(
+                transaction = t,
+                accounts = accounts,
+                categories = categories,
+                onEdit = onEdit,
+                onDelete = remove
+            )
+        }
+    }
+}
+
+@Composable
+fun TransactionCard(
+    transaction: TransactionEntity,
+    accounts: List<AccountEntity>,
+    categories: List<CategoryEntity>,
+    modifier: Modifier = Modifier,
+    onEdit: ((TransactionEntity) -> Unit)? = null,
+    onDelete: ((Long) -> Unit)? = null,
+) {
+    val haptics = rememberSpendTrackHaptics()
+    val isTransfer = transaction.type == TransactionType.TRANSFER
+    val isIncome = transaction.type == TransactionType.INCOME
+    val dateText = formatDate(transaction.dateEpochDay)
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.extraLarge,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    start = 18.dp,
+                    top = 16.dp,
+                    end = if (onEdit != null || onDelete != null) 10.dp else 18.dp,
+                    bottom = 16.dp
+                ),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(end = if (onEdit != null || onDelete != null) 8.dp else 0.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Primary line: description/type yields space first, amount gets guaranteed width
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val title = if (isTransfer) "Transfer" else transaction.description.ifBlank { "Transaction" }
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .padding(end = 12.dp)
+                    )
+                    val absPaise = Math.abs(transaction.amountPaise)
+                    val amountText = when {
+                        isTransfer -> money(absPaise)
+                        isIncome -> "+${money(absPaise)}"
+                        else -> "−${money(absPaise)}"
+                    }
+                    val amountColor = when {
+                        isTransfer -> MaterialTheme.colorScheme.secondary
+                        isIncome -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+                    Text(
+                        text = amountText,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = amountColor,
+                        maxLines = 1,
+                        softWrap = false
+                    )
+                }
+
+                // Secondary line: transfer route or category/account/date
+                if (isTransfer) {
+                    val src = accounts.find { it.id == transaction.accountId }?.name ?: "Account"
+                    val dst = accounts.find { it.id == transaction.destinationAccountId }?.name ?: "Account"
+                    Text(
+                        text = "$src → $dst",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    val metadata = if (transaction.description.isNotBlank()) "$dateText · ${transaction.description}" else dateText
+                    Text(
+                        text = metadata,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else {
+                    val cat = categories.find { it.id == transaction.categoryId }?.name ?: "Other"
+                    val acc = accounts.find { it.id == transaction.accountId }?.name ?: "Account"
+                    Text(
+                        text = "$cat · $acc · $dateText",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            if (onEdit != null || onDelete != null) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    if (onEdit != null) {
+                        IconButton(
+                            onClick = { haptics.click(); onEdit(transaction) },
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Edit,
+                                contentDescription = "Edit transaction",
+                                tint = LocalContentColor.current,
+                                modifier = Modifier.size(20.dp)
+                            )
                         }
                     }
-                    Column {
-                        ActionIcon(Icons.Default.Edit, "Edit transaction") { haptics.click(); onEdit(t) }
-                        ActionIcon(Icons.Default.Delete, "Delete transaction", MaterialTheme.colorScheme.error) { haptics.reject(); remove(t.id) }
+                    if (onDelete != null) {
+                        IconButton(
+                            onClick = { haptics.reject(); onDelete(transaction.id) },
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete transaction",
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -726,8 +1069,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 }
                 Button(onClick = {
                     haptics.confirm()
-                    val parsedMin = if (!card) ((minBalance.toDoubleOrNull() ?: 0.0) * 100).toLong().coerceAtLeast(0L) else 0L
-                    onAdd(name.trim(), card, ((opening.toDoubleOrNull() ?: 0.0) * 100).toLong(), lastFour, ((limit.toDoubleOrNull() ?: 0.0) * 100).toLong().takeIf { card && it > 0 }, cycle.toIntOrNull()?.takeIf { card && it in 1..31 }, due.toIntOrNull()?.takeIf { card && it in 1..31 }, parsedMin)
+                    val parsedMin = if (!card) parsePaise(minBalance).coerceAtLeast(0L) else 0L
+                    onAdd(name.trim(), card, parsePaise(opening), lastFour, parsePaise(limit).takeIf { card && it > 0 }, cycle.toIntOrNull()?.takeIf { card && it in 1..31 }, due.toIntOrNull()?.takeIf { card && it in 1..31 }, parsedMin)
                     name = ""; opening = ""; minBalance = ""; card = false; lastFour = ""; limit = ""; cycle = ""; due = ""; adding = false
                 }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Save") }
             } }
@@ -838,13 +1181,13 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                         TextButton(
                             onClick = {
                                 haptics.confirm()
-                                val parsedMin = if (!account.isCreditCard) ((minBalance.toDoubleOrNull() ?: 0.0) * 100).toLong().coerceAtLeast(0L) else 0L
+                                val parsedMin = if (!account.isCreditCard) parsePaise(minBalance).coerceAtLeast(0L) else 0L
                                 onSave(
                                     account.copy(
                                         name = name.trim(),
-                                        balancePaise = ((balance.toDoubleOrNull() ?: 0.0) * 100).toLong(),
+                                        balancePaise = parsePaise(balance),
                                         maskedNumber = lastFour,
-                                        creditLimitPaise = ((limit.toDoubleOrNull() ?: 0.0) * 100).toLong().takeIf { account.isCreditCard && it > 0 },
+                                        creditLimitPaise = parsePaise(limit).takeIf { account.isCreditCard && it > 0 },
                                         statementCycleDay = cycle.toIntOrNull()?.takeIf { account.isCreditCard && it in 1..31 },
                                         dueDay = due.toIntOrNull()?.takeIf { account.isCreditCard && it in 1..31 },
                                         minimumBalancePaise = parsedMin
@@ -913,7 +1256,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                     DropdownMenu(categoryMenu, { categoryMenu = false }) { expenseCategories.forEachIndexed { index, category -> DropdownMenuItem({ Text(category.name) }, { haptics.selection(); categoryIndex = index; categoryMenu = false }) } }
                 }
                 OutlinedTextField(limit, { limit = it }, Modifier.fillMaxWidth(), label = { Text("Monthly limit (₹)") }, singleLine = true)
-                Button(onClick = { haptics.confirm(); expenseCategories.getOrNull(categoryIndex)?.let { onSave(it.id, month, ((limit.toDoubleOrNull() ?: 0.0) * 100).toLong()); limit = ""; adding = false } }, enabled = limit.toDoubleOrNull()?.let { it > 0 } == true && expenseCategories.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Save Budget") }
+                Button(onClick = { haptics.confirm(); expenseCategories.getOrNull(categoryIndex)?.let { onSave(it.id, month, parsePaise(limit)); limit = ""; adding = false } }, enabled = parsePaise(limit) > 0 && expenseCategories.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Save Budget") }
             } }
         } else item { Button({ haptics.click(); adding = true }, Modifier.fillMaxWidth()) { Text("Add Budget") } }
         if (current.isEmpty()) item { SummaryCard("No Budgets", "", "") }
@@ -943,7 +1286,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     val haptics = rememberSpendTrackHaptics()
     var name by remember(loan.id) { mutableStateOf(loan.name) }
     var repayment by remember(loan.id) { mutableStateOf("") }
-    val repaymentPaise = ((repayment.toDoubleOrNull() ?: 0.0) * 100).toLong().coerceAtMost(loan.currentOutstandingPaise)
+    val repaymentPaise = parsePaise(repayment).coerceAtMost(loan.currentOutstandingPaise)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Manage Loan") },
@@ -984,7 +1327,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     var person by remember(owed.id) { mutableStateOf(owed.personName) }
     var note by remember(owed.id) { mutableStateOf(owed.note) }
     var settlement by remember(owed.id) { mutableStateOf("") }
-    val settlementPaise = ((settlement.toDoubleOrNull() ?: 0.0) * 100).toLong().coerceAtMost(owed.amountPaise)
+    val settlementPaise = parsePaise(settlement).coerceAtMost(owed.amountPaise)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Manage Owed Entry") },
@@ -1066,7 +1409,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     var interest by remember { mutableStateOf("") }; var emi by remember { mutableStateOf("") }; var tenure by remember { mutableStateOf("") }; var includeNetWorth by remember { mutableStateOf(true) }
     var dueEpochDay by remember { mutableLongStateOf(LocalDate.now().plusMonths(1).toEpochDay()) }
     var showDatePicker by remember { mutableStateOf(false) }
-    val toPaise = { value: String -> ((value.toDoubleOrNull() ?: 0.0) * 100).toLong() }
+    val toPaise = { value: String -> parsePaise(value) }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Add Loan", style = MaterialTheme.typography.displaySmall)
         OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Loan name") }, singleLine = true)
@@ -1088,7 +1431,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
 @Composable private fun AddOwedScreen(onBack: () -> Unit, onSave: (OwedEntity) -> Unit) {
     val haptics = rememberSpendTrackHaptics()
     var person by remember { mutableStateOf("") }; var amount by remember { mutableStateOf("") }; var note by remember { mutableStateOf("") }; var owesMe by remember { mutableStateOf(true) }
-    val paise = ((amount.toDoubleOrNull() ?: 0.0) * 100).toLong()
+    val paise = parsePaise(amount)
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Add Owed Entry", style = MaterialTheme.typography.displaySmall)
         OutlinedTextField(person, { person = it }, Modifier.fillMaxWidth(), label = { Text("Person") }, singleLine = true)
@@ -1107,7 +1450,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     var cardMenu by remember { mutableStateOf(false) }; var sourceMenu by remember { mutableStateOf(false) }
     var fullPayment by remember { mutableStateOf(true) }; var amount by remember { mutableStateOf("") }
     val card = cards.getOrNull(cardIndex); val source = sources.getOrNull(sourceIndex)
-    val amountPaise = if (fullPayment) card?.balancePaise ?: 0 else ((amount.toDoubleOrNull() ?: 0.0) * 100).toLong()
+    val amountPaise = if (fullPayment) card?.balancePaise ?: 0 else parsePaise(amount)
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Pay Card Bill", style = MaterialTheme.typography.displaySmall)
         Box(Modifier.fillMaxWidth()) {
@@ -1127,10 +1470,31 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         Button(onClick = { haptics.confirm(); onPay(card!!.id, source!!.id, amountPaise) }, enabled = card != null && source != null && amountPaise in 1..(card?.balancePaise ?: 0), modifier = Modifier.fillMaxWidth()) { Text("Pay Bill") }
     }
 }
-private fun money(paise: Long) = "₹" + String.format(Locale.US, "%,.2f", paise / 100.0)
+
+fun formatIndianMoney(paise: Long): String {
+    val absPaise = Math.abs(paise)
+    val rupees = absPaise / 100
+    val remPaise = absPaise % 100
+    val paiseStr = String.format(Locale.US, "%02d", remPaise)
+    val rupeeStr = rupees.toString()
+    val formattedRupees = if (rupeeStr.length <= 3) {
+        rupeeStr
+    } else {
+        val lastThree = rupeeStr.takeLast(3)
+        val rest = rupeeStr.dropLast(3)
+        val sb = StringBuilder()
+        for (i in rest.indices) {
+            if (i > 0 && (rest.length - i) % 2 == 0) {
+                sb.append(',')
+            }
+            sb.append(rest[i])
+        }
+        sb.append(',').append(lastThree).toString()
+    }
+    return (if (paise < 0) "−" else "") + "₹" + formattedRupees + "." + paiseStr
+}
+
+fun money(paise: Long): String = formatIndianMoney(paise)
 private fun displayMonth(ym: YearMonth): String = "${ym.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.getDefault())} ${ym.year}"
 private fun displayMonth(ymString: String): String = runCatching { displayMonth(YearMonth.parse(ymString)) }.getOrDefault(ymString)
-private fun formatDate(epochDay: Long): String = runCatching {
-    val d = LocalDate.ofEpochDay(epochDay)
-    "${d.dayOfMonth} ${d.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault())} ${d.year}"
-}.getOrDefault(LocalDate.ofEpochDay(epochDay).toString())
+private fun formatDate(epochDay: Long): String = formatEpochDate(epochDay)

@@ -52,7 +52,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
     companion object {
         private const val CHANNEL_ID = "spendtrack_reminders"
         fun schedule(context: Context) {
-            WorkManager.getInstance(context).enqueueUniquePeriodicWork("spendtrack-reminders", ExistingPeriodicWorkPolicy.UPDATE, PeriodicWorkRequestBuilder<ReminderWorker>(1, TimeUnit.DAYS).build())
+            WorkManager.getInstance(context).enqueueUniquePeriodicWork("spendtrack-reminders", ExistingPeriodicWorkPolicy.KEEP, PeriodicWorkRequestBuilder<ReminderWorker>(1, TimeUnit.DAYS).build())
         }
     }
 }
