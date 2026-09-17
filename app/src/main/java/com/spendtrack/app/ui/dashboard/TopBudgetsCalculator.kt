@@ -56,6 +56,7 @@ object TopBudgetsCalculator {
         monthKey: String = YearMonth.now().toString()
     ): List<TopBudgetItem> {
         val currentBudgets = budgets.filter { it.monthKey == monthKey && it.limitPaise > 0L }
+            .distinctBy { it.categoryId }
         if (currentBudgets.isEmpty()) return emptyList()
 
         val items = currentBudgets.mapNotNull { budget ->

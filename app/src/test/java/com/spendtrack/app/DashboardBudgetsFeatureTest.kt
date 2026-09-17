@@ -300,4 +300,27 @@ class DashboardBudgetsFeatureTest {
         assertEquals("₹10,000", TopBudgetsCalculator.formatCompactMoney(10000_00L))
         assertEquals("₹2,450.50", TopBudgetsCalculator.formatCompactMoney(2450_50L))
     }
+
+    // 11. Deduplicates multiple budgets for the same category in the same month
+    @Test
+    fun testDeduplicateBudgetsWithSameCategory() {
+        val cat = CategoryEntity(id = 1L, name = "Food")
+        val budgets = listOf(
+            BudgetEntity(id = 101L, categoryId = 1L, monthKey = monthKey, limitPaise = 5000_00L),
+            BudgetEntity(id = 102L, categoryId = 1L, monthKey = monthKey, limitPaise = 10000_00L),
+        )
+        val transactions = listOf(
+            TransactionEntity(id = 1L, description = "Lunch", accountId = 1L, categoryId = 1L, amountPaise = 2000_00L, type = TransactionType.EXPENSE, dateEpochDay = dateEpoch)
+        )
+
+        val result = TopBudgetsCalculator.calculateTopBudgetCategories(
+            budgets = budgets,
+            categories = listOf(cat),
+            transactions = transactions,
+            monthKey = monthKey
+        )
+
+        assertEquals(1, result.size)
+        assertEquals(1L, result[0].categoryId)
+    }
 }

@@ -100,7 +100,6 @@ fun RecurringTransactionsScreen(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Add recurring schedule")
                 Text("Add Recurring Schedule")
             }
         }

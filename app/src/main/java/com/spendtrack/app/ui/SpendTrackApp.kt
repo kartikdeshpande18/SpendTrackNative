@@ -82,7 +82,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     val spendingListState = rememberLazyListState()
     var spendingQuery by rememberSaveable { mutableStateOf("") }
     var spendingCategoryFilter by rememberSaveable { mutableStateOf<Long?>(null) }
-    var spendingDateFilterType by rememberSaveable { mutableStateOf(DateFilterType.ALL_DATES.name) }
+    var spendingDateFilterType by rememberSaveable { mutableStateOf(DateFilterType.THIS_MONTH.name) }
     var spendingCustomStartDay by rememberSaveable { mutableStateOf<Long?>(null) }
     var spendingCustomEndDay by rememberSaveable { mutableStateOf<Long?>(null) }
 
@@ -179,7 +179,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                                     )
                                 }
                                 "spending" -> {
-                                    val currentFilterType = runCatching { DateFilterType.valueOf(spendingDateFilterType) }.getOrDefault(DateFilterType.ALL_DATES)
+                                    val currentFilterType = runCatching { DateFilterType.valueOf(spendingDateFilterType) }.getOrDefault(DateFilterType.THIS_MONTH)
                                     val currentDateFilter = TransactionDateFilter(
                                         type = currentFilterType,
                                         customStartDateEpochDay = spendingCustomStartDay,
@@ -462,7 +462,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         if (topBudgets.isEmpty()) {
             item { TopBudgetCategoriesEmptyCard() }
         } else {
-            items(topBudgets, key = { it.categoryId }) { item ->
+            items(topBudgets, key = { "top_budget_${it.categoryId}" }) { item ->
                 TopBudgetCategoryCard(item)
             }
         }
@@ -470,7 +470,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         if (transactions.isEmpty()) {
             item { SummaryCard("No Transactions Yet", "", "Tap + to record your first transaction") }
         } else {
-            items(transactions.take(5), key = { it.id }) { t ->
+            items(transactions.take(5), key = { "recent_tx_${it.id}" }) { t ->
                 TransactionCard(
                     transaction = t,
                     accounts = accounts,
@@ -871,10 +871,10 @@ fun TransactionCard(
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric("Owed to you", money(owedToMe), Modifier.weight(1f)); SmallMetric("You owe", money(iOwe), Modifier.weight(1f)) } }
         item { Text("Loans", style = MaterialTheme.typography.titleLarge) }
         if (loans.isEmpty()) item { SummaryCard("No loans", "", "") }
-        items(loans, key = { it.id }) { loan -> LoanCard(loan) { haptics.click(); managingLoan = loan } }
+        items(loans, key = { "loan_${it.id}" }) { loan -> LoanCard(loan) { haptics.click(); managingLoan = loan } }
         item { Text("People", style = MaterialTheme.typography.titleLarge) }
         if (owed.isEmpty()) item { SummaryCard("No owed entries", "", "") }
-        items(owed, key = { it.id }) { entry -> ManageableCard(entry.personName, money(entry.amountPaise), if (entry.direction == OwedDirection.OWED_TO_ME) "Owes you" else "You owe") { haptics.click(); managingOwed = entry } }
+        items(owed, key = { "owed_${it.id}" }) { entry -> ManageableCard(entry.personName, money(entry.amountPaise), if (entry.direction == OwedDirection.OWED_TO_ME) "Owes you" else "You owe") { haptics.click(); managingOwed = entry } }
     }
     managingLoan?.let { loan -> LoanManageDialog(loan, onDismiss = { managingLoan = null }, onSave = { haptics.confirm(); onUpdateLoan(it); managingLoan = null }, onDelete = { haptics.reject(); onDeleteLoan(loan); managingLoan = null }) }
     managingOwed?.let { entry -> OwedManageDialog(entry, onDismiss = { managingOwed = null }, onSave = { haptics.confirm(); onUpdateOwed(it); managingOwed = null }, onDelete = { haptics.reject(); onDeleteOwed(entry); managingOwed = null }, onSettle = { amount -> haptics.confirm(); onSettleOwed(entry, amount); managingOwed = null }) }

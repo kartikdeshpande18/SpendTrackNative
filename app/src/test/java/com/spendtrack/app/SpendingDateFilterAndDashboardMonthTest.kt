@@ -43,6 +43,43 @@ class SpendingDateFilterAndDashboardMonthTest {
     // =========================================================================
 
     @Test
+    fun testInitialDefaultSpendingDateFilterIsThisMonth() {
+        val defaultFilter = TransactionDateFilter()
+        assertEquals(
+            "Default date filter on first entry must be THIS_MONTH",
+            DateFilterType.THIS_MONTH,
+            defaultFilter.type
+        )
+        assertEquals("This Month", defaultFilter.label(referenceToday))
+
+        // When transactions exist across different months:
+        val txThisMonth = createTx(1, TransactionType.EXPENSE, 100_00L, LocalDate.of(2026, 9, 10))
+        val txLastMonth = createTx(2, TransactionType.EXPENSE, 200_00L, LocalDate.of(2026, 8, 20))
+        val txNextMonth = createTx(3, TransactionType.EXPENSE, 300_00L, LocalDate.of(2026, 10, 5))
+        val txs = listOf(txThisMonth, txLastMonth, txNextMonth)
+
+        // List immediately uses This Month
+        val filteredList = TransactionDateFilter.filterTransactions(
+            transactions = txs,
+            categoryFilter = null,
+            dateFilter = defaultFilter,
+            today = referenceToday
+        )
+        assertEquals(1, filteredList.size)
+        assertEquals(1L, filteredList.first().id)
+
+        // Chart immediately uses This Month
+        val filteredChart = TransactionDateFilter.filterForChart(
+            transactions = txs,
+            categoryFilter = null,
+            dateFilter = defaultFilter,
+            today = referenceToday
+        )
+        assertEquals(1, filteredChart.size)
+        assertEquals(1L, filteredChart.first().id)
+    }
+
+    @Test
     fun testAllDates_includesAllTransactions() {
         val filter = TransactionDateFilter(DateFilterType.ALL_DATES)
         val txs = listOf(

@@ -18,7 +18,7 @@ enum class DateFilterType {
 }
 
 data class TransactionDateFilter(
-    val type: DateFilterType = DateFilterType.ALL_DATES,
+    val type: DateFilterType = DateFilterType.THIS_MONTH,
     val customStartDateEpochDay: Long? = null,
     val customEndDateEpochDay: Long? = null,
 ) {

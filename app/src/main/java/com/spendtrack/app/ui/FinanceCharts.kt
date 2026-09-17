@@ -233,8 +233,10 @@ fun DailyTransactionBarChart(
                 val barProgress = animatable.value
 
                 Canvas(Modifier.fillMaxWidth().height(200.dp)) {
+                    if (size.width <= 0f || size.height <= 0f || values.isEmpty()) return@Canvas
                     val gap = 10.dp.toPx()
                     val barWidth = (size.width - gap * (values.size - 1)) / values.size
+                    if (barWidth <= 0f) return@Canvas
                     val baseline = size.height - 24.dp.toPx()
                     val chartTop = 48.dp.toPx()
                     val labelAlpha = ((barProgress - 0.35f) / 0.65f).coerceIn(0f, 1f)
@@ -304,7 +306,15 @@ fun DailyTransactionBarChart(
                         )
                     }
                 }
-                Text("${dates.first().format(labelFormatter)} – ${dates.last().format(labelFormatter)}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                if (dates.isNotEmpty()) {
+                    Text(
+                        "${dates.first().format(labelFormatter)} – ${dates.last().format(labelFormatter)}",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
             }
         }
     }
