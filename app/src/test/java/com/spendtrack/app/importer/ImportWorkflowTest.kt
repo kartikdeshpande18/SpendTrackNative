@@ -645,6 +645,111 @@ class ImportWorkflowTest {
     }
 
     // -------------------------------------------------------------------------
+    // REGRESSION TEST: Credit card repayments vs spends vs savings account credits
+    // -------------------------------------------------------------------------
+    @Test
+    fun testRegression_creditCardRepaymentVsSpendVsSavingsCredit() = runBlocking {
+        // Setup Slice Credit Card account
+        val sliceCard = AccountEntity(
+            id = 5L,
+            name = "Slice Credit Card",
+            bank = "Slice",
+            balancePaise = 500000L, // ₹5,000.00 initial outstanding dues
+            isCreditCard = true
+        )
+        fakeDb.accountsList.add(sliceCard)
+
+        val viewModel = ImportViewModel(importRepository, parsers, testScope)
+        val sliceText = readResource("Slice Credit Card Statement.pdf.txt")
+
+        // 1. Import Slice Credit Card
+        viewModel.parseStatementText(
+            format = StatementFormat.SLICE_CREDIT_CARD,
+            text = sliceText,
+            filename = "SliceCC.pdf",
+            accountId = 5L
+        )
+
+        val reviewState = awaitReviewState(viewModel)
+        assertEquals(48, reviewState.batch.transactions.size)
+
+        // Find the ₹210.00 repayment
+        val repayment210 = reviewState.batch.transactions.first {
+            it.amountPaise == 21000L && it.direction == Direction.CREDIT
+        }
+        assertEquals(ImporterTransactionType.CARD_PAYMENT, repayment210.transactionType)
+
+        // Find a spend transaction (e.g. ₹50.00)
+        val spendTx = reviewState.batch.transactions.first {
+            it.direction == Direction.DEBIT && it.amountPaise == 5000L
+        }
+        assertEquals(ImporterTransactionType.EXPENSE, spendTx.transactionType)
+
+        // Accept only the repayment and the spend
+        viewModel.acceptTransaction(repayment210.id)
+        viewModel.acceptTransaction(spendTx.id)
+
+        // Commit accepted transactions
+        viewModel.confirmImport()
+        val successState = awaitSuccessState(viewModel)
+        assertEquals(2, successState.importedCount)
+
+        // VERIFICATION:
+        // 1. Repayment ₹210.00 is stored as a CardPaymentEntity, NOT in transactionsList!
+        assertEquals("CardPaymentEntity must be created for card repayment", 1, fakeDb.cardPaymentsList.size)
+        val cardPayment = fakeDb.cardPaymentsList[0]
+        assertEquals(5L, cardPayment.cardAccountId)
+        assertEquals(21000L, cardPayment.amountPaise)
+
+        // 2. Transactions table contains ONLY the spend transaction as EXPENSE
+        assertEquals("Transactions table must only contain the spend", 1, fakeDb.transactionsList.size)
+        val txEntity = fakeDb.transactionsList[0]
+        assertEquals(TransactionType.EXPENSE, txEntity.type)
+        assertEquals(5000L, txEntity.amountPaise)
+        assertEquals(5L, txEntity.accountId)
+
+        // 3. Repayment ₹210.00 did NOT become ordinary income or inflate income
+        assertTrue("No income transaction should be created for credit card repayment",
+            fakeDb.transactionsList.none { it.type == TransactionType.INCOME })
+
+        // 4. Repayment ₹210.00 did NOT become an expense
+        assertTrue("No expense transaction should represent the repayment",
+            fakeDb.transactionsList.none { it.amountPaise == 21000L })
+
+        // 5. Credit card outstanding dues correctly adjusted:
+        // Initial = 500000L, + 5000L (spend) - 21000L (repayment) = 484000L
+        val updatedCard = fakeDb.accounts().getById(5L)
+        assertNotNull(updatedCard)
+        assertEquals(484000L, updatedCard!!.balancePaise)
+
+        // 6. Savings account credit test: HDFC savings account credit maps to TransactionType.INCOME
+        viewModel.reset()
+        val hdfcText = readResource("HDFC Bank Savings Account Statement.pdf.txt")
+        viewModel.parseStatementText(
+            format = StatementFormat.HDFC_SAVINGS,
+            text = hdfcText,
+            filename = "HDFC.pdf",
+            accountId = 2L
+        )
+
+        val hdfcReview = awaitReviewState(viewModel)
+        val hdfcCredit = hdfcReview.batch.transactions.first { it.direction == Direction.CREDIT }
+        viewModel.acceptTransaction(hdfcCredit.id)
+
+        viewModel.confirmImport()
+        awaitSuccessState(viewModel)
+
+        // Verify HDFC credit is persisted as TransactionType.INCOME
+        val hdfcTx = fakeDb.transactionsList.first { it.accountId == 2L && it.amountPaise == hdfcCredit.amountPaise }
+        assertEquals("Savings account credit must map to INCOME", TransactionType.INCOME, hdfcTx.type)
+
+        // Verify HDFC balance increased by credit amount
+        val updatedHdfc = fakeDb.accounts().getById(2L)
+        assertNotNull(updatedHdfc)
+        assertEquals(1000000L + hdfcCredit.amountPaise, updatedHdfc!!.balancePaise)
+    }
+
+    // -------------------------------------------------------------------------
     // Concrete In-Memory Test Database implementation for Unit Tests
     // -------------------------------------------------------------------------
     class TestSpendTrackDatabase : SpendTrackDatabase() {

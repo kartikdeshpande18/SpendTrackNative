@@ -24,9 +24,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.spendtrack.app.ui.parsePaise
 import com.spendtrack.app.data.local.AccountEntity
 import com.spendtrack.app.data.local.CategoryEntity
 import com.spendtrack.app.data.local.TransactionEntity
@@ -271,83 +275,87 @@ private fun AccountMappingStage(
     onCancel: () -> Unit
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
+        modifier = Modifier.fillMaxSize()
     ) {
-        Text(
-            text = "Select Target Account",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "Choose which SpendTrack account to import transactions into for each statement file.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .weight(1f)
-                .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .fillMaxWidth()
+                .padding(16.dp)
         ) {
-            items(files) { file ->
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = file.filename,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Detected: ${file.format.name.replace('_', ' ')}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Select Target Account",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "Choose which SpendTrack account to import transactions into for each statement file.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-                        val selectedAccountId = mappings[file.filename] ?: 0L
-                        var expanded by remember { mutableStateOf(false) }
-                        val currentAccount = accounts.firstOrNull { it.id == selectedAccountId }
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                items(files) { file ->
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = file.filename,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Detected: ${file.format.name.replace('_', ' ')}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            OutlinedCard(
-                                onClick = { expanded = true },
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
+                            val selectedAccountId = mappings[file.filename] ?: 0L
+                            var expanded by remember { mutableStateOf(false) }
+                            val currentAccount = accounts.firstOrNull { it.id == selectedAccountId }
+
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                OutlinedCard(
+                                    onClick = { expanded = true },
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Text(
-                                        text = currentAccount?.name ?: "Select an account...",
-                                        style = MaterialTheme.typography.bodyMedium
-                                    )
-                                    Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(12.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = currentAccount?.name ?: "Select an account...",
+                                            style = MaterialTheme.typography.bodyMedium
+                                        )
+                                        Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                                    }
                                 }
-                            }
-                            DropdownMenu(
-                                expanded = expanded,
-                                onDismissRequest = { expanded = false }
-                            ) {
-                                accounts.forEach { acc ->
-                                    DropdownMenuItem(
-                                        text = { Text("${acc.name}${if (acc.isCreditCard) " (Credit Card)" else ""}") },
-                                        onClick = {
-                                            onUpdateMapping(file.filename, acc.id)
-                                            expanded = false
-                                        }
-                                    )
+                                DropdownMenu(
+                                    expanded = expanded,
+                                    onDismissRequest = { expanded = false }
+                                ) {
+                                    accounts.forEach { acc ->
+                                        DropdownMenuItem(
+                                            text = { Text("${acc.name}${if (acc.isCreditCard) " (Credit Card)" else ""}") },
+                                            onClick = {
+                                                onUpdateMapping(file.filename, acc.id)
+                                                expanded = false
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -356,23 +364,43 @@ private fun AccountMappingStage(
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Row(
+        // Bottom Action Bar
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            shadowElevation = 8.dp,
+            color = MaterialTheme.colorScheme.surface
         ) {
-            OutlinedButton(
-                onClick = onCancel,
-                modifier = Modifier.weight(1f)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Cancel")
-            }
-            Button(
-                onClick = onProceed,
-                modifier = Modifier.weight(1f)
-            ) {
-                Text("Continue to Review")
+                OutlinedButton(
+                    onClick = onCancel,
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = "Cancel",
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
+                Button(
+                    onClick = onProceed,
+                    modifier = Modifier.weight(1.8f),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+                ) {
+                    Text(
+                        text = "Continue to Review",
+                        textAlign = TextAlign.Center,
+                        maxLines = 1
+                    )
+                }
             }
         }
     }
@@ -759,38 +787,72 @@ private fun EditTransactionDialog(
     var selectedSourceAccountId by remember { mutableStateOf(transaction.sourceAccountId) }
     var selectedDestAccountId by remember { mutableStateOf(transaction.destinationAccountId) }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
+                .padding(horizontal = 24.dp)
+                .wrapContentHeight(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(20.dp)
-                    .fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text(
-                    text = "Edit Transaction",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
-                )
+                // Header with strong visual hierarchy and date subtitle
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Edit Transaction",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    val dateFormatted = runCatching {
+                        LocalDate.ofEpochDay(transaction.dateEpochDay).format(DateTimeFormatter.ofPattern("dd MMM yyyy"))
+                    }.getOrDefault("")
+                    if (dateFormatted.isNotEmpty()) {
+                        Text(
+                            text = dateFormatted,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
 
+                // Merchant / Narration text field
                 OutlinedTextField(
                     value = merchant,
                     onValueChange = { merchant = it },
                     label = { Text("Merchant / Narration") },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
                     singleLine = true
                 )
 
+                // Amount text field with currency symbol prefix
                 OutlinedTextField(
                     value = amountInput,
                     onValueChange = { amountInput = it },
                     label = { Text("Amount (₹)") },
+                    prefix = {
+                        Text(
+                            text = "₹ ",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true
                 )
@@ -801,22 +863,42 @@ private fun EditTransactionDialog(
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedCard(
                         onClick = { catExpanded = true },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(currentCategory?.name ?: "Select Category")
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Category",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = currentCategory?.name ?: "None / Uncategorized",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (currentCategory != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                     DropdownMenu(
                         expanded = catExpanded,
-                        onDismissRequest = { catExpanded = false }
+                        onDismissRequest = { catExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.75f)
                     ) {
                         DropdownMenuItem(
                             text = { Text("None / Uncategorized") },
@@ -843,26 +925,46 @@ private fun EditTransactionDialog(
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedCard(
                         onClick = { accExpanded = true },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(12.dp),
+                                .padding(horizontal = 16.dp, vertical = 14.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(currentAccount?.name ?: "Select Account")
-                            Icon(Icons.Default.ArrowDropDown, contentDescription = null)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = "Account",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = currentAccount?.let { "${it.name}${if (it.isCreditCard) " (Credit Card)" else ""}" } ?: "Select Account",
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (currentAccount != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Icon(
+                                imageVector = Icons.Default.ArrowDropDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                     DropdownMenu(
                         expanded = accExpanded,
-                        onDismissRequest = { accExpanded = false }
+                        onDismissRequest = { accExpanded = false },
+                        modifier = Modifier.fillMaxWidth(0.75f)
                     ) {
                         accounts.forEach { acc ->
                             DropdownMenuItem(
-                                text = { Text(acc.name) },
+                                text = { Text("${acc.name}${if (acc.isCreditCard) " (Credit Card)" else ""}") },
                                 onClick = {
                                     selectedSourceAccountId = acc.id
                                     accExpanded = false
@@ -872,22 +974,28 @@ private fun EditTransactionDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
-
+                // Action buttons: Cancel and Save (visually balanced Material 3 actions)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 12.dp)
+                    ) {
+                        Text("Cancel", textAlign = TextAlign.Center, maxLines = 1)
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+
                     Button(
                         onClick = {
                             val parsedPaise = parsePaiseFromInput(amountInput)
                             onSave(
-                                merchant,
+                                merchant.trim(),
                                 parsedPaise,
                                 transaction.dateEpochDay,
                                 selectedType,
@@ -895,9 +1003,12 @@ private fun EditTransactionDialog(
                                 selectedSourceAccountId,
                                 selectedDestAccountId
                             )
-                        }
+                        },
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp),
+                        contentPadding = PaddingValues(vertical = 12.dp)
                     ) {
-                        Text("Save")
+                        Text("Save", textAlign = TextAlign.Center, maxLines = 1)
                     }
                 }
             }
@@ -906,13 +1017,7 @@ private fun EditTransactionDialog(
 }
 
 private fun parsePaiseFromInput(input: String): Long {
-    val clean = input.replace(",", "").trim()
-    return try {
-        val bd = BigDecimal(clean)
-        bd.multiply(BigDecimal(100)).setScale(0, RoundingMode.HALF_UP).toLong()
-    } catch (e: Exception) {
-        0L
-    }
+    return parsePaise(input)
 }
 
 @Composable
