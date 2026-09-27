@@ -27,17 +27,21 @@ object TopBudgetsCalculator {
      * - TransactionType.EXPENSE only
      * - Matches categoryId and monthKey (from dateEpochDay)
      * - Sums mySharePaise ?: amountPaise (shared expense handling)
-     */
     fun calculateCategorySpendingPaise(
         transactions: List<TransactionEntity>,
         categoryId: Long,
         monthKey: String
     ): Long {
-        return transactions.filter {
-            it.type == TransactionType.EXPENSE &&
-            it.categoryId == categoryId &&
-            YearMonth.from(LocalDate.ofEpochDay(it.dateEpochDay)).toString() == monthKey
-        }.sumOf { it.mySharePaise ?: it.amountPaise }
+        val parsedYm = runCatching { YearMonth.parse(monthKey) }.getOrElse { YearMonth.now() }
+        val startEpoch = parsedYm.atDay(1).toEpochDay()
+        val endEpoch = parsedYm.atEndOfMonth().toEpochDay()
+        var total = 0L
+        for (t in transactions) {
+            if (t.type == TransactionType.EXPENSE && t.categoryId == categoryId && t.dateEpochDay in startEpoch..endEpoch) {
+                total += (t.mySharePaise ?: t.amountPaise)
+            }
+        }
+        return total
     }
 
     /**
@@ -59,9 +63,25 @@ object TopBudgetsCalculator {
             .distinctBy { it.categoryId }
         if (currentBudgets.isEmpty()) return emptyList()
 
+        val parsedYm = runCatching { YearMonth.parse(monthKey) }.getOrElse { YearMonth.now() }
+        val startEpoch = parsedYm.atDay(1).toEpochDay()
+        val endEpoch = parsedYm.atEndOfMonth().toEpochDay()
+
+        val spendingByCategory = HashMap<Long, Long>()
+        for (t in transactions) {
+            if (t.type == TransactionType.EXPENSE && t.dateEpochDay in startEpoch..endEpoch) {
+                val catId = t.categoryId
+                if (catId != null) {
+                    val amount = t.mySharePaise ?: t.amountPaise
+                    spendingByCategory[catId] = (spendingByCategory[catId] ?: 0L) + amount
+                }
+            }
+        }
+
+        val categoryMap = categories.associateBy { it.id }
         val items = currentBudgets.mapNotNull { budget ->
-            val category = categories.find { it.id == budget.categoryId } ?: return@mapNotNull null
-            val spentPaise = calculateCategorySpendingPaise(transactions, budget.categoryId, monthKey)
+            val category = categoryMap[budget.categoryId] ?: return@mapNotNull null
+            val spentPaise = spendingByCategory[budget.categoryId] ?: 0L
             val utilization = spentPaise.toDouble() / budget.limitPaise.toDouble()
             val visualProgress = (spentPaise.toFloat() / budget.limitPaise.toFloat()).coerceIn(0f, 1f)
             val percent = (utilization * 100.0).roundToInt()

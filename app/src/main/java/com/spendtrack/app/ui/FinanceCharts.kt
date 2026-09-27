@@ -56,6 +56,25 @@ private data class ChartSlice(
     val percentageFormatted: String,
 )
 
+private data class DonutData(
+    val slices: List<ChartSlice>,
+    val total: Long,
+)
+
+private data class DailyBarData(
+    val dates: List<LocalDate>,
+    val values: List<Long>,
+    val maxValue: Long,
+    val isCurrentMonth: Boolean,
+    val isFutureMonth: Boolean,
+)
+
+private data class IncomeExpenseMetrics(
+    val expensePaise: Long,
+    val incomePaise: Long,
+    val total: Long,
+)
+
 @Composable
 fun CategorySpendingDonut(
     transactions: List<TransactionEntity>,
@@ -70,31 +89,37 @@ fun CategorySpendingDonut(
         MaterialTheme.colorScheme.primaryContainer,
         MaterialTheme.colorScheme.tertiaryContainer,
     )
-    val expenseItems = transactions
-        .asSequence()
-        .filter { it.type == TransactionType.EXPENSE }
-        .groupBy { transaction -> categories.find { it.id == transaction.categoryId }?.name ?: "Other" }
-        .map { (name, values) -> name to values.sumOf { it.mySharePaise ?: it.amountPaise } }
-        .filter { it.second > 0L }
-        .sortedByDescending { it.second }
-        .toList()
-    val total = expenseItems.sumOf { it.second }
-
-    val slices = expenseItems.mapIndexed { index, item ->
-        val pct = if (total > 0L) (item.second.toDouble() / total.toDouble() * 100.0).toFloat() else 0f
-        val pctFormatted = when {
-            pct >= 99.95f -> "100%"
-            pct == pct.toInt().toFloat() -> "${pct.toInt()}%"
-            else -> String.format(Locale.US, "%.1f%%", pct)
+    val donutData = remember(transactions, categories, palette) {
+        val categoryMap = categories.associateBy { it.id }
+        val expenseTotals = HashMap<String, Long>()
+        for (t in transactions) {
+            if (t.type == TransactionType.EXPENSE) {
+                val name = categoryMap[t.categoryId]?.name ?: "Other"
+                val amount = t.mySharePaise ?: t.amountPaise
+                expenseTotals[name] = (expenseTotals[name] ?: 0L) + amount
+            }
         }
-        ChartSlice(
-            label = item.first,
-            amountPaise = item.second,
-            color = palette[index % palette.size],
-            percentage = pct,
-            percentageFormatted = pctFormatted,
-        )
+        val expenseItems = expenseTotals.filter { it.value > 0L }.toList().sortedByDescending { it.second }
+        val total = expenseItems.sumOf { it.second }
+        val slices = expenseItems.mapIndexed { index, item ->
+            val pct = if (total > 0L) (item.second.toDouble() / total.toDouble() * 100.0).toFloat() else 0f
+            val pctFormatted = when {
+                pct >= 99.95f -> "100%"
+                pct == pct.toInt().toFloat() -> "${pct.toInt()}%"
+                else -> String.format(Locale.US, "%.1f%%", pct)
+            }
+            ChartSlice(
+                label = item.first,
+                amountPaise = item.second,
+                color = palette[index % palette.size],
+                percentage = pct,
+                percentageFormatted = pctFormatted,
+            )
+        }
+        DonutData(slices = slices, total = total)
     }
+    val slices = donutData.slices
+    val total = donutData.total
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -175,24 +200,36 @@ fun DailyTransactionBarChart(
     selectedMonth: YearMonth = YearMonth.now(),
     modifier: Modifier = Modifier
 ) {
-    val currentMonth = YearMonth.now()
-    val today = LocalDate.now()
-    val isCurrentMonth = selectedMonth == currentMonth
-    val isFutureMonth = selectedMonth > currentMonth
+    val chartData = remember(transactions, selectedMonth) {
+        val currentMonth = YearMonth.now()
+        val today = LocalDate.now()
+        val isCurrentMonth = selectedMonth == currentMonth
+        val isFutureMonth = selectedMonth > currentMonth
 
-    val dates = when {
-        isCurrentMonth -> (6 downTo 0).map { today.minusDays(it.toLong()) }
-        isFutureMonth -> emptyList()
-        else -> {
-            val lastDay = selectedMonth.atEndOfMonth()
-            (6 downTo 0).map { lastDay.minusDays(it.toLong()) }
+        val dates = when {
+            isCurrentMonth -> (6 downTo 0).map { today.minusDays(it.toLong()) }
+            isFutureMonth -> emptyList()
+            else -> {
+                val lastDay = selectedMonth.atEndOfMonth()
+                (6 downTo 0).map { lastDay.minusDays(it.toLong()) }
+            }
         }
+        val epochDayToAmount = HashMap<Long, Long>()
+        for (t in transactions) {
+            if (t.type == TransactionType.EXPENSE) {
+                epochDayToAmount[t.dateEpochDay] = (epochDayToAmount[t.dateEpochDay] ?: 0L) + (t.mySharePaise ?: t.amountPaise)
+            }
+        }
+        val values = dates.map { date -> epochDayToAmount[date.toEpochDay()] ?: 0L }
+        val maxValue = max(values.maxOrNull() ?: 0L, 1L)
+        DailyBarData(dates, values, maxValue, isCurrentMonth, isFutureMonth)
     }
-    val values = dates.map { date ->
-        transactions.filter { it.type == TransactionType.EXPENSE && LocalDate.ofEpochDay(it.dateEpochDay) == date }
-            .sumOf { it.mySharePaise ?: it.amountPaise }
-    }
-    val maxValue = max(values.maxOrNull() ?: 0L, 1L)
+
+    val dates = chartData.dates
+    val values = chartData.values
+    val maxValue = chartData.maxValue
+    val isCurrentMonth = chartData.isCurrentMonth
+    val isFutureMonth = chartData.isFutureMonth
     val labelFormatter = DateTimeFormatter.ofPattern("d MMM", Locale.getDefault())
     val monthName = selectedMonth.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.getDefault()) + " " + selectedMonth.year
     val subLabel = when {
@@ -325,15 +362,21 @@ fun IncomeVsExpenseChart(
     transactions: List<TransactionEntity>,
     modifier: Modifier = Modifier,
 ) {
-    val expensePaise = transactions
-        .asSequence()
-        .filter { it.type == TransactionType.EXPENSE }
-        .sumOf { it.mySharePaise ?: it.amountPaise }
-    val incomePaise = transactions
-        .asSequence()
-        .filter { it.type == TransactionType.INCOME }
-        .sumOf { it.amountPaise }
-    val total = expensePaise + incomePaise
+    val metrics = remember(transactions) {
+        var exp = 0L
+        var inc = 0L
+        for (t in transactions) {
+            if (t.type == TransactionType.EXPENSE) {
+                exp += (t.mySharePaise ?: t.amountPaise)
+            } else if (t.type == TransactionType.INCOME) {
+                inc += t.amountPaise
+            }
+        }
+        IncomeExpenseMetrics(exp, inc, exp + inc)
+    }
+    val expensePaise = metrics.expensePaise
+    val incomePaise = metrics.incomePaise
+    val total = metrics.total
 
     Card(
         modifier = modifier.fillMaxWidth(),

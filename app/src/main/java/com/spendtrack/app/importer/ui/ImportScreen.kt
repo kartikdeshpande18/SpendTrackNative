@@ -427,12 +427,16 @@ private fun ReviewStage(
     val acceptedCount = batch.transactions.count { it.isAccepted }
     val removedCount = batch.transactions.count { it.reviewStatus == ReviewStatus.REMOVED }
 
-    val filteredTransactions = when (currentFilter) {
-        ReviewFilter.ALL -> batch.transactions
-        ReviewFilter.PENDING -> batch.transactions.filter { it.reviewStatus == ReviewStatus.PENDING }
-        ReviewFilter.ACCEPTED -> batch.transactions.filter { it.isAccepted }
-        ReviewFilter.REMOVED -> batch.transactions.filter { it.reviewStatus == ReviewStatus.REMOVED }
+    val filteredTransactions = remember(batch.transactions, currentFilter) {
+        when (currentFilter) {
+            ReviewFilter.ALL -> batch.transactions
+            ReviewFilter.PENDING -> batch.transactions.filter { it.reviewStatus == ReviewStatus.PENDING }
+            ReviewFilter.ACCEPTED -> batch.transactions.filter { it.isAccepted }
+            ReviewFilter.REMOVED -> batch.transactions.filter { it.reviewStatus == ReviewStatus.REMOVED }
+        }
     }
+    val accountMap = remember(accounts) { accounts.associateBy { it.id } }
+    val categoryMap = remember(categories) { categories.associateBy { it.id } }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Files Summary Card
@@ -550,8 +554,8 @@ private fun ReviewStage(
                 }
             } else {
                 items(filteredTransactions, key = { it.id }) { tx ->
-                    val accountName = accounts.firstOrNull { it.id == tx.sourceAccountId }?.name ?: "Account"
-                    val categoryName = categories.firstOrNull { it.id == tx.categoryId }?.name ?: "Uncategorized"
+                    val accountName = accountMap[tx.sourceAccountId]?.name ?: "Account"
+                    val categoryName = categoryMap[tx.categoryId]?.name ?: "Uncategorized"
 
                     TransactionReviewCard(
                         transaction = tx,

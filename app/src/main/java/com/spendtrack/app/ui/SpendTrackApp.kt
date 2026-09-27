@@ -193,15 +193,17 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                         ) { currentRoute ->
                             when (currentRoute) {
                                 "home" -> {
-                                    val activeFdPrincipal = fixedDeposits.filter { it.status == FixedDepositStatus.ACTIVE }.sumOf { it.principalPaise }
-                                    val currentDashboardMonth = runCatching { YearMonth.parse(dashboardMonthStr) }.getOrDefault(YearMonth.now())
+                                    val activeFdPrincipal = remember(fixedDeposits) { fixedDeposits.filter { it.status == FixedDepositStatus.ACTIVE }.sumOf { it.principalPaise } }
+                                    val currentDashboardMonth = remember(dashboardMonthStr) { runCatching { YearMonth.parse(dashboardMonthStr) }.getOrDefault(YearMonth.now()) }
+                                    val loansTotal = remember(loans) { loans.filter { it.includeInNetWorth }.sumOf { it.currentOutstandingPaise } }
+                                    val owedTotal = remember(owed) { owed.sumOf { if (it.direction == OwedDirection.OWED_TO_ME) it.amountPaise else -it.amountPaise } }
                                     Dashboard(
                                         transactions = transactions,
                                         accounts = accounts,
                                         categories = categories,
                                         budgets = budgets,
-                                        loans = loans.filter { it.includeInNetWorth }.sumOf { it.currentOutstandingPaise },
-                                        owed = owed.sumOf { if (it.direction == OwedDirection.OWED_TO_ME) it.amountPaise else -it.amountPaise },
+                                        loans = loansTotal,
+                                        owed = owedTotal,
                                         activeFdPrincipal = activeFdPrincipal,
                                         bottomContentPadding = bottomContentPadding,
                                         selectedMonth = currentDashboardMonth,
@@ -250,12 +252,15 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                                     onSettings = { route = "settings" },
                                 )
                                 "loans_owed" -> LoansOwed(loans, owed, bottomContentPadding, onUpdateLoan = viewModel::updateLoan, onDeleteLoan = viewModel::deleteLoan, onUpdateOwed = viewModel::updateOwed, onDeleteOwed = viewModel::deleteOwed, onSettleOwed = viewModel::settleOwed, onSettings = { route = "settings" })
-                                else -> Settings(
-                                    accounts.size,
-                                    categories.size,
-                                    fixedDeposits.count { it.status == FixedDepositStatus.ACTIVE },
-                                    recurringTransactions.count { it.isEnabled },
-                                    bottomContentPadding,
+                                else -> {
+                                    val activeFdCount = remember(fixedDeposits) { fixedDeposits.count { it.status == FixedDepositStatus.ACTIVE } }
+                                    val activeRecurringCount = remember(recurringTransactions) { recurringTransactions.count { it.isEnabled } }
+                                    Settings(
+                                        accounts.size,
+                                        categories.size,
+                                        activeFdCount,
+                                        activeRecurringCount,
+                                        bottomContentPadding,
                                     onBack = { route = "home" },
                                     onAccounts = { overlay = Overlay.ACCOUNTS },
                                     onCategories = { overlay = Overlay.CATEGORIES },
@@ -266,6 +271,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                                     onReminders = { overlay = Overlay.REMINDERS },
                                     onImportStatement = { overlay = Overlay.IMPORT_STATEMENT }
                                 )
+                            }
                             }
                         }
                         if (overlay == Overlay.LOAN_OWED_CHOOSER) LoanOwedActionDialog(onLoan = { overlay = Overlay.ADD_LOAN }, onOwed = { overlay = Overlay.ADD_OWED }, onDismiss = { overlay = Overlay.NONE })
@@ -426,13 +432,29 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     val haptics = rememberSpendTrackHaptics()
     var showMonthPicker by remember { mutableStateOf(false) }
     val isCurrentMonth = selectedMonth == YearMonth.now()
-    val inMonth = transactions.filter { YearMonth.from(LocalDate.ofEpochDay(it.dateEpochDay)) == selectedMonth }
-    val spending = inMonth.filter { it.type == TransactionType.EXPENSE }.sumOf { it.mySharePaise ?: it.amountPaise }
-    val income = inMonth.filter { it.type == TransactionType.INCOME }.sumOf { it.amountPaise }
-    val cash = accounts.filterNot { it.isCreditCard }.sumOf { it.balancePaise }
-    val availableSavings = SavingsCalculator.calculateAvailableSavingsPaise(accounts)
-    val cards = accounts.filter { it.isCreditCard }.sumOf { it.balancePaise }
-    val topBudgets = TopBudgetsCalculator.calculateTopBudgetCategories(budgets, categories, transactions, selectedMonth.toString())
+    val startEpoch = remember(selectedMonth) { selectedMonth.atDay(1).toEpochDay() }
+    val endEpoch = remember(selectedMonth) { selectedMonth.atEndOfMonth().toEpochDay() }
+    val inMonth = remember(transactions, startEpoch, endEpoch) {
+        transactions.filter { it.dateEpochDay in startEpoch..endEpoch }
+    }
+    val spending = remember(inMonth) {
+        inMonth.filter { it.type == TransactionType.EXPENSE }.sumOf { it.mySharePaise ?: it.amountPaise }
+    }
+    val income = remember(inMonth) {
+        inMonth.filter { it.type == TransactionType.INCOME }.sumOf { it.amountPaise }
+    }
+    val cash = remember(accounts) {
+        accounts.filterNot { it.isCreditCard }.sumOf { it.balancePaise }
+    }
+    val availableSavings = remember(accounts) {
+        SavingsCalculator.calculateAvailableSavingsPaise(accounts)
+    }
+    val cards = remember(accounts) {
+        accounts.filter { it.isCreditCard }.sumOf { it.balancePaise }
+    }
+    val topBudgets = remember(budgets, categories, transactions, selectedMonth) {
+        TopBudgetsCalculator.calculateTopBudgetCategories(budgets, categories, transactions, selectedMonth.toString())
+    }
 
     if (showMonthPicker) {
         MonthSelectorDialog(
@@ -502,11 +524,15 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         if (transactions.isEmpty()) {
             item { SummaryCard("No Transactions Yet", "", "Tap + to record your first transaction") }
         } else {
+            val recentAccountMap = remember(accounts) { accounts.associateBy { it.id } }
+            val recentCategoryMap = remember(categories) { categories.associateBy { it.id } }
             items(transactions.take(5), key = { "recent_tx_${it.id}" }) { t ->
                 TransactionCard(
                     transaction = t,
                     accounts = accounts,
-                    categories = categories
+                    categories = categories,
+                    accountMap = recentAccountMap,
+                    categoryMap = recentCategoryMap
                 )
             }
         }
@@ -718,11 +744,15 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 )
             }
         }
+        val accountMap = remember(accounts) { accounts.associateBy { it.id } }
+        val categoryMap = remember(categories) { categories.associateBy { it.id } }
         items(visible, key = { it.id }) { t ->
             TransactionCard(
                 transaction = t,
                 accounts = accounts,
                 categories = categories,
+                accountMap = accountMap,
+                categoryMap = categoryMap,
                 onEdit = onEdit,
                 onDelete = remove
             )
@@ -738,6 +768,8 @@ fun TransactionCard(
     modifier: Modifier = Modifier,
     onEdit: ((TransactionEntity) -> Unit)? = null,
     onDelete: ((Long) -> Unit)? = null,
+    accountMap: Map<Long, AccountEntity>? = null,
+    categoryMap: Map<Long, CategoryEntity>? = null,
 ) {
     val haptics = rememberSpendTrackHaptics()
     val isTransfer = transaction.type == TransactionType.TRANSFER
@@ -804,8 +836,10 @@ fun TransactionCard(
 
                 // Secondary line: transfer route or category/account/date
                 if (isTransfer) {
-                    val src = accounts.find { it.id == transaction.accountId }?.name ?: "Account"
-                    val dst = accounts.find { it.id == transaction.destinationAccountId }?.name ?: "Account"
+                    val src = accountMap?.get(transaction.accountId)?.name
+                        ?: accounts.find { it.id == transaction.accountId }?.name ?: "Account"
+                    val dst = (transaction.destinationAccountId?.let { accountMap?.get(it)?.name })
+                        ?: accounts.find { it.id == transaction.destinationAccountId }?.name ?: "Account"
                     Text(
                         text = "$src → $dst",
                         style = MaterialTheme.typography.bodyMedium,
@@ -822,8 +856,10 @@ fun TransactionCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 } else {
-                    val cat = categories.find { it.id == transaction.categoryId }?.name ?: "Other"
-                    val acc = accounts.find { it.id == transaction.accountId }?.name ?: "Account"
+                    val cat = categoryMap?.get(transaction.categoryId)?.name
+                        ?: categories.find { it.id == transaction.categoryId }?.name ?: "Other"
+                    val acc = accountMap?.get(transaction.accountId)?.name
+                        ?: accounts.find { it.id == transaction.accountId }?.name ?: "Account"
                     Text(
                         text = "$cat · $acc · $dateText",
                         style = MaterialTheme.typography.bodySmall,
@@ -883,8 +919,8 @@ fun TransactionCard(
     onSettings: () -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
-    val owedToMe = owed.filter { it.direction == OwedDirection.OWED_TO_ME }.sumOf { it.amountPaise }
-    val iOwe = owed.filter { it.direction == OwedDirection.I_OWE }.sumOf { it.amountPaise }
+    val owedToMe = remember(owed) { owed.filter { it.direction == OwedDirection.OWED_TO_ME }.sumOf { it.amountPaise } }
+    val iOwe = remember(owed) { owed.filter { it.direction == OwedDirection.I_OWE }.sumOf { it.amountPaise } }
     var managingLoan by remember { mutableStateOf<LoanEntity?>(null) }
     var managingOwed by remember { mutableStateOf<OwedEntity?>(null) }
     LazyColumn(Modifier.fillMaxSize().padding(20.dp), contentPadding = PaddingValues(bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1283,7 +1319,23 @@ fun TransactionCard(
     var categoryIndex by remember { mutableIntStateOf(0) }
     var categoryMenu by remember { mutableStateOf(false) }
     var limit by remember { mutableStateOf("") }
-    val current = budgets.filter { it.monthKey == month }
+    val current = remember(budgets, month) { budgets.filter { it.monthKey == month } }
+    val categoryMap = remember(categories) { categories.associateBy { it.id } }
+    val monthlyCategorySpending = remember(transactions, month) {
+        val parsedYm = runCatching { YearMonth.parse(month) }.getOrElse { YearMonth.now() }
+        val startEpoch = parsedYm.atDay(1).toEpochDay()
+        val endEpoch = parsedYm.atEndOfMonth().toEpochDay()
+        val map = HashMap<Long, Long>()
+        for (t in transactions) {
+            if (t.type == TransactionType.EXPENSE && t.dateEpochDay in startEpoch..endEpoch) {
+                val catId = t.categoryId
+                if (catId != null) {
+                    map[catId] = (map[catId] ?: 0L) + (t.mySharePaise ?: t.amountPaise)
+                }
+            }
+        }
+        map
+    }
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Budget", style = MaterialTheme.typography.displaySmall); Text(displayMonth(month), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if (adding) item {
@@ -1298,8 +1350,8 @@ fun TransactionCard(
         } else item { Button({ haptics.click(); adding = true }, Modifier.fillMaxWidth()) { Text("Add Budget") } }
         if (current.isEmpty()) item { SummaryCard("No Budgets", "", "") }
         items(current, key = { it.id }) { budget ->
-            val category = categories.find { it.id == budget.categoryId }?.name ?: "Category"
-            val used = TopBudgetsCalculator.calculateCategorySpendingPaise(transactions, budget.categoryId, month)
+            val category = categoryMap[budget.categoryId]?.name ?: "Category"
+            val used = monthlyCategorySpending[budget.categoryId] ?: 0L
             val progress = if (budget.limitPaise > 0) (used.toFloat() / budget.limitPaise.toFloat()).coerceIn(0f, 1f) else 0f
             Card(Modifier.fillMaxWidth()) { Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(category, style = MaterialTheme.typography.titleMedium); Text("${money(used)} / ${money(budget.limitPaise)}", style = MaterialTheme.typography.titleLarge) }; ActionIcon(Icons.Default.Delete, "Delete budget", MaterialTheme.colorScheme.error) { haptics.reject(); onDelete(budget) } }
@@ -1511,15 +1563,15 @@ fun TransactionCard(
 fun formatIndianMoney(paise: Long): String {
     val absPaise = Math.abs(paise)
     val rupees = absPaise / 100
-    val remPaise = absPaise % 100
-    val paiseStr = String.format(Locale.US, "%02d", remPaise)
+    val remPaise = (absPaise % 100).toInt()
+    val paiseStr = if (remPaise < 10) "0$remPaise" else "$remPaise"
     val rupeeStr = rupees.toString()
     val formattedRupees = if (rupeeStr.length <= 3) {
         rupeeStr
     } else {
         val lastThree = rupeeStr.takeLast(3)
         val rest = rupeeStr.dropLast(3)
-        val sb = StringBuilder()
+        val sb = java.lang.StringBuilder(rupeeStr.length + (rest.length / 2) + 1)
         for (i in rest.indices) {
             if (i > 0 && (rest.length - i) % 2 == 0) {
                 sb.append(',')

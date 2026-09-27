@@ -60,7 +60,8 @@ fun FixedDepositsScreen(
     var editingFd by remember { mutableStateOf<FixedDepositEntity?>(null) }
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Active, 1: Matured
 
-    val eligibleAccounts = accounts.filterNot { it.isCreditCard }
+    val eligibleAccounts = remember(accounts) { accounts.filterNot { it.isCreditCard } }
+    val accountMap = remember(accounts) { accounts.associateBy { it.id } }
 
     if (isFormVisible) {
         FixedDepositFormScreen(
@@ -102,8 +103,17 @@ fun FixedDepositsScreen(
             }
         )
     } else {
-        val activeDeposits = fixedDeposits.filter { it.status == FixedDepositStatus.ACTIVE }
-        val maturedDeposits = fixedDeposits.filter { it.status == FixedDepositStatus.MATURED }
+        val (activeDeposits, maturedDeposits) = remember(fixedDeposits) {
+            val active = ArrayList<FixedDepositEntity>()
+            val matured = ArrayList<FixedDepositEntity>()
+            for (fd in fixedDeposits) {
+                if (fd.status == FixedDepositStatus.ACTIVE) active.add(fd)
+                else if (fd.status == FixedDepositStatus.MATURED) matured.add(fd)
+            }
+            active to matured
+        }
+        val activePrincipalPaise = remember(activeDeposits) { activeDeposits.sumOf { it.principalPaise } }
+        val activeMaturityPaise = remember(activeDeposits) { activeDeposits.sumOf { it.maturityAmountPaise } }
         val displayedDeposits = if (selectedTab == 0) activeDeposits else maturedDeposits
         val todayEpochDay = LocalDate.now().toEpochDay()
 
@@ -132,9 +142,9 @@ fun FixedDepositsScreen(
                 ) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Active Principal", style = MaterialTheme.typography.titleMedium)
-                        Text(money(activeDeposits.sumOf { it.principalPaise }), style = MaterialTheme.typography.headlineMedium)
+                        Text(money(activePrincipalPaise), style = MaterialTheme.typography.headlineMedium)
                         Text(
-                            "${activeDeposits.size} Active · ${maturedDeposits.size} Matured · Maturity Value: ${formatMaturityAmount(activeDeposits.sumOf { it.maturityAmountPaise })}",
+                            "${activeDeposits.size} Active · ${maturedDeposits.size} Matured · Maturity Value: ${formatMaturityAmount(activeMaturityPaise)}",
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -188,7 +198,7 @@ fun FixedDepositsScreen(
             }
 
             items(displayedDeposits, key = { it.id }) { fd ->
-                val accountName = accounts.find { it.id == fd.linkedAccountId }?.name ?: "Account"
+                val accountName = accountMap[fd.linkedAccountId]?.name ?: "Account"
                 val isDue = fd.status == FixedDepositStatus.ACTIVE && todayEpochDay >= fd.maturityDateEpochDay
 
                 Card(

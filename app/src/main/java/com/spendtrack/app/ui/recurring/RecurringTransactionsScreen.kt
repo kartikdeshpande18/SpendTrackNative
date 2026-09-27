@@ -48,8 +48,16 @@ fun RecurringTransactionsScreen(
     var editingSchedule by remember { mutableStateOf<RecurringTransactionEntity?>(null) }
     var scheduleToDelete by remember { mutableStateOf<RecurringTransactionEntity?>(null) }
 
-    val activeSchedules = recurringTransactions.filter { it.isEnabled }
-    val pausedSchedules = recurringTransactions.filter { !it.isEnabled }
+    val (activeSchedules, pausedSchedules) = remember(recurringTransactions) {
+        val active = ArrayList<RecurringTransactionEntity>()
+        val paused = ArrayList<RecurringTransactionEntity>()
+        for (r in recurringTransactions) {
+            if (r.isEnabled) active.add(r) else paused.add(r)
+        }
+        active to paused
+    }
+    val accountMap = remember(accounts) { accounts.associateBy { it.id } }
+    val categoryMap = remember(categories) { categories.associateBy { it.id } }
     val displayedList = if (selectedTab == 0) activeSchedules else pausedSchedules
 
     LazyColumn(
@@ -141,9 +149,9 @@ fun RecurringTransactionsScreen(
         }
 
         items(displayedList, key = { it.id }) { schedule ->
-            val account = accounts.find { it.id == schedule.accountId }
-            val destAccount = if (schedule.destinationAccountId != null) accounts.find { it.id == schedule.destinationAccountId } else null
-            val category = categories.find { it.id == schedule.categoryId }
+            val account = accountMap[schedule.accountId]
+            val destAccount = schedule.destinationAccountId?.let { accountMap[it] }
+            val category = categoryMap[schedule.categoryId]
 
             Card(
                 modifier = Modifier.fillMaxWidth(),

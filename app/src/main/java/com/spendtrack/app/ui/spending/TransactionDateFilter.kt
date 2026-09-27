@@ -22,29 +22,46 @@ data class TransactionDateFilter(
     val customStartDateEpochDay: Long? = null,
     val customEndDateEpochDay: Long? = null,
 ) {
-    fun matches(dateEpochDay: Long, today: LocalDate = LocalDate.now()): Boolean {
+    fun dateRangeEpochDays(today: LocalDate = LocalDate.now()): LongRange? {
         return when (type) {
-            DateFilterType.ALL_DATES -> true
+            DateFilterType.ALL_DATES -> null
             DateFilterType.THIS_MONTH -> {
-                val txDate = LocalDate.ofEpochDay(dateEpochDay)
-                txDate.year == today.year && txDate.month == today.month
+                val start = today.withDayOfMonth(1).toEpochDay()
+                val end = today.withDayOfMonth(today.lengthOfMonth()).toEpochDay()
+                start..end
             }
             DateFilterType.LAST_7_DAYS -> {
-                val txDate = LocalDate.ofEpochDay(dateEpochDay)
-                val start = today.minusDays(6)
-                !txDate.isBefore(start) && !txDate.isAfter(today)
+                val start = today.minusDays(6).toEpochDay()
+                val end = today.toEpochDay()
+                start..end
             }
             DateFilterType.LAST_30_DAYS -> {
-                val txDate = LocalDate.ofEpochDay(dateEpochDay)
-                val start = today.minusDays(29)
-                !txDate.isBefore(start) && !txDate.isAfter(today)
+                val start = today.minusDays(29).toEpochDay()
+                val end = today.toEpochDay()
+                start..end
             }
             DateFilterType.CUSTOM_RANGE -> {
-                val start = customStartDateEpochDay ?: return true
-                val end = customEndDateEpochDay ?: return true
-                dateEpochDay in start..end
+                val start = customStartDateEpochDay ?: return null
+                val end = customEndDateEpochDay ?: return null
+                start..end
             }
         }
+    }
+
+    fun matches(dateEpochDay: Long, today: LocalDate = LocalDate.now()): Boolean {
+        val range = dateRangeEpochDays(today) ?: return when (type) {
+            DateFilterType.ALL_DATES -> true
+            DateFilterType.CUSTOM_RANGE -> {
+                val start = customStartDateEpochDay
+                val end = customEndDateEpochDay
+                if (start == null && end == null) true
+                else if (start != null && end == null) dateEpochDay >= start
+                else if (start == null && end != null) dateEpochDay <= end
+                else dateEpochDay in start!!..end!!
+            }
+            else -> true
+        }
+        return dateEpochDay in range
     }
 
     fun label(today: LocalDate = LocalDate.now()): String {
@@ -81,18 +98,33 @@ data class TransactionDateFilter(
             accounts: List<AccountEntity> = emptyList(),
             today: LocalDate = LocalDate.now()
         ): List<TransactionEntity> {
+            val range = dateFilter.dateRangeEpochDays(today)
+            val isCustomRange = dateFilter.type == DateFilterType.CUSTOM_RANGE
+            val trimmedQuery = query.trim()
+            val hasQuery = trimmedQuery.isNotEmpty()
+            val categoryMap = if (hasQuery) categories.associateBy { it.id } else null
+            val accountMap = if (hasQuery) accounts.associateBy { it.id } else null
+
             return transactions.filter { t ->
                 val matchesCategory = categoryFilter == null || (t.type != TransactionType.TRANSFER && t.categoryId == categoryFilter)
-                val matchesDate = dateFilter.matches(t.dateEpochDay, today)
-                val matchesQuery = query.isBlank() ||
-                    t.description.contains(query, ignoreCase = true) ||
-                    (t.type != TransactionType.TRANSFER && categories.find { it.id == t.categoryId }?.name?.contains(query, ignoreCase = true) == true) ||
+                if (!matchesCategory) return@filter false
+
+                val matchesDate = when {
+                    range != null -> t.dateEpochDay in range
+                    isCustomRange -> dateFilter.matches(t.dateEpochDay, today)
+                    else -> true
+                }
+                if (!matchesDate) return@filter false
+
+                if (!hasQuery) return@filter true
+
+                t.description.contains(trimmedQuery, ignoreCase = true) ||
+                    (t.type != TransactionType.TRANSFER && categoryMap?.get(t.categoryId)?.name?.contains(trimmedQuery, ignoreCase = true) == true) ||
                     (t.type == TransactionType.TRANSFER && (
-                        "transfer".contains(query, ignoreCase = true) ||
-                        accounts.find { it.id == t.accountId }?.name?.contains(query, ignoreCase = true) == true ||
-                        accounts.find { it.id == t.destinationAccountId }?.name?.contains(query, ignoreCase = true) == true
+                        "transfer".contains(trimmedQuery, ignoreCase = true) ||
+                        accountMap?.get(t.accountId)?.name?.contains(trimmedQuery, ignoreCase = true) == true ||
+                        accountMap?.get(t.destinationAccountId)?.name?.contains(trimmedQuery, ignoreCase = true) == true
                     ))
-                matchesCategory && matchesDate && matchesQuery
             }
         }
 
@@ -102,10 +134,16 @@ data class TransactionDateFilter(
             dateFilter: TransactionDateFilter,
             today: LocalDate = LocalDate.now()
         ): List<TransactionEntity> {
+            val range = dateFilter.dateRangeEpochDays(today)
+            val isCustomRange = dateFilter.type == DateFilterType.CUSTOM_RANGE
             return transactions.filter { t ->
                 val matchesCategory = categoryFilter == null || t.categoryId == categoryFilter
-                val matchesDate = dateFilter.matches(t.dateEpochDay, today)
-                matchesCategory && matchesDate
+                if (!matchesCategory) return@filter false
+                when {
+                    range != null -> t.dateEpochDay in range
+                    isCustomRange -> dateFilter.matches(t.dateEpochDay, today)
+                    else -> true
+                }
             }
         }
     }

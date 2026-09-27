@@ -59,7 +59,11 @@ fun AddTransactionScreen(
 
     val isTransfer = transactionType == TransactionType.TRANSFER
     val isIncome = transactionType == TransactionType.INCOME
-    val filtered = categories.filter { it.isIncomeCategory == isIncome }
+    val filtered = remember(categories, isIncome) {
+        categories.filter { it.isIncomeCategory == isIncome }
+    }
+    val accountNames = remember(accounts) { accounts.map { it.name } }
+    val categoryNames = remember(filtered) { filtered.map { it.name } }
     val account = accounts.getOrNull(accountIndex); val category = filtered.getOrNull(categoryIndex)
     val fromAccount = accounts.getOrNull(fromAccountIndex); val toAccount = accounts.getOrNull(toAccountIndex)
     val paise = parsePaise(amount)
@@ -90,15 +94,15 @@ fun AddTransactionScreen(
 
         if (isTransfer) {
             // From/To account pickers for transfers
-            SelectionMenu("From account", fromAccount?.name ?: "No account", accounts.map { it.name }, accounts.isNotEmpty(), fromMenuExpanded, { fromMenuExpanded = it }) { fromAccountIndex = it }
-            SelectionMenu("To account", toAccount?.name ?: "No account", accounts.map { it.name }, accounts.isNotEmpty(), toMenuExpanded, { toMenuExpanded = it }) { toAccountIndex = it }
+            SelectionMenu("From account", fromAccount?.name ?: "No account", accountNames, accountNames.isNotEmpty(), fromMenuExpanded, { fromMenuExpanded = it }) { fromAccountIndex = it }
+            SelectionMenu("To account", toAccount?.name ?: "No account", accountNames, accountNames.isNotEmpty(), toMenuExpanded, { toMenuExpanded = it }) { toAccountIndex = it }
             if (fromAccount != null && toAccount != null && fromAccount.id == toAccount.id) {
                 Text("Source and destination must be different accounts.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
             }
         } else {
             // Standard Income/Expense fields
-            SelectionMenu("Account", account?.name ?: "No account", accounts.map { it.name }, accounts.isNotEmpty(), accountMenuExpanded, { accountMenuExpanded = it }) { accountIndex = it }
-            SelectionMenu("Category", category?.name ?: "No matching category", filtered.map { it.name }, filtered.isNotEmpty(), categoryMenuExpanded, { categoryMenuExpanded = it }) { categoryIndex = it }
+            SelectionMenu("Account", account?.name ?: "No account", accountNames, accountNames.isNotEmpty(), accountMenuExpanded, { accountMenuExpanded = it }) { accountIndex = it }
+            SelectionMenu("Category", category?.name ?: "No matching category", categoryNames, categoryNames.isNotEmpty(), categoryMenuExpanded, { categoryMenuExpanded = it }) { categoryIndex = it }
             if (!isIncome) {
                 Column(Modifier.fillMaxWidth().animateContentSize(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(shared, { haptics.selection(); shared = it }); Text("Shared expense") }
