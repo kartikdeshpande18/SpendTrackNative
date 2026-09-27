@@ -58,9 +58,15 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun deleteFixedDeposit(fd: FixedDepositEntity) = viewModelScope.launch { repository.deleteFixedDeposit(fd) }
     fun matureFixedDeposit(fdId: Long) = viewModelScope.launch { repository.matureFixedDeposit(fdId) }
     fun matureDueDeposits() = viewModelScope.launch { repository.matureDueDeposits() }
-    fun addTransaction(value: TransactionEntity) = viewModelScope.launch { repository.addTransaction(value) }
-    fun deleteTransaction(id: Long) = viewModelScope.launch { repository.deleteTransaction(id) }
-    fun updateTransaction(value: TransactionEntity) = viewModelScope.launch { repository.updateTransaction(value) }
+    fun addTransaction(value: TransactionEntity) = viewModelScope.launch {
+        runCatching { repository.addTransaction(value) }.onFailure { it.printStackTrace() }
+    }
+    fun deleteTransaction(id: Long) = viewModelScope.launch {
+        runCatching { repository.deleteTransaction(id) }.onFailure { it.printStackTrace() }
+    }
+    fun updateTransaction(value: TransactionEntity) = viewModelScope.launch {
+        runCatching { repository.updateTransaction(value) }.onFailure { it.printStackTrace() }
+    }
     fun addAccount(name: String, card: Boolean, opening: Long, maskedNumber: String = "", creditLimit: Long? = null, statementCycle: Int? = null, dueDay: Int? = null, minimumBalance: Long = 0) = viewModelScope.launch { repository.addAccount(name, card, opening, maskedNumber, creditLimit, statementCycle, dueDay, minimumBalance) }
     fun addCategory(name: String, income: Boolean) = viewModelScope.launch { repository.addCategory(name, income) }
     fun updateAccount(account: AccountEntity) = viewModelScope.launch { repository.updateAccount(account) }

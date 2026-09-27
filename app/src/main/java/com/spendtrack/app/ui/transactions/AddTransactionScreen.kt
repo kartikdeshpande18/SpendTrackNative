@@ -54,7 +54,14 @@ fun AddTransactionScreen(
     var accountMenuExpanded by remember { mutableStateOf(false) }; var categoryMenuExpanded by remember { mutableStateOf(false) }
     // Transfer-specific: source and destination accounts
     var fromAccountIndex by remember(initial?.id, accounts) { mutableIntStateOf(accounts.indexOfFirst { it.id == initial?.accountId }.coerceAtLeast(0)) }
-    var toAccountIndex by remember(initial?.id, accounts) { mutableIntStateOf(accounts.indexOfFirst { it.id == initial?.destinationAccountId }.coerceAtLeast(0)) }
+    var toAccountIndex by remember(initial?.id, accounts) { mutableIntStateOf(
+        if (initial?.destinationAccountId != null) {
+            accounts.indexOfFirst { it.id == initial.destinationAccountId }.coerceAtLeast(0)
+        } else if (accounts.size > 1) {
+            val srcIdx = accounts.indexOfFirst { it.id == initial?.accountId }.coerceAtLeast(0)
+            if (srcIdx == 0) 1 else 0
+        } else 0
+    ) }
     var fromMenuExpanded by remember { mutableStateOf(false) }; var toMenuExpanded by remember { mutableStateOf(false) }
 
     val isTransfer = transactionType == TransactionType.TRANSFER
@@ -207,9 +214,13 @@ fun AddTransactionScreen(
                 )
                 onSaveRecurring(recurring)
             } else if (isTransfer) {
-                onSaved(TransactionEntity(id = initial?.id ?: 0, dateEpochDay = dateEpochDay, description = description.trim(), amountPaise = paise, categoryId = 0, accountId = fromAccount!!.id, type = TransactionType.TRANSFER, destinationAccountId = toAccount!!.id))
+                val fromId = fromAccount?.id ?: initial?.accountId ?: 0L
+                val toId = toAccount?.id ?: initial?.destinationAccountId
+                onSaved(TransactionEntity(id = initial?.id ?: 0, dateEpochDay = dateEpochDay, description = description.trim(), amountPaise = paise, categoryId = 0, accountId = fromId, type = TransactionType.TRANSFER, destinationAccountId = toId))
             } else {
-                onSaved(TransactionEntity(id = initial?.id ?: 0, dateEpochDay = dateEpochDay, description = description.trim(), amountPaise = paise, categoryId = category!!.id, accountId = account!!.id, type = if (isIncome) TransactionType.INCOME else TransactionType.EXPENSE, isShared = shared && !isIncome, mySharePaise = if (shared && !isIncome) parsePaise(share) else null, sharedWith = if (shared && !isIncome) sharedWith.trim() else ""))
+                val accId = account?.id ?: initial?.accountId ?: 0L
+                val catId = category?.id ?: initial?.categoryId ?: 0L
+                onSaved(TransactionEntity(id = initial?.id ?: 0, dateEpochDay = dateEpochDay, description = description.trim(), amountPaise = paise, categoryId = catId, accountId = accId, type = if (isIncome) TransactionType.INCOME else TransactionType.EXPENSE, isShared = shared && !isIncome, mySharePaise = if (shared && !isIncome) parsePaise(share) else null, sharedWith = if (shared && !isIncome) sharedWith.trim() else ""))
             }
         }, Modifier.fillMaxWidth(), enabled = canSave) {
             Text(

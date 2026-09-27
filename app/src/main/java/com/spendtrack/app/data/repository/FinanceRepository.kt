@@ -42,12 +42,14 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
     suspend fun addTransaction(transaction: TransactionEntity): Long = database.withTransaction {
         val account = database.accounts().getById(transaction.accountId) ?: error("Choose a valid account")
         if (transaction.type == TransactionType.TRANSFER) {
-            val destAccount = database.accounts().getById(transaction.destinationAccountId!!) ?: error("Choose a valid destination account")
+            val destAccount = transaction.destinationAccountId?.let { database.accounts().getById(it) }
             val sourceDelta = if (account.isCreditCard) transaction.amountPaise else -transaction.amountPaise
-            val destDelta = if (destAccount.isCreditCard) -transaction.amountPaise else transaction.amountPaise
             val id = database.transactions().insert(transaction)
             database.accounts().update(account.copy(balancePaise = account.balancePaise + sourceDelta))
-            database.accounts().update(destAccount.copy(balancePaise = destAccount.balancePaise + destDelta))
+            if (destAccount != null) {
+                val destDelta = if (destAccount.isCreditCard) -transaction.amountPaise else transaction.amountPaise
+                database.accounts().update(destAccount.copy(balancePaise = destAccount.balancePaise + destDelta))
+            }
             id
         } else {
             val delta = when {
@@ -65,29 +67,36 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
 
     suspend fun deleteTransaction(id: Long) = database.withTransaction {
         val transaction = database.transactions().getById(id) ?: return@withTransaction
-        val account = database.accounts().getById(transaction.accountId) ?: return@withTransaction
+        val account = database.accounts().getById(transaction.accountId)
         if (transaction.type == TransactionType.TRANSFER) {
-            val destAccount = database.accounts().getById(transaction.destinationAccountId!!) ?: return@withTransaction
-            val sourceDelta = if (account.isCreditCard) transaction.amountPaise else -transaction.amountPaise
-            val destDelta = if (destAccount.isCreditCard) -transaction.amountPaise else transaction.amountPaise
-            database.transactions().delete(transaction)
-            database.accounts().update(account.copy(balancePaise = account.balancePaise - sourceDelta))
-            database.accounts().update(destAccount.copy(balancePaise = destAccount.balancePaise - destDelta))
-        } else {
-            val delta = when {
-                account.isCreditCard && transaction.type == TransactionType.EXPENSE -> transaction.amountPaise
-                account.isCreditCard -> -transaction.amountPaise
-                transaction.type == TransactionType.EXPENSE -> -transaction.amountPaise
-                else -> transaction.amountPaise
-            }
+            val destAccount = transaction.destinationAccountId?.let { database.accounts().getById(it) }
             database.transactions().delete(transaction)
             database.owed().deleteForTransaction(transaction.id)
-            database.accounts().update(account.copy(balancePaise = account.balancePaise - delta))
+            if (account != null) {
+                val sourceDelta = if (account.isCreditCard) transaction.amountPaise else -transaction.amountPaise
+                database.accounts().update(account.copy(balancePaise = account.balancePaise - sourceDelta))
+            }
+            if (destAccount != null) {
+                val destDelta = if (destAccount.isCreditCard) -transaction.amountPaise else transaction.amountPaise
+                database.accounts().update(destAccount.copy(balancePaise = destAccount.balancePaise - destDelta))
+            }
+        } else {
+            database.transactions().delete(transaction)
+            database.owed().deleteForTransaction(transaction.id)
+            if (account != null) {
+                val delta = when {
+                    account.isCreditCard && transaction.type == TransactionType.EXPENSE -> transaction.amountPaise
+                    account.isCreditCard -> -transaction.amountPaise
+                    transaction.type == TransactionType.EXPENSE -> -transaction.amountPaise
+                    else -> transaction.amountPaise
+                }
+                database.accounts().update(account.copy(balancePaise = account.balancePaise - delta))
+            }
         }
     }
 
     suspend fun updateTransaction(transaction: TransactionEntity) = database.withTransaction {
-        val previous = database.transactions().getById(transaction.id) ?: error("Transaction not found")
+        val previous = database.transactions().getById(transaction.id) ?: return@withTransaction
 
         // Collect all balance adjustments by account ID, then apply them at the end.
         val adjustments = mutableMapOf<Long, Long>()
@@ -102,27 +111,39 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
         }
 
         // 1. Reverse the previous transaction's effect.
-        val prevSource = database.accounts().getById(previous.accountId) ?: error("Previous account not found")
-        if (previous.type == TransactionType.TRANSFER) {
-            val prevDest = database.accounts().getById(previous.destinationAccountId!!) ?: error("Previous destination not found")
-            val srcDelta = if (prevSource.isCreditCard) previous.amountPaise else -previous.amountPaise
-            val dstDelta = if (prevDest.isCreditCard) -previous.amountPaise else previous.amountPaise
-            adjust(prevSource.id, -srcDelta)
-            adjust(prevDest.id, -dstDelta)
-        } else {
-            adjust(prevSource.id, -incExpDelta(prevSource, previous))
+        val prevSource = database.accounts().getById(previous.accountId)
+        if (prevSource != null) {
+            if (previous.type == TransactionType.TRANSFER) {
+                val srcDelta = if (prevSource.isCreditCard) previous.amountPaise else -previous.amountPaise
+                adjust(prevSource.id, -srcDelta)
+            } else {
+                adjust(prevSource.id, -incExpDelta(prevSource, previous))
+            }
+        }
+        if (previous.type == TransactionType.TRANSFER && previous.destinationAccountId != null) {
+            val prevDest = database.accounts().getById(previous.destinationAccountId)
+            if (prevDest != null) {
+                val dstDelta = if (prevDest.isCreditCard) -previous.amountPaise else previous.amountPaise
+                adjust(prevDest.id, -dstDelta)
+            }
         }
 
         // 2. Apply the new transaction's effect.
-        val newSource = database.accounts().getById(transaction.accountId) ?: error("Choose a valid account")
-        if (transaction.type == TransactionType.TRANSFER) {
-            val newDest = database.accounts().getById(transaction.destinationAccountId!!) ?: error("Choose a valid destination account")
-            val srcDelta = if (newSource.isCreditCard) transaction.amountPaise else -transaction.amountPaise
-            val dstDelta = if (newDest.isCreditCard) -transaction.amountPaise else transaction.amountPaise
-            adjust(newSource.id, srcDelta)
-            adjust(newDest.id, dstDelta)
-        } else {
-            adjust(newSource.id, incExpDelta(newSource, transaction))
+        val newSource = database.accounts().getById(transaction.accountId)
+        if (newSource != null) {
+            if (transaction.type == TransactionType.TRANSFER) {
+                val srcDelta = if (newSource.isCreditCard) transaction.amountPaise else -transaction.amountPaise
+                adjust(newSource.id, srcDelta)
+            } else {
+                adjust(newSource.id, incExpDelta(newSource, transaction))
+            }
+        }
+        if (transaction.type == TransactionType.TRANSFER && transaction.destinationAccountId != null) {
+            val newDest = database.accounts().getById(transaction.destinationAccountId)
+            if (newDest != null) {
+                val dstDelta = if (newDest.isCreditCard) -transaction.amountPaise else transaction.amountPaise
+                adjust(newDest.id, dstDelta)
+            }
         }
 
         // 3. Apply all adjustments.
