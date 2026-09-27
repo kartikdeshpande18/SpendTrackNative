@@ -1,0 +1,110 @@
+01 Sep '26 - 26 Sep '26
+1/2
+KARTIK KIRAN DESHPANDE
+Customer ID 380004185728 atom name Emergency fund
+Phone 9284893719 Branch Ground Floor, Ashford Park View, Indiqube, 80
+Feet Rd, 3rd Block, Koramangala, Bengaluru,
+Email kartikdeshpande15@gmail.com Karnataka, INDIA, 560034
+CKYC number 40010806826738 Address C O KIRAN DIGAMBAR DESHPANDE P 401
+PRATHAM, HOUSING SOCIETY KASARI ROAD
+Nominee Shubhankar Deshpande TALEGAON DHAMDHERE, PUNE, NEAR BAZAR
+MAIDAN TALEGAON DHAMDHERE TALEGAON,
+MAHARASHTRA, INDIA, 412208
+Opening balance Total credits Interest earned Total debits Closing balance
++ + - =
+₹3,961.23 ₹3,991 ₹21.35 ₹1 ₹7,972.58
+DATE DETAILS REF NO. AMOUNT BALANCE
+01 Sep '26 Daily interest cr. for 31-Aug-2026 683710709_1 ₹0.57 ₹3,961.8
+02 Sep '26 Daily interest cr. for 01-Sep-2026 690492114_1 ₹0.57 ₹3,962.37
+02 Sep '26 Add money 691515022_1 ₹484 ₹4,446.37
+03 Sep '26 Daily interest cr. for 02-Sep-2026 697323899_1 ₹0.64 ₹4,447.01
+04 Sep '26 Daily interest cr. for 03-Sep-2026 705163885_1 ₹0.64 ₹4,447.65
+05 Sep '26 Daily interest cr. for 04-Sep-2026 713627896_1 ₹0.64 ₹4,448.29
+06 Sep '26 Daily interest cr. for 05-Sep-2026 722116411_1 ₹0.64 ₹4,448.93
+07 Sep '26 Daily interest cr. for 06-Sep-2026 734320724_1 ₹0.64 ₹4,449.57
+08 Sep '26 Daily interest cr. for 07-Sep-2026 745786045_1 ₹0.64 ₹4,450.21
+09 Sep '26 Daily interest cr. for 08-Sep-2026 766630745_1 ₹0.64 ₹4,450.85
+10 Sep '26 Daily interest cr. for 09-Sep-2026 788225432_1 ₹0.64 ₹4,451.49
+11 Sep '26 Daily interest cr. for 10-Sep-2026 814085797_1 ₹0.64 ₹4,452.13
+11 Sep '26 Add money 815566871_1 ₹500 ₹4,952.13
+12 Sep '26 Daily interest cr. for 11-Sep-2026 836559828_1 ₹0.71 ₹4,952.84
+13 Sep '26 Daily interest cr. for 12-Sep-2026 858270451_1 ₹0.71 ₹4,953.55
+Need help? Contact our support team at help@slice.bank.in or +91-8048329999 slice small finance bank
+01 Sep '26 - 26 Sep '26
+2/2
+14 Sep '26 Daily interest cr. for 13-Sep-2026 879920325_1 ₹0.71 ₹4,954.26
+15 Sep '26 Daily interest cr. for 14-Sep-2026 901399439_1 ₹0.71 ₹4,954.97
+15 Sep '26 Monthly auto save 902224815_1 ₹1,000 ₹5,954.97
+16 Sep '26 Daily interest cr. for 15-Sep-2026 923130853_1 ₹0.86 ₹5,955.83
+16 Sep '26 Transfer to savings 924803524_1 -₹1 ₹5,954.83
+17 Sep '26 Daily interest cr. for 16-Sep-2026 944957067_1 ₹0.86 ₹5,955.69
+18 Sep '26 Daily interest cr. for 17-Sep-2026 966740276_1 ₹0.85 ₹5,956.54
+18 Sep '26 Add money 972731656_1 ₹1,807 ₹7,763.54
+19 Sep '26 Daily interest cr. for 18-Sep-2026 988726109_1 ₹1.11 ₹7,764.65
+20 Sep '26 Daily interest cr. for 19-Sep-2026 1010423884_1 ₹1.12 ₹7,765.77
+21 Sep '26 Daily interest cr. for 20-Sep-2026 1032087872_1 ₹1.12 ₹7,766.89
+22 Sep '26 Daily interest cr. for 21-Sep-2026 1053829013_1 ₹1.12 ₹7,768.01
+23 Sep '26 Daily interest cr. for 22-Sep-2026 1075605002_1 ₹1.12 ₹7,769.13
+23 Sep '26 Add money 1076506292_1 ₹200 ₹7,969.13
+24 Sep '26 Daily interest cr. for 23-Sep-2026 1097781769_1 ₹1.15 ₹7,970.28
+25 Sep '26 Daily interest cr. for 24-Sep-2026 1125953466_1 ₹1.15 ₹7,971.43
+26 Sep '26 Daily interest cr. for 25-Sep-2026 1147898508_1 ₹1.15 ₹7,972.58
+ Generated on 26 Sep '26
+ⓘ  This statement shows transactions for your Emergency fund atom only. For a consolidated statement including your savings account,
+please contact customer support at help@slice.bank.in
+Need help? Contact our support team at help@slice.bank.in or +91-8048329999 slice small finance bank
+
+===POSITIONAL===
+01 Sep '26 - 26 Sep '26|454.8856|41.0
+1/2|551.41156|55.599976
+KARTIK KIRAN DESHPANDE|32.0|98.400024
+Customer ID|32.0|121.39996~380004185728|107.0|121.39996~atom name|310.0|121.39996~Emergency fund|385.0|121.39996
+Phone|32.0|141.0~9284893719|107.0|141.0~Branch|310.0|141.0~Ground Floor, Ashford Park View, Indiqube, 80|385.0|141.0
+Feet Rd, 3rd Block, Koramangala, Bengaluru,|385.0|151.79999
+Email|32.0|160.59998~kartikdeshpande15@gmail.com|107.0|160.59998~Karnataka, INDIA, 560034|385.0|162.59998
+CKYC number|32.0|180.20001~40010806826738|107.0|180.20001~Address|310.0|182.19995~C O KIRAN DIGAMBAR DESHPANDE P 401|385.0|182.19995
+PRATHAM, HOUSING SOCIETY KASARI ROAD|385.0|193.0
+Nominee|32.0|199.79999~Shubhankar Deshpande|107.0|199.79999~TALEGAON DHAMDHERE, PUNE, NEAR BAZAR|385.0|203.79999
+MAIDAN TALEGAON DHAMDHERE TALEGAON,|385.0|214.59998
+MAHARASHTRA, INDIA, 412208|385.0|225.39996
+Opening balance|41.144|290.39996~Total credits|162.088|290.39996~Interest earned|268.896|290.39996~Total debits|388.596|290.39996~Closing balance|493.328|290.39996
++|124.916|300.8~+|237.516|300.8~-|350.914|300.8~=|462.992|300.8
+₹3,961.23|49.11|309.09998~₹3,991|169.195|309.09998~₹21.35|281.535|309.09998~₹1|404.82|309.09998~₹7,972.58|499.605|309.09998
+DATE|32.0|369.0~DETAILS|92.0|369.0~REF NO.|284.0|369.0~AMOUNT|441.656|369.0~BALANCE|535.06396|369.0
+01 Sep '26|32.0|400.59998~Daily interest cr. for 31-Aug-2026|92.0|400.59998~683710709_1|284.0|400.59998~₹0.57|446.48|400.6~₹3,961.8|532.128|400.59998
+02 Sep '26|32.0|426.19998~Daily interest cr. for 01-Sep-2026|92.0|426.19998~690492114_1|284.0|426.19998~₹0.57|446.48|426.19998~₹3,962.37|526.76|426.19998
+02 Sep '26|32.0|451.8~Add money|92.0|451.8~691515022_1|284.0|451.8~₹484|447.288|451.8~₹4,446.37|525.904|451.8
+03 Sep '26|32.0|477.4~Daily interest cr. for 02-Sep-2026|92.0|477.4~697323899_1|284.0|477.4~₹0.64|445.632|477.4~₹4,447.01|527.81604|477.4
+04 Sep '26|32.0|503.0~Daily interest cr. for 03-Sep-2026|92.0|503.0~705163885_1|284.0|503.0~₹0.64|445.632|503.0~₹4,447.65|526.71204|503.0
+05 Sep '26|32.0|528.6~Daily interest cr. for 04-Sep-2026|92.0|528.6~713627896_1|284.0|528.6~₹0.64|445.632|528.6~₹4,448.29|525.192|528.6
+06 Sep '26|32.0|554.19995~Daily interest cr. for 05-Sep-2026|92.0|554.19995~722116411_1|284.0|554.19995~₹0.64|445.632|554.19995~₹4,448.93|525.56|554.19995
+07 Sep '26|32.0|579.8~Daily interest cr. for 06-Sep-2026|92.0|579.8~734320724_1|284.0|579.8~₹0.64|445.632|579.8~₹4,449.57|526.61597|579.8
+08 Sep '26|32.0|605.4~Daily interest cr. for 07-Sep-2026|92.0|605.4~745786045_1|284.0|605.4~₹0.64|445.632|605.4~₹4,450.21|526.776|605.4
+09 Sep '26|32.0|631.0~Daily interest cr. for 08-Sep-2026|92.0|631.0~766630745_1|284.0|631.0~₹0.64|445.632|631.0~₹4,450.85|525.136|631.0
+10 Sep '26|32.0|656.6~Daily interest cr. for 09-Sep-2026|92.0|656.6~788225432_1|284.0|656.6~₹0.64|445.632|656.6~₹4,451.49|527.024|656.6
+11 Sep '26|32.0|682.19995~Daily interest cr. for 10-Sep-2026|92.0|682.19995~814085797_1|284.0|682.19995~₹0.64|445.632|682.19995~₹4,452.13|527.464|682.19995
+11 Sep '26|32.0|707.8~Add money|92.0|707.8~815566871_1|284.0|707.8~₹500|447.4|707.8~₹4,952.13|527.928|707.8
+12 Sep '26|32.0|733.4~Daily interest cr. for 11-Sep-2026|92.0|733.4~836559828_1|284.0|733.4~₹0.71|448.048|733.39996~₹4,952.84|525.648|733.4
+13 Sep '26|32.0|759.0~Daily interest cr. for 12-Sep-2026|92.0|759.0~858270451_1|284.0|759.0~₹0.71|448.048|759.0~₹4,953.55|526.008|759.0
+Need help? Contact our support team at help@slice.bank.in or +91-8048329999|24.0|817.8898~slice small finance bank|467.6436|817.8898~01 Sep '26 - 26 Sep '26|454.8856|41.0
+2/2|550.1396|55.599976
+14 Sep '26|32.0|103.599976~Daily interest cr. for 13-Sep-2026|92.0|103.599976~879920325_1|284.0|103.599976~₹0.71|448.048|103.599976~₹4,954.26|525.952|103.599976
+15 Sep '26|32.0|129.20001~Daily interest cr. for 14-Sep-2026|92.0|129.20001~901399439_1|284.0|129.20001~₹0.71|448.048|129.19995~₹4,954.97|526.984|129.20001
+15 Sep '26|32.0|154.79999~Monthly auto save|92.0|154.79999~902224815_1|284.0|154.79999~₹1,000|441.776|154.79999~₹5,954.97|527.152|154.79999
+16 Sep '26|32.0|180.40002~Daily interest cr. for 15-Sep-2026|92.0|180.40002~923130853_1|284.0|180.40002~₹0.86|445.504|180.39996~₹5,955.83|525.992|180.40002
+16 Sep '26|32.0|206.0~Transfer to savings|92.0|206.0~924803524_1|284.0|206.0~-₹1|455.016|206.0~₹5,954.83|525.824|206.0
+17 Sep '26|32.0|231.59998~Daily interest cr. for 16-Sep-2026|92.0|231.59998~944957067_1|284.0|231.59998~₹0.86|445.504|231.59998~₹5,955.69|526.328|231.59998
+18 Sep '26|32.0|257.2~Daily interest cr. for 17-Sep-2026|92.0|257.2~966740276_1|284.0|257.2~₹0.85|445.576|257.19995~₹5,956.54|525.944|257.2
+18 Sep '26|32.0|282.8~Add money|92.0|282.8~972731656_1|284.0|282.8~₹1,807|442.704|282.8~₹7,763.54|527.752|282.8
+19 Sep '26|32.0|308.40002~Daily interest cr. for 18-Sep-2026|92.0|308.40002~988726109_1|284.0|308.40002~₹1.11|450.56|308.39996~₹7,764.65|527.944|308.40002
+20 Sep '26|32.0|334.0~Daily interest cr. for 19-Sep-2026|92.0|334.0~1010423884_1|284.0|334.0~₹1.12|449.288|334.00003~₹7,765.77|529.63196|334.0
+21 Sep '26|32.0|359.6~Daily interest cr. for 20-Sep-2026|92.0|359.6~1032087872_1|284.0|359.6~₹1.12|449.288|359.6~₹7,766.89|527.704|359.6
+22 Sep '26|32.0|385.2~Daily interest cr. for 21-Sep-2026|92.0|385.2~1053829013_1|284.0|385.2~₹1.12|449.288|385.2~₹7,768.01|528.888|385.2
+23 Sep '26|32.0|410.8~Daily interest cr. for 22-Sep-2026|92.0|410.8~1075605002_1|284.0|410.8~₹1.12|449.288|410.80002~₹7,769.13|530.352|410.8
+23 Sep '26|32.0|436.4~Add money|92.0|436.4~1076506292_1|284.0|436.4~₹200|447.456|436.4~₹7,969.13|529.664|436.4
+24 Sep '26|32.0|462.0~Daily interest cr. for 23-Sep-2026|92.0|462.0~1097781769_1|284.0|462.0~₹1.15|449.232|462.0~₹7,970.28|527.48804|462.0
+25 Sep '26|32.0|487.6~Daily interest cr. for 24-Sep-2026|92.0|487.6~1125953466_1|284.0|487.6~₹1.15|449.232|487.6~₹7,971.43|529.152|487.6
+26 Sep '26|32.0|513.2~Daily interest cr. for 25-Sep-2026|92.0|513.2~1147898508_1|284.0|513.2~₹1.15|449.232|513.2~₹7,972.58|527.69604|513.2
+ Generated on 26 Sep '26|32.0|560.8
+ⓘ  This statement shows transactions for your Emergency fund atom only. For a consolidated statement including your savings account,|44.0|627.0
+please contact customer support at help@slice.bank.in|44.0|637.8

@@ -1,0 +1,497 @@
+Kartik's
+Credit card statement
+X X X X  X X X X  X X X X  4 8 3 1
+15 AUG - 14 SEP
+₹2,920.14 Repay
+Due on 1 Oct
+Statement summary
+Spends ₹5,030.14
+Refunds & repayments ₹2,110.00
+Interest ₹0.00
+Surcharge ₹0.00
+Total amount due ₹2,920.14
+Min amount due ₹200.00
+Spends
+Shree mataji sup… ₹50
+S
+13 Sep '26 • UPI
+Pmpml ₹80
+P
+12 Sep '26 • UPI
+Jay malhar snac… ₹210
+J
+11 Sep '26 • UPI
+Sadguru enterpr… ₹75
+S
+10 Sep '26 • UPI
+Jay malhar snac… ₹70
+J
+10 Sep '26 • UPI
+Swad hotel ₹140
+S
+9 Sep '26 • UPI
+Jay malhar snac… ₹70
+J
+9 Sep '26 • UPI
+Vaibhav shankar… ₹25
+V
+9 Sep '26 • UPI
+Noor key maker ₹120
+N
+8 Sep '26 • UPI
+Swad hotel ₹140
+S
+8 Sep '26 • UPI
+Spends
+Swad hotel ₹140
+S
+7 Sep '26 • UPI
+Swad hotel ₹140
+S
+5 Sep '26 • UPI
+Initiative ₹10
+I
+4 Sep '26 • UPI
+Initiative ₹10
+I
+4 Sep '26 • UPI
+Jay malhar snac… ₹50
+J
+4 Sep '26 • UPI
+Joshi fast food ₹30
+J
+4 Sep '26 • UPI
+R mart stores nx ₹101
+R
+3 Sep '26 • UPI
+Swad hotel ₹140
+S
+3 Sep '26 • UPI
+Kaveri snacks ₹270
+K
+3 Sep '26 • UPI
+Sudalaikannu ₹40
+S
+3 Sep '26 • UPI
+Spends
+New chamunda … ₹40
+N
+2 Sep '26 • UPI
+Sachin apparao … ₹210
+S
+31 Aug '26 • UPI
+Mahendra dewasi ₹40
+M
+31 Aug '26 • UPI
+Joshi fast food ₹20
+J
+31 Aug '26 • UPI
+Pmpml ₹10
+P
+31 Aug '26 • UPI
+Zomato ₹121.53
+29 Aug '26 • UPI
+Hotel grand mal… ₹170
+H
+28 Aug '26 • UPI
+Jay malhar snac… ₹70
+J
+27 Aug '26 • UPI
+Joshi fast food ₹25
+J
+27 Aug '26 • UPI
+Harshad shanka… ₹20
+H
+27 Aug '26 • UPI
+Spends
+Pmpml ₹10
+P
+25 Aug '26 • UPI
+Krishna ₹70
+K
+25 Aug '26 • UPI
+Krishna ₹50
+K
+24 Aug '26 • UPI
+Paushtik aahar ₹180
+P
+22 Aug '26 • UPI
+Swiggy ₹149
+22 Aug '26 • UPI
+Pmpml ₹10
+P
+21 Aug '26 • UPI
+Joshi fast food ₹25
+J
+21 Aug '26 • UPI
+Pmpml ₹10
+P
+20 Aug '26 • UPI
+Jay malhar snac… ₹50
+J
+20 Aug '26 • UPI
+Swiggy ₹125
+19 Aug '26 • UPI
+Spends
+Petrol ₹335.46
+P
+17 Aug '26 • UPI
+Hemant ₹20
+H
+17 Aug '26 • UPI
+Saptshrungi pan… ₹12
+S
+17 Aug '26 • UPI
+Surekha petrole… ₹786
+S
+16 Aug '26 • UPI
+Maharashtra pet… ₹560.15
+M
+16 Aug '26 • UPI
+Refunds & repayments
+Repayment ₹210
+2 Sep '26
+Repayment ₹180
+24 Aug '26
+Repayment ₹1,720
+20 Aug '26
+GST details
+IGST ₹0
+CGST ₹0
+SGST ₹0
+monies
+Earned 3,348
+15 Aug - 14 Sep
+Glossary
+Payment obligations
+The Total Amount Due (TAD) is the full
+outstanding balance on your card,
+including all transactions, fees, and
+charges.Please ensure that at least the
+Minimum Amount Due (MAD) is paid by
+the due date. Failure to do so within
+three days of the due date will result in
+reporting of default to credit bureaus.
+For details on how your MAD is
+calculated, please refer to the slice
+credit card MITC (Most Important Terms
+and Conditions) available on slice app or
+website (https://slice.bank.in/cc-mitc/).
+Credit card security
+To immediately block your card in the
+event of loss, theft, or any suspicious
+activity, contact our customer support
+through the slice app or call on 080
+4832 9999.
+Spends
+All money you spent using your slice
+credit card or UPI during this
+statement's billing cycle.
+Bank transfers
+Money transferred from your slice credit
+card cash limit to your bank account,
+during this statement’s billing cycle.
+Glossary
+Refunds & repayments
+All amounts credited to your credit card
+balance during this statement’s billing
+cycle, including refunds, reversals,
+repayments, waivers, and any cashback.
+Interest
+If any portion from the total bill due
+remains unpaid after the payment due
+date, interest or finance charges may
+apply as per the average daily reducing
+balance method. Paying only the
+minimum amount each month may
+result in long-term debt with
+compounded interest and loss of
+interest-free credit period benefits.
+Surcharge
+Fee applicable on specific spend
+categories such as rent, education,
+online gaming or wallet loads. More
+details can be found in slice credit card
+MITC.
+Flat fee
+Fee for processing bank transfers from
+your slice credit card cash limit to your
+savings account.
+Glossary
+Late fee
+Fee charged when the minimum due
+amount isn’t paid by the due date. The
+fee is applied as per the structured
+schedule based on your outstanding
+balance.
+Foreclosure charge
+Fee charged to facilitate early closure of
+an active sliced transaction. For details
+on how the foreclosure charge is
+calculated, refer to the slicing facility
+terms or the slice UPI credit card MITC.
+Ongoing EMIs
+Monthly installment payments due for
+active sliced transactions or any active
+EMIs on your credit card.
+Carry forward
+Any outstanding balance from your
+previous month's statement that
+remains unpaid is carried forward.
+Glossary
+Grievance redressal
+If your concern isn't resolved through
+customer support, you may escalate it
+to our Grievance Redressal Officer, Mr.
+Aashish Saxena, by calling +91
+8069390473, emailing
+customergrievance@slice.bank.in, or
+writing to:Indiqube Ashford Park View,
+First Floor, Municipal No. 9, 80 Feet Rd,
+Industrial Layout, Koramangala 3rd
+Block, Ward No. 68, Bengaluru –
+560034, Karnataka
+
+===POSITIONAL===
+Kartik's|18.0|72.75
+Credit card statement|18.0|90.75
+X|18.0|112.5~X|26.247036|112.5~X|34.494072|112.5~X|42.741108|112.5~ X|50.988144|112.5~X|63.99019|112.5~X|72.23723|112.5~X|80.48426|112.5~ X|88.73129|112.5~X|101.73334|112.5~X|109.98038|112.5~X|118.22742|112.5~ 4|126.47445|112.5~8|139.3685|112.5~3|147.64253|112.5~1|155.43845|112.5
+15 AUG - 14 SEP|18.0|133.5
+₹2,920.14|36.75|190.5~Repay|188.03906|195.0
+Due on 1 Oct|36.75|207.0
+Statement summary|18.0|258.0
+Spends|18.0|287.25~₹5,030.14|205.65234|287.25
+Refunds & repayments|18.0|314.25~₹2,110.00|208.125|314.25
+Interest|18.0|353.25~₹0.00|226.03125|353.25
+Surcharge|18.0|380.25~₹0.00|226.03125|380.25
+Total amount due|18.0|423.0~₹2,920.14|197.36719|423.0
+Min amount due ₹200.00|18.0|436.5~Spends|18.0|29.25
+Shree mataji sup…|57.0|63.75~₹50|228.89062|63.75
+S|28.03125|72.75
+13 Sep '26 • UPI|57.0|80.25
+Pmpml|57.0|120.0~₹80|228.38672|120.0
+P|27.902344|129.0
+12 Sep '26 • UPI|57.0|136.5
+Jay malhar snac…|57.0|176.25~₹210|223.59375|176.25
+J|27.949219|185.25
+11 Sep '26 • UPI|57.0|192.75
+Sadguru enterpr…|57.0|232.5~₹75|230.35547|232.5
+S|28.03125|241.5
+10 Sep '26 • UPI|57.0|249.0
+Jay malhar snac…|57.0|288.75~₹70|229.86328|288.75
+J|27.949219|297.75
+10 Sep '26 • UPI|57.0|305.25
+Swad hotel|57.0|345.0~₹140|223.19531|345.0
+S|28.03125|354.0
+9 Sep '26 • UPI|57.0|361.5
+Jay malhar snac…|57.0|401.25~₹70|229.86328|401.25
+J|27.949219|410.25
+9 Sep '26 • UPI|57.0|417.75
+Vaibhav shankar…|57.0|457.5~₹25|229.46484|457.5
+V|27.785156|466.5
+9 Sep '26 • UPI|57.0|474.0
+Noor key maker|57.0|513.75~₹120|223.59375|513.75
+N|27.539062|522.75
+8 Sep '26 • UPI|57.0|530.25
+Swad hotel|57.0|570.0~₹140|223.19531|570.0
+S|28.03125|579.0
+8 Sep '26 • UPI|57.0|586.5~Spends|18.0|29.25
+Swad hotel|57.0|63.75~₹140|223.19531|63.75
+S|28.03125|72.75
+7 Sep '26 • UPI|57.0|80.25
+Swad hotel|57.0|120.0~₹140|223.19531|120.0
+S|28.03125|129.0
+5 Sep '26 • UPI|57.0|136.5
+Initiative|57.0|176.25~₹10|230.88281|176.25
+I|30.597656|185.25
+4 Sep '26 • UPI|57.0|192.75
+Initiative|57.0|232.5~₹10|230.88281|232.5
+I|30.597656|241.5
+4 Sep '26 • UPI|57.0|249.0
+Jay malhar snac…|57.0|288.75~₹50|228.89062|288.75
+J|27.949219|297.75
+4 Sep '26 • UPI|57.0|305.25
+Joshi fast food|57.0|345.0~₹30|228.8086|345.0
+J|27.949219|354.0
+4 Sep '26 • UPI|57.0|361.5
+R mart stores nx|57.0|401.25~₹101|225.5039|401.25
+R|27.796875|410.25
+3 Sep '26 • UPI|57.0|417.75
+Swad hotel|57.0|457.5~₹140|223.19531|457.5
+S|28.03125|466.5
+3 Sep '26 • UPI|57.0|474.0
+Kaveri snacks|57.0|513.75~₹270|222.57422|513.75
+K|28.101562|522.75
+3 Sep '26 • UPI|57.0|530.25
+Sudalaikannu|57.0|570.0~₹40|228.5625|570.0
+S|28.03125|579.0
+3 Sep '26 • UPI|57.0|586.5~Spends|18.0|29.25
+New chamunda …|57.0|63.75~₹40|228.5625|63.75
+N|27.539062|72.75
+2 Sep '26 • UPI|57.0|80.25
+Sachin apparao …|57.0|120.0~₹210|223.59375|120.0
+S|28.03125|129.0
+31 Aug '26 • UPI|57.0|136.5
+Mahendra dewasi|57.0|176.25~₹40|228.5625|176.25
+M|26.765625|185.25
+31 Aug '26 • UPI|57.0|192.75
+Joshi fast food|57.0|232.5~₹20|228.97266|232.5
+J|27.949219|241.5
+31 Aug '26 • UPI|57.0|249.0
+Pmpml|57.0|288.75~₹10|230.88281|288.75
+P|27.902344|297.75
+31 Aug '26 • UPI|57.0|305.25
+Zomato|57.0|345.0~₹121.53|207.9961|345.0
+29 Aug '26 • UPI|57.0|361.5
+Hotel grand mal…|57.0|401.25~₹170|224.48438|401.25
+H|27.375|410.25
+28 Aug '26 • UPI|57.0|417.75
+Jay malhar snac…|57.0|457.5~₹70|229.86328|457.5
+J|27.949219|466.5
+27 Aug '26 • UPI|57.0|474.0
+Joshi fast food|57.0|513.75~₹25|229.46484|513.75
+J|27.949219|522.75
+27 Aug '26 • UPI|57.0|530.25
+Harshad shanka…|57.0|570.0~₹20|228.97266|570.0
+H|27.375|579.0
+27 Aug '26 • UPI|57.0|586.5~Spends|18.0|29.25
+Pmpml|57.0|63.75~₹10|230.88281|63.75
+P|27.902344|72.75
+25 Aug '26 • UPI|57.0|80.25
+Krishna|57.0|120.0~₹70|229.86328|120.0
+K|28.101562|129.0
+25 Aug '26 • UPI|57.0|136.5
+Krishna|57.0|176.25~₹50|228.89062|176.25
+K|28.101562|185.25
+24 Aug '26 • UPI|57.0|192.75
+Paushtik aahar|57.0|232.5~₹180|223.00781|232.5
+P|27.902344|241.5
+22 Aug '26 • UPI|57.0|249.0
+Swiggy|57.0|288.75~₹149|223.79297|288.75
+22 Aug '26 • UPI|57.0|305.25
+Pmpml|57.0|345.0~₹10|230.88281|345.0
+P|27.902344|354.0
+21 Aug '26 • UPI|57.0|361.5
+Joshi fast food|57.0|401.25~₹25|229.46484|401.25
+J|27.949219|410.25
+21 Aug '26 • UPI|57.0|417.75
+Pmpml|57.0|457.5~₹10|230.88281|457.5
+P|27.902344|466.5
+20 Aug '26 • UPI|57.0|474.0
+Jay malhar snac…|57.0|513.75~₹50|228.89062|513.75
+J|27.949219|522.75
+20 Aug '26 • UPI|57.0|530.25
+Swiggy|57.0|570.0~₹125|224.08594|570.0
+19 Aug '26 • UPI|57.0|586.5~Spends|18.0|29.25
+Petrol|57.0|63.75~₹335.46|203.70703|63.75
+P|27.902344|72.75
+17 Aug '26 • UPI|57.0|80.25
+Hemant|57.0|120.0~₹20|228.97266|120.0
+H|27.375|129.0
+17 Aug '26 • UPI|57.0|136.5
+Saptshrungi pan…|57.0|176.25~₹12|231.45703|176.25
+S|28.03125|185.25
+17 Aug '26 • UPI|57.0|192.75
+Surekha petrole…|57.0|232.5~₹786|222.375|232.5
+S|28.03125|241.5
+16 Aug '26 • UPI|57.0|249.0
+Maharashtra pet…|57.0|288.75~₹560.15|206.40234|288.75
+M|26.765625|297.75
+16 Aug '26 • UPI|57.0|305.25
+Refunds & repayments|18.0|349.5
+Repayment|57.0|384.0~₹210|223.59375|384.0
+2 Sep '26|57.0|400.5
+Repayment|57.0|440.25~₹180|223.00781|440.25
+24 Aug '26|57.0|456.75
+Repayment|57.0|496.5~₹1,720|214.33594|496.5
+20 Aug '26|57.0|513.0~GST details|18.0|29.25
+IGST|18.0|57.75~₹0|236.26172|57.75
+CGST|18.0|87.75~₹0|236.26172|87.75
+SGST|18.0|117.75~₹0|236.26172|117.75
+monies|18.0|158.25
+Earned|57.0|192.75~3,348|218.29688|192.75
+15 Aug - 14 Sep|57.0|209.25~Glossary|18.0|29.25
+Payment obligations|18.0|57.75
+The Total Amount Due (TAD) is the full|18.0|78.75
+outstanding balance on your card,|18.0|96.75
+including all transactions, fees, and|18.0|114.75
+charges.Please ensure that at least the|18.0|132.75
+Minimum Amount Due (MAD) is paid by|18.0|150.75
+the due date. Failure to do so within|18.0|168.75
+three days of the due date will result in|18.0|186.75
+reporting of default to credit bureaus.|18.0|204.75
+For details on how your MAD is|18.0|222.75
+calculated, please refer to the slice|18.0|240.75
+credit card MITC (Most Important Terms|18.0|258.75
+and Conditions) available on slice app or|18.0|276.75
+website (https://slice.bank.in/cc-mitc/).|18.0|294.75
+Credit card security|18.0|324.75
+To immediately block your card in the|18.0|345.75
+event of loss, theft, or any suspicious|18.0|363.75
+activity, contact our customer support|18.0|381.75
+through the slice app or call on 080|18.0|399.75
+4832 9999.|18.0|417.75
+Spends|18.0|447.75
+All money you spent using your slice|18.0|468.75
+credit card or UPI during this|18.0|486.75
+statement's billing cycle.|18.0|504.75
+Bank transfers|18.0|534.75
+Money transferred from your slice credit|18.0|555.75
+card cash limit to your bank account,|18.0|573.75
+during this statement’s billing cycle.|18.0|591.75~Glossary|18.0|29.25
+Refunds & repayments|18.0|57.75
+All amounts credited to your credit card|18.0|78.75
+balance during this statement’s billing|18.0|96.75
+cycle, including refunds, reversals,|18.0|114.75
+repayments, waivers, and any cashback.|18.0|132.75
+Interest|18.0|162.75
+If any portion from the total bill due|18.0|183.75
+remains unpaid after the payment due|18.0|201.75
+date, interest or finance charges may|18.0|219.75
+apply as per the average daily reducing|18.0|237.75
+balance method. Paying only the|18.0|255.75
+minimum amount each month may|18.0|273.75
+result in long-term debt with|18.0|291.75
+compounded interest and loss of|18.0|309.75
+interest-free credit period benefits.|18.0|327.75
+Surcharge|18.0|357.75
+Fee applicable on specific spend|18.0|378.75
+categories such as rent, education,|18.0|396.75
+online gaming or wallet loads. More|18.0|414.75
+details can be found in slice credit card|18.0|432.75
+MITC.|18.0|450.75
+Flat fee|18.0|480.75
+Fee for processing bank transfers from|18.0|501.75
+your slice credit card cash limit to your|18.0|519.75
+savings account.|18.0|537.75~Glossary|18.0|29.25
+Late fee|18.0|57.75
+Fee charged when the minimum due|18.0|78.75
+amount isn’t paid by the due date. The|18.0|96.75
+fee is applied as per the structured|18.0|114.75
+schedule based on your outstanding|18.0|132.75
+balance.|18.0|150.75
+Foreclosure charge|18.0|180.75
+Fee charged to facilitate early closure of|18.0|201.75
+an active sliced transaction. For details|18.0|219.75
+on how the foreclosure charge is|18.0|237.75
+calculated, refer to the slicing facility|18.0|255.75
+terms or the slice UPI credit card MITC.|18.0|273.75
+Ongoing EMIs|18.0|303.75
+Monthly installment payments due for|18.0|324.75
+active sliced transactions or any active|18.0|342.75
+EMIs on your credit card.|18.0|360.75
+Carry forward|18.0|390.75
+Any outstanding balance from your|18.0|411.75
+previous month's statement that|18.0|429.75
+remains unpaid is carried forward.|18.0|447.75~Glossary|18.0|29.25
+Grievance redressal|18.0|57.75
+If your concern isn't resolved through|18.0|78.75
+customer support, you may escalate it|18.0|96.75
+to our Grievance Redressal Officer, Mr.|18.0|114.75
+Aashish Saxena, by calling +91|18.0|132.75
+8069390473, emailing|18.0|150.75
+customergrievance@slice.bank.in, or|18.0|168.75
+writing to:Indiqube Ashford Park View,|18.0|186.75
+First Floor, Municipal No. 9, 80 Feet Rd,|18.0|204.75
+Industrial Layout, Koramangala 3rd|18.0|222.75
+Block, Ward No. 68, Bengaluru –|18.0|240.75

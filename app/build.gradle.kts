@@ -55,7 +55,10 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.11.0")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("org.apache.pdfbox:pdfbox:2.0.27")
     testImplementation("org.json:json:20250517")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0")
 }

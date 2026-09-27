@@ -334,6 +334,7 @@ class Phase1CorrectnessHardeningTest {
         val fixedDepositsList = mutableListOf<FixedDepositEntity>()
         val recurringTransactionsList = mutableListOf<RecurringTransactionEntity>()
         val recurringOccurrencesList = mutableListOf<RecurringOccurrenceEntity>()
+        val importHistoryList = mutableListOf<ImportHistoryEntity>()
 
         private val dummyDb = Proxy.newProxyInstance(
             SupportSQLiteDatabase::class.java.classLoader,
@@ -407,6 +408,7 @@ class Phase1CorrectnessHardeningTest {
         private val _fixedDepositsDao by lazy { createDaoProxy<FixedDepositDao, FixedDepositEntity>(fixedDepositsList) }
         private val _recurringTransactionsDao by lazy { createDaoProxy<RecurringTransactionDao, RecurringTransactionEntity>(recurringTransactionsList) }
         private val _recurringOccurrencesDao by lazy { createDaoProxy<RecurringOccurrenceDao, RecurringOccurrenceEntity>(recurringOccurrencesList) }
+        private val _importHistoryDao by lazy { createDaoProxy<ImportHistoryDao, ImportHistoryEntity>(importHistoryList) }
 
         override fun accounts(): AccountDao = _accountsDao
         override fun categories(): CategoryDao = _categoriesDao
@@ -418,6 +420,7 @@ class Phase1CorrectnessHardeningTest {
         override fun fixedDeposits(): FixedDepositDao = _fixedDepositsDao
         override fun recurringTransactions(): RecurringTransactionDao = _recurringTransactionsDao
         override fun recurringOccurrences(): RecurringOccurrenceDao = _recurringOccurrencesDao
+        override fun importHistory(): ImportHistoryDao = _importHistoryDao
 
         override fun inTransaction(): Boolean = true
         override val isOpen: Boolean = true

@@ -15,9 +15,10 @@ import androidx.room.TypeConverters
         CardPaymentEntity::class,
         FixedDepositEntity::class,
         RecurringTransactionEntity::class,
-        RecurringOccurrenceEntity::class
+        RecurringOccurrenceEntity::class,
+        ImportHistoryEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 @TypeConverters(SpendTrackConverters::class)
@@ -32,4 +33,5 @@ abstract class SpendTrackDatabase : RoomDatabase() {
     abstract fun fixedDeposits(): FixedDepositDao
     abstract fun recurringTransactions(): RecurringTransactionDao
     abstract fun recurringOccurrences(): RecurringOccurrenceDao
+    abstract fun importHistory(): ImportHistoryDao
 }

@@ -70,7 +70,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.util.Locale
 
-private enum class Overlay { NONE, TRANSACTION, EDIT_TRANSACTION, ACCOUNTS, CATEGORIES, BUDGETS, DATA, REMINDERS, ADD_LOAN, ADD_OWED, CARD_PAYMENT, LOAN_OWED_CHOOSER, FIXED_DEPOSITS, RECURRING_TRANSACTIONS }
+private enum class Overlay { NONE, TRANSACTION, EDIT_TRANSACTION, ACCOUNTS, CATEGORIES, BUDGETS, DATA, REMINDERS, ADD_LOAN, ADD_OWED, CARD_PAYMENT, LOAN_OWED_CHOOSER, FIXED_DEPOSITS, RECURRING_TRANSACTIONS, IMPORT_STATEMENT }
 private enum class ReminderType { CARD, LOAN }
 
 @Composable
@@ -128,7 +128,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                     Overlay.ACCOUNTS -> AccountsScreen(accounts, onBack = { overlay = Overlay.NONE }, onAdd = { name, card, opening, lastFour, limit, cycle, due, minBal -> viewModel.addAccount(name, card, opening, lastFour, limit, cycle, due, minBal) }, onUpdate = viewModel::updateAccount, onDelete = viewModel::deleteAccount, onPayCard = { overlay = Overlay.CARD_PAYMENT })
                     Overlay.CATEGORIES -> CategoriesScreen(categories, onBack = { overlay = Overlay.NONE }, onAdd = viewModel::addCategory, onUpdate = viewModel::updateCategory, onDelete = viewModel::deleteCategory)
                     Overlay.BUDGETS -> BudgetsScreen(budgets, categories, transactions, onBack = { overlay = Overlay.NONE }, onSave = viewModel::saveBudget, onDelete = viewModel::deleteBudget, ensureMonth = viewModel::ensureBudgetMonth)
-                    Overlay.DATA -> DataScreen(viewModel, onBack = { overlay = Overlay.NONE })
+                    Overlay.DATA -> DataScreen(viewModel, onBack = { overlay = Overlay.NONE }, onImportStatement = { overlay = Overlay.IMPORT_STATEMENT })
                     Overlay.REMINDERS -> RemindersScreen(onBack = { overlay = Overlay.NONE })
                     Overlay.ADD_LOAN -> AddLoanScreen(onBack = { overlay = Overlay.NONE }, onSave = { viewModel.addLoan(it); overlay = Overlay.NONE })
                     Overlay.ADD_OWED -> AddOwedScreen(onBack = { overlay = Overlay.NONE }, onSave = { viewModel.addOwed(it); overlay = Overlay.NONE })
@@ -154,6 +154,37 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                         onUpdate = viewModel::updateRecurringTransaction,
                         onDelete = viewModel::deleteRecurringTransaction
                     )
+                    Overlay.IMPORT_STATEMENT -> {
+                        val ctx = LocalContext.current
+                        val importRepo = remember { com.spendtrack.app.importer.repository.ImportRepository(DatabaseProvider.get(ctx)) }
+                        val parsers = remember {
+                            mapOf(
+                                com.spendtrack.app.importer.detector.StatementFormat.HDFC_SAVINGS to com.spendtrack.app.importer.parser.HdfcSavingsParser(),
+                                com.spendtrack.app.importer.detector.StatementFormat.ICICI_SAVINGS to com.spendtrack.app.importer.parser.IciciSavingsParser(),
+                                com.spendtrack.app.importer.detector.StatementFormat.ICICI_CREDIT_CARD to com.spendtrack.app.importer.parser.IciciCreditCardParser(),
+                                com.spendtrack.app.importer.detector.StatementFormat.SLICE_SAVINGS to com.spendtrack.app.importer.parser.SliceSavingsParser(),
+                                com.spendtrack.app.importer.detector.StatementFormat.SLICE_CREDIT_CARD to com.spendtrack.app.importer.parser.SliceCreditCardParser(),
+                                com.spendtrack.app.importer.detector.StatementFormat.SLICE_ATOM to com.spendtrack.app.importer.parser.SliceAtomParser(),
+                                com.spendtrack.app.importer.detector.StatementFormat.SBI_SAVINGS to com.spendtrack.app.importer.parser.SbiSavingsParser(),
+                                com.spendtrack.app.importer.detector.StatementFormat.KOTAK_SAVINGS to com.spendtrack.app.importer.parser.KotakSavingsParser()
+                            )
+                        }
+                        val importViewModel: com.spendtrack.app.importer.ui.ImportViewModel = viewModel(
+                            factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                                    @Suppress("UNCHECKED_CAST")
+                                    return com.spendtrack.app.importer.ui.ImportViewModel(importRepo, parsers) as T
+                                }
+                            }
+                        )
+                        com.spendtrack.app.importer.ui.ImportScreen(
+                            viewModel = importViewModel,
+                            accounts = accounts,
+                            categories = categories,
+                            existingTransactions = transactions,
+                            onBack = { overlay = Overlay.NONE }
+                        )
+                    }
                     else -> Box(Modifier.fillMaxSize().statusBarsPadding()) {
                         AnimatedContent(
                             targetState = route,
@@ -232,7 +263,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                                     onRecurring = { overlay = Overlay.RECURRING_TRANSACTIONS },
                                     onBudgets = { overlay = Overlay.BUDGETS },
                                     onData = { overlay = Overlay.DATA },
-                                    onReminders = { overlay = Overlay.REMINDERS }
+                                    onReminders = { overlay = Overlay.REMINDERS },
+                                    onImportStatement = { overlay = Overlay.IMPORT_STATEMENT }
                                 )
                             }
                         }
@@ -893,7 +925,8 @@ fun TransactionCard(
     onRecurring: () -> Unit,
     onBudgets: () -> Unit,
     onData: () -> Unit,
-    onReminders: () -> Unit
+    onReminders: () -> Unit,
+    onImportStatement: () -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
     LazyColumn(Modifier.fillMaxSize().padding(20.dp), contentPadding = PaddingValues(bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -914,6 +947,7 @@ fun TransactionCard(
         item { SettingsCard("Budget", "Category budgets") { haptics.click(); onBudgets() } }
         item { SettingsCard("Data", "Backup and restore") { haptics.click(); onData() } }
         item { SettingsCard("Alerts & Reminders", "Card and loan notifications") { haptics.click(); onReminders() } }
+        item { SettingsCard("Import Statements", "Bulk import from PDF") { haptics.click(); onImportStatement() } }
     }
 }
 @Composable private fun SettingsCard(title: String, sub: String, onClick: () -> Unit = {}) { Card(Modifier.fillMaxWidth().clickable(onClick = onClick), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) { Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.titleLarge); Text(sub, color = MaterialTheme.colorScheme.onSurfaceVariant) }; Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) } } }
@@ -964,7 +998,7 @@ fun TransactionCard(
         dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
     )
 }
-@Composable private fun DataScreen(viewModel: FinanceViewModel, onBack: () -> Unit) {
+@Composable private fun DataScreen(viewModel: FinanceViewModel, onBack: () -> Unit, onImportStatement: (() -> Unit)? = null) {
     val context = LocalContext.current
     var backupText by remember { mutableStateOf<String?>(null) }
     var pendingRestore by remember { mutableStateOf<String?>(null) }
@@ -973,7 +1007,10 @@ fun TransactionCard(
     val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) pendingRestore = runCatching { context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: error("Unable to read file") }.getOrElse { status = "Restore failed"; null } }
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Data", style = MaterialTheme.typography.displaySmall) }
-        item { Button({ viewModel.exportBackup { result -> result.onSuccess { backupText = it; createDocument.launch("spendtrack-backup.json") }.onFailure { status = "Backup failed" } } }, Modifier.fillMaxWidth()) { Text("Create Backup") } }
+        if (onImportStatement != null) {
+            item { Button({ onImportStatement() }, Modifier.fillMaxWidth()) { Text("Import Statement (PDF)") } }
+        }
+        item { OutlinedButton({ viewModel.exportBackup { result -> result.onSuccess { backupText = it; createDocument.launch("spendtrack-backup.json") }.onFailure { status = "Backup failed" } } }, Modifier.fillMaxWidth()) { Text("Create Backup") } }
         item { OutlinedButton({ openDocument.launch(arrayOf("application/json", "text/plain")) }, Modifier.fillMaxWidth()) { Text("Restore Backup") } }
         if (status.isNotBlank()) item { Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }

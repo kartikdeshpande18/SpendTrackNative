@@ -1,0 +1,93 @@
+1
+Statement of Transactions in Saving Account no. 098501576648 in INR for the period September 1, 2026 - September 26, 2026
+KARTIK KIRAN DESHPANDE Your Base Branch:  ICICI BANK LIMITED,
+P-401, PRA,THAM HOUSING SOCIETY,KASARI ROAD, SHOP NO. 2, ATRIA,, SAI PRESTIGE, BANER
+NEAR BAZAR MAIDAN TALEGAON D, PUNE ROAD, , PUNE, MH, IN, 411045
+MAHARASHTRA - INDIA -  412208
+S No. Transaction
+Date Cheque Number Transaction Remarks Withdrawal Deposit Balance
+Amount (INR) Amount (INR) (INR)
+1 05.09.2026 Fund transfer
+INF/INFT/045758890601/77952210     /MANNLOWE 24666.00 24666.00
+INFORMATION/Salary Aug 26
+2 05.09.2026 KARTIK KIR
+UPI/KARTIK KIR/kartikdeshpand/Self Trans/SLICE 24666.00 0.00
+SMAL/624833104171/ICI6abdc2baf70d47a9bc09d
+4cdafa3d4cf
+3 14.09.2026 KARTIKKIRA
+UPI/KARTIKKIRA/XXde15@upi/NO REMARK/SLICE 15.00 15.00
+SMAL/144048724525/UPI508a9bd1d83f52acb0d9
+1ffcf729b681
+4 14.09.2026 KARTIKKIRA
+UPI/KARTIKKIRA/XXde15@upi/NO REMARK/SLICE 50.00 65.00
+SMAL/144127656358/UPI07f28214067d532cbeca3
+cb6db3d09d6
+5 14.09.2026 KARTIK KIR
+UPI/KARTIK KIR/XXde15@upi/Self Trans/SLICE 65.00 0.00
+SMAL/144518212298/UPI8803e73b2cd955478d7c
+84c59d089509
+Sincerly,
+Team ICICI Bank
+This is a system generated statement. Hence, it does not require any signature.
+Legends for transactions in your Account Statement
+RCHG - Recharge PAVC - Pay any Visa credit card SMO - Smart Money Order
+DTAX - Direct Tax PAC - Personal Accident cover VPS/IPS - Debit card transaction
+BPAY - Bill payment LNPY - Linked loan payment TOP - Mobile Recharge
+IDTX - Indirect Tax CCWD - Cardless Cash Withdrawal BCTT - Banking Cash Transaction Tax
+BBPS - Bharat Bill Payment Service PAYC - Pay to Contact UCCBRN CMS - Upcountry cheque collection
+INFT - Internal Fund Transfer (Within ICICI Bank) IMPS - Immediate Payment Service LCCBRN CMS - Local cheque collection
+BIL - Internet Bill payment or funds transfer to Third party VAT/MAT/NFS - Cash withdrawal at other bank N chg - NEFT Charges
+ONL - Online Shopping transaction (Payment done on third party ATM MMT - Mobile Money Transfer (Insta FT -
+website) INF - Internet fund transfer in linked accounts IMPS)
+NEFT - National Electronics Funds Transfer System (Other Bank EBA - Transaction on ICICI Direct T Chg - Travel Charges
+Fund transfer) SGB - Sovereign gold bond
+www.icici.bank.in Dial your Bank 1800-1080
+Please call from your registered mobile number for faster access
+Never share your OTP, CVV or passwords with anyone, even if the person claims to be a Bank employee.
+
+===POSITIONAL===
+1|418.0|42.049988
+Statement of Transactions in Saving Account no. 098501576648 in INR for the period September 1, 2026 - September 26, 2026|46.26|105.02002
+KARTIK KIRAN DESHPANDE|20.0|137.03998~Your Base Branch:  ICICI BANK LIMITED,|400.0|136.0
+P-401, PRA,THAM HOUSING SOCIETY,KASARI ROAD,|20.0|148.03998~SHOP NO. 2, ATRIA,, SAI PRESTIGE, BANER|400.0|146.03998
+NEAR BAZAR MAIDAN TALEGAON D, PUNE|20.0|160.03998~ROAD, , PUNE, MH, IN, 411045|400.0|156.08002
+MAHARASHTRA - INDIA -  412208|20.0|172.03998
+S No.|23.54|228.02002~Transaction|60.24|223.0
+Date|74.44|233.03998~Cheque Number|122.42|228.02002~Transaction Remarks|247.13|228.02002~Withdrawal|398.98|223.0~Deposit|473.79|223.0~Balance|532.14|223.0
+Amount (INR)|395.6|233.03998~Amount (INR)|461.6|233.03998~(INR)|537.62|233.03998
+1|30.1|253.02002~05.09.2026|61.4|253.02002~Fund transfer|192.0|247.97998
+INF/INFT/045758890601/77952210     /MANNLOWE|192.0|258.02002~24666.00|483.5|253.02002~24666.00|535.5|253.02002
+INFORMATION/Salary Aug 26|192.0|268.06
+2|30.1|283.02002~05.09.2026|61.4|283.02002~KARTIK KIR|192.0|277.96002
+UPI/KARTIK KIR/kartikdeshpand/Self Trans/SLICE|192.0|288.0~24666.00|417.5|283.02002~0.00|554.7|283.02002
+SMAL/624833104171/ICI6abdc2baf70d47a9bc09d|192.0|298.03998
+4cdafa3d4cf|192.0|308.08002
+3|30.1|323.02002~14.09.2026|61.4|323.02002~KARTIKKIRA|192.0|317.96002
+UPI/KARTIKKIRA/XXde15@upi/NO REMARK/SLICE|192.0|328.0~15.00|497.9|323.02002~15.00|549.9|323.02002
+SMAL/144048724525/UPI508a9bd1d83f52acb0d9|192.0|338.04
+1ffcf729b681|192.0|348.08
+4|30.1|363.02~14.09.2026|61.4|363.02~KARTIKKIRA|192.0|357.96
+UPI/KARTIKKIRA/XXde15@upi/NO REMARK/SLICE|192.0|368.0~50.00|497.9|363.02~65.00|549.9|363.02
+SMAL/144127656358/UPI07f28214067d532cbeca3|192.0|378.04
+cb6db3d09d6|192.0|388.08
+5|30.1|403.02~14.09.2026|61.4|403.02~KARTIK KIR|192.0|397.96
+UPI/KARTIK KIR/XXde15@upi/Self Trans/SLICE|192.0|408.0~65.00|431.9|403.02~0.00|554.7|403.02
+SMAL/144518212298/UPI8803e73b2cd955478d7c|192.0|418.04
+84c59d089509|192.0|428.08
+Sincerly,|19.0|461.05
+Team ICICI Bank|19.0|479.36
+This is a system generated statement. Hence, it does not require any signature.|143.64|505.02
+Legends for transactions in your Account Statement|195.84|558.02
+RCHG - Recharge|25.0|581.03~PAVC - Pay any Visa credit card|255.0|582.03~SMO - Smart Money Order|425.0|581.03
+DTAX - Direct Tax|25.0|593.33997~PAC - Personal Accident cover|255.0|594.33997~VPS/IPS - Debit card transaction|425.0|593.33997
+BPAY - Bill payment|25.0|605.64~LNPY - Linked loan payment|255.0|606.64~TOP - Mobile Recharge|425.0|605.64
+IDTX - Indirect Tax|25.0|617.94~CCWD - Cardless Cash Withdrawal|255.0|618.94~BCTT - Banking Cash Transaction Tax|425.0|617.94
+BBPS - Bharat Bill Payment Service|25.0|630.24~PAYC - Pay to Contact|255.0|631.24~UCCBRN CMS - Upcountry cheque collection|425.0|630.24
+INFT - Internal Fund Transfer (Within ICICI Bank)|25.0|642.55~IMPS - Immediate Payment Service|255.0|643.55~LCCBRN CMS - Local cheque collection|425.0|642.55
+BIL - Internet Bill payment or funds transfer to Third party|25.0|654.85~VAT/MAT/NFS - Cash withdrawal at other bank|255.0|655.85~N chg - NEFT Charges|425.0|654.85
+ONL - Online Shopping transaction (Payment done on third party|25.0|667.15~ATM|255.0|668.15~MMT - Mobile Money Transfer (Insta FT -|425.0|667.15
+website)|25.0|679.45~INF - Internet fund transfer in linked accounts|255.0|680.45~IMPS)|425.0|679.45
+NEFT - National Electronics Funds Transfer System (Other Bank|25.0|691.76~EBA - Transaction on ICICI Direct|255.0|692.76~T Chg - Travel Charges|425.0|691.76
+Fund transfer)|25.0|704.06~SGB - Sovereign gold bond|425.0|704.06
+www.icici.bank.in|230.0|777.64~Dial your Bank 1800-1080|322.0|777.64
+Please call from your registered mobile number for faster access|171.38|792.02
