@@ -455,6 +455,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     val topBudgets = remember(budgets, categories, transactions, selectedMonth) {
         TopBudgetsCalculator.calculateTopBudgetCategories(budgets, categories, transactions, selectedMonth.toString())
     }
+    val recentAccountMap = remember(accounts) { accounts.associateBy { it.id } }
+    val recentCategoryMap = remember(categories) { categories.associateBy { it.id } }
 
     if (showMonthPicker) {
         MonthSelectorDialog(
@@ -524,8 +526,6 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         if (transactions.isEmpty()) {
             item { SummaryCard("No Transactions Yet", "", "Tap + to record your first transaction") }
         } else {
-            val recentAccountMap = remember(accounts) { accounts.associateBy { it.id } }
-            val recentCategoryMap = remember(categories) { categories.associateBy { it.id } }
             items(transactions.take(5), key = { "recent_tx_${it.id}" }) { t ->
                 TransactionCard(
                     transaction = t,
@@ -559,6 +559,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     var categoryExpanded by remember { mutableStateOf(false) }
     var dateExpanded by remember { mutableStateOf(false) }
     var showCustomDateRangeDialog by remember { mutableStateOf(false) }
+    val accountMap = remember(accounts) { accounts.associateBy { it.id } }
+    val categoryMap = remember(categories) { categories.associateBy { it.id } }
 
     val visible = remember(transactions, query, categoryFilter, dateFilter, categories, accounts) {
         TransactionDateFilter.filterTransactions(
@@ -744,8 +746,6 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 )
             }
         }
-        val accountMap = remember(accounts) { accounts.associateBy { it.id } }
-        val categoryMap = remember(categories) { categories.associateBy { it.id } }
         items(visible, key = { it.id }) { t ->
             TransactionCard(
                 transaction = t,

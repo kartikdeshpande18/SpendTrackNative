@@ -27,6 +27,7 @@ object TopBudgetsCalculator {
      * - TransactionType.EXPENSE only
      * - Matches categoryId and monthKey (from dateEpochDay)
      * - Sums mySharePaise ?: amountPaise (shared expense handling)
+     */
     fun calculateCategorySpendingPaise(
         transactions: List<TransactionEntity>,
         categoryId: Long,
