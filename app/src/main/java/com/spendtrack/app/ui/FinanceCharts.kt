@@ -41,6 +41,7 @@ import com.spendtrack.app.data.local.CategoryEntity
 import com.spendtrack.app.data.local.TransactionEntity
 import com.spendtrack.app.data.local.TransactionType
 import com.spendtrack.app.ui.animation.SpendTrackMotion
+import com.spendtrack.app.ui.animation.ChartAnimationState
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -76,24 +77,35 @@ private data class IncomeExpenseMetrics(
 )
 
 @Composable
+private fun chartPalette() = with(MaterialTheme.colorScheme) {
+    listOf(
+        primary,
+        secondary,
+        tertiary,
+        error,
+        primaryContainer,
+        secondaryContainer,
+        tertiaryContainer,
+        inversePrimary,
+        onPrimaryContainer,
+        onSecondaryContainer,
+        onTertiaryContainer,
+        surfaceTint,
+    )
+}
+
+@Composable
 fun CategorySpendingDonut(
     transactions: List<TransactionEntity>,
     categories: List<CategoryEntity>,
     modifier: Modifier = Modifier,
 ) {
-    val palette = listOf(
-        MaterialTheme.colorScheme.primary,
-        MaterialTheme.colorScheme.tertiary,
-        MaterialTheme.colorScheme.secondary,
-        MaterialTheme.colorScheme.error,
-        MaterialTheme.colorScheme.primaryContainer,
-        MaterialTheme.colorScheme.tertiaryContainer,
-    )
+    val palette = chartPalette()
     val donutData = remember(transactions, categories, palette) {
         val categoryMap = categories.associateBy { it.id }
         val expenseTotals = HashMap<String, Long>()
         for (t in transactions) {
-            if (t.type == TransactionType.EXPENSE) {
+            if (t.type == TransactionType.EXPENSE && !t.isExcludedFromCalculations) {
                 val name = categoryMap[t.categoryId]?.name ?: "Other"
                 val amount = t.mySharePaise ?: t.amountPaise
                 expenseTotals[name] = (expenseTotals[name] ?: 0L) + amount
@@ -127,20 +139,22 @@ fun CategorySpendingDonut(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Monthly Spending By Category", style = MaterialTheme.typography.titleLarge)
+            Text("Monthly spending by category", style = MaterialTheme.typography.titleLarge)
             if (slices.isEmpty()) {
                 Text("No expense data for this selection", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                val animatable = remember { Animatable(0f) }
+                val shouldAnimate = remember { ChartAnimationState.shouldAnimate("CategorySpendingDonut") }
+                val animatable = remember { Animatable(if (shouldAnimate) 0f else 1f) }
                 LaunchedEffect(total, slices.size) {
-                    animatable.snapTo(0f)
-                    animatable.animateTo(
-                        targetValue = 1f,
-                        animationSpec = tween(
-                            durationMillis = SpendTrackMotion.DurationChart,
-                            easing = SpendTrackMotion.DecelEasing,
-                        ),
-                    )
+                    if (shouldAnimate && animatable.value < 1f) {
+                        animatable.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = SpendTrackMotion.DurationChart,
+                                easing = SpendTrackMotion.DecelEasing,
+                            ),
+                        )
+                    }
                 }
                 val sweepProgress = animatable.value
 
@@ -215,8 +229,9 @@ fun DailyTransactionBarChart(
             }
         }
         val epochDayToAmount = HashMap<Long, Long>()
+        val dateSet = dates.map { it.toEpochDay() }.toSet()
         for (t in transactions) {
-            if (t.type == TransactionType.EXPENSE) {
+            if (t.type == TransactionType.EXPENSE && !t.isExcludedFromCalculations && t.dateEpochDay in dateSet) {
                 epochDayToAmount[t.dateEpochDay] = (epochDayToAmount[t.dateEpochDay] ?: 0L) + (t.mySharePaise ?: t.amountPaise)
             }
         }
@@ -248,24 +263,26 @@ fun DailyTransactionBarChart(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Expenses In The Last 7 Days", style = MaterialTheme.typography.titleLarge)
+            Text("Expenses in the last 7 days", style = MaterialTheme.typography.titleLarge)
             Text(subLabel, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (isFutureMonth) {
                 Text("No transactions for $monthName", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else if (values.all { it == 0L }) {
                 Text(if (isCurrentMonth) "No transactions in the last 7 days" else "No transactions in the final 7 days of $monthName", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                val animatable = remember { Animatable(0f) }
+                val shouldAnimate = remember { ChartAnimationState.shouldAnimate("DailyTransactionBarChart") }
+                val animatable = remember { Animatable(if (shouldAnimate) 0f else 1f) }
                 val chartKey = remember(transactions) { values.joinToString(",") }
                 LaunchedEffect(chartKey) {
-                    animatable.snapTo(0f)
-                    animatable.animateTo(
-                        targetValue = 1f,
-                        animationSpec = tween(
-                            durationMillis = SpendTrackMotion.DurationChart,
-                            easing = SpendTrackMotion.DecelEasing,
-                        ),
-                    )
+                    if (shouldAnimate && animatable.value < 1f) {
+                        animatable.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = SpendTrackMotion.DurationChart,
+                                easing = SpendTrackMotion.DecelEasing,
+                            ),
+                        )
+                    }
                 }
                 val barProgress = animatable.value
 
@@ -366,6 +383,7 @@ fun IncomeVsExpenseChart(
         var exp = 0L
         var inc = 0L
         for (t in transactions) {
+            if (t.isExcludedFromCalculations) continue
             if (t.type == TransactionType.EXPENSE) {
                 exp += (t.mySharePaise ?: t.amountPaise)
             } else if (t.type == TransactionType.INCOME) {
@@ -384,25 +402,27 @@ fun IncomeVsExpenseChart(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
         Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("Income vs Expense", style = MaterialTheme.typography.titleLarge)
+            Text("Income vs expense", style = MaterialTheme.typography.titleLarge)
             if (total == 0L) {
                 Text("No income or expense data for this selection", color = MaterialTheme.colorScheme.onSurfaceVariant)
             } else {
-                val animatable = remember { Animatable(0f) }
+                val shouldAnimate = remember { ChartAnimationState.shouldAnimate("IncomeVsExpenseChart") }
+                val animatable = remember { Animatable(if (shouldAnimate) 0f else 1f) }
                 LaunchedEffect(total, incomePaise, expensePaise) {
-                    animatable.snapTo(0f)
-                    animatable.animateTo(
-                        targetValue = 1f,
-                        animationSpec = tween(
-                            durationMillis = SpendTrackMotion.DurationChart,
-                            easing = SpendTrackMotion.DecelEasing,
-                        ),
-                    )
+                    if (shouldAnimate && animatable.value < 1f) {
+                        animatable.animateTo(
+                            targetValue = 1f,
+                            animationSpec = tween(
+                                durationMillis = SpendTrackMotion.DurationChart,
+                                easing = SpendTrackMotion.DecelEasing,
+                            ),
+                        )
+                    }
                 }
                 val sweepProgress = animatable.value
 
-                val incomeColor = MaterialTheme.colorScheme.primary
-                val expenseColor = MaterialTheme.colorScheme.error
+                val incomeColor = MaterialTheme.colorScheme.tertiary
+                val expenseColor = MaterialTheme.colorScheme.primary
                 val onPrimary = MaterialTheme.colorScheme.onPrimary
                 val onError = MaterialTheme.colorScheme.onError
                 val onSurface = MaterialTheme.colorScheme.onSurface

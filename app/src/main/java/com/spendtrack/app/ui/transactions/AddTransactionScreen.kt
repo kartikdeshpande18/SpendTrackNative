@@ -6,7 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -15,11 +16,13 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.spendtrack.app.data.local.*
 import com.spendtrack.app.ui.parsePaise
+import com.spendtrack.app.ui.money
 import com.spendtrack.app.ui.haptics.rememberSpendTrackHaptics
 import com.spendtrack.app.ui.recurring.RecurrenceFrequencySelector
 import java.time.LocalDate
 import java.time.Instant
 import java.time.ZoneOffset
+import java.util.Locale
 
 @Composable
 fun AddTransactionScreen(
@@ -28,12 +31,70 @@ fun AddTransactionScreen(
     onSaved: (TransactionEntity) -> Unit,
     onCancel: () -> Unit,
     initial: TransactionEntity? = null,
-    onSaveRecurring: ((RecurringTransactionEntity) -> Unit)? = null
+    onSaveRecurring: ((RecurringTransactionEntity) -> Unit)? = null,
+    owedParticipants: List<String> = emptyList()
 ) {
     val haptics = rememberSpendTrackHaptics()
     var description by remember(initial?.id) { mutableStateOf(initial?.description.orEmpty()) }; var amount by remember(initial?.id) { mutableStateOf(initial?.let { "%.2f".format(java.util.Locale.US, it.amountPaise / 100.0) }.orEmpty()) }
     var transactionType by remember(initial?.id) { mutableStateOf(initial?.type ?: TransactionType.EXPENSE) }
+    var isExcludedFromCalculations by remember(initial?.id) { mutableStateOf(initial?.isExcludedFromCalculations ?: false) }
     var shared by remember(initial?.id) { mutableStateOf(initial?.isShared == true) }; var share by remember(initial?.id) { mutableStateOf(initial?.mySharePaise?.let { "%.2f".format(java.util.Locale.US, it / 100.0) }.orEmpty()) }; var sharedWith by remember(initial?.id) { mutableStateOf(initial?.sharedWith.orEmpty()) }
+
+    // Multi-participant split state (dynamically derived from owed section, without hardcoding)
+    val initialSplit = remember(initial?.id) { initial?.splitDetails?.let { SharedExpenseHelper.deserialize(it) } }
+    val availableMembers = remember(initial?.id, owedParticipants) {
+        val list = mutableStateListOf<String>()
+        list.add("You")
+        owedParticipants.forEach { name ->
+            val trimmed = name.trim()
+            if (trimmed.isNotBlank() && !list.any { it.equals(trimmed, ignoreCase = true) }) {
+                list.add(trimmed)
+            }
+        }
+        if (initialSplit != null && initialSplit.participants.isNotEmpty()) {
+            initialSplit.participants.forEach { name ->
+                val trimmed = name.trim()
+                if (trimmed.isNotBlank() && !list.any { it.equals(trimmed, ignoreCase = true) }) {
+                    list.add(trimmed)
+                }
+            }
+        } else if (initial?.sharedWith?.isNotBlank() == true) {
+            initial.sharedWith.split(",").map { it.trim() }.filter { it.isNotBlank() }.forEach { name ->
+                if (!list.any { it.equals(name, ignoreCase = true) }) {
+                    list.add(name)
+                }
+            }
+        }
+        list
+    }
+    var selectedParticipants by remember(initial?.id, availableMembers) {
+        val set = mutableSetOf<String>()
+        if (initialSplit != null && initialSplit.participants.isNotEmpty()) {
+            set.addAll(initialSplit.participants)
+        } else if (initial?.sharedWith?.isNotBlank() == true) {
+            set.add("You")
+            set.addAll(initial.sharedWith.split(",").map { it.trim() }.filter { it.isNotBlank() })
+        } else {
+            set.add("You")
+            val firstOther = availableMembers.firstOrNull { !it.equals("You", ignoreCase = true) && !it.equals("Kartik", ignoreCase = true) && !it.equals("Me", ignoreCase = true) }
+            if (firstOther != null) {
+                set.add(firstOther)
+            }
+        }
+        mutableStateOf(set.toSet())
+    }
+    var splitMethod by remember(initial?.id) { mutableStateOf(initialSplit?.splitMethod ?: SplitMethod.EQUAL) }
+    val customShares = remember(initial?.id) {
+        val map = mutableStateMapOf<String, String>()
+        if (initialSplit != null && initialSplit.shares.isNotEmpty()) {
+            initialSplit.shares.forEach { (name, pa) ->
+                map[name] = "%.2f".format(Locale.US, pa / 100.0)
+            }
+        }
+        map
+    }
+    var showCreateParticipantDialog by remember { mutableStateOf(false) }
+    var newParticipantName by remember { mutableStateOf("") }
     var dateEpochDay by remember(initial?.id) { mutableLongStateOf(initial?.dateEpochDay ?: LocalDate.now().toEpochDay()) }
     var showDatePicker by remember { mutableStateOf(false) }
 
@@ -66,19 +127,30 @@ fun AddTransactionScreen(
 
     val isTransfer = transactionType == TransactionType.TRANSFER
     val isIncome = transactionType == TransactionType.INCOME
-    val filtered = remember(categories, isIncome) {
-        categories.filter { it.isIncomeCategory == isIncome }
+    val filtered = remember(categories, isIncome, initial) {
+        categories.filter { it.isIncomeCategory == isIncome && (!it.isDisabled || it.id == initial?.categoryId) }
     }
     val accountNames = remember(accounts) { accounts.map { it.name } }
     val categoryNames = remember(filtered) { filtered.map { it.name } }
     val account = accounts.getOrNull(accountIndex); val category = filtered.getOrNull(categoryIndex)
     val fromAccount = accounts.getOrNull(fromAccountIndex); val toAccount = accounts.getOrNull(toAccountIndex)
     val paise = parsePaise(amount)
+    val equalShares = remember(paise, selectedParticipants) {
+        SharedExpenseHelper.calculateEqualSplit(paise, selectedParticipants.toList())
+    }
+    val customSum = remember(customShares.values.toList(), selectedParticipants) {
+        selectedParticipants.sumOf { parsePaise(customShares[it].orEmpty()) }
+    }
+    val isSplitValid = !shared || (
+        selectedParticipants.size >= 2 && (
+            splitMethod == SplitMethod.EQUAL || (splitMethod == SplitMethod.CUSTOM && customSum == paise)
+        )
+    )
 
     val canSave = if (isTransfer) {
         paise > 0 && fromAccount != null && toAccount != null && fromAccount.id != toAccount.id && (!isRecurring || !hasEndDate || endDateEpochDay >= dateEpochDay)
     } else {
-        paise > 0 && account != null && category != null && (!shared || sharedWith.isNotBlank()) && (!isRecurring || !hasEndDate || endDateEpochDay >= dateEpochDay)
+        paise > 0 && account != null && category != null && isSplitValid && (!isRecurring || !hasEndDate || endDateEpochDay >= dateEpochDay)
     }
 
     Column(
@@ -89,7 +161,7 @@ fun AddTransactionScreen(
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) { IconButton({ haptics.click(); onCancel() }) { Icon(Icons.Default.ArrowBack, contentDescription = "Back") }; Text(if (initial == null) "Add Transaction" else "Edit Transaction", style = MaterialTheme.typography.displaySmall) }
+        Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = { haptics.click(); onCancel() }, modifier = Modifier.size(40.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp)) }; Text(if (initial == null) "Add transaction" else "Edit transaction", style = MaterialTheme.typography.titleLarge) }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(transactionType == TransactionType.EXPENSE, { haptics.selection(); transactionType = TransactionType.EXPENSE; categoryIndex = 0 }, { Text("Expense") })
             FilterChip(transactionType == TransactionType.INCOME, { haptics.selection(); transactionType = TransactionType.INCOME; categoryIndex = 0 }, { Text("Income") })
@@ -114,16 +186,129 @@ fun AddTransactionScreen(
                 Column(Modifier.fillMaxWidth().animateContentSize(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) { Checkbox(shared, { haptics.selection(); shared = it }); Text("Shared expense") }
                     AnimatedVisibility(visible = shared) {
-                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            OutlinedTextField(share, { share = it }, Modifier.fillMaxWidth(), label = { Text("My share (₹)") }, keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal), singleLine = true)
-                            OutlinedTextField(sharedWith, { sharedWith = it }, Modifier.fillMaxWidth(), label = { Text("Who owes the remainder?") }, singleLine = true)
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Participants", style = MaterialTheme.typography.titleSmall)
+                            // Chips for group members with + Create New as last option
+                            FlowRow(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                availableMembers.forEach { member ->
+                                    val isSelected = selectedParticipants.contains(member)
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = {
+                                            haptics.selection()
+                                            selectedParticipants = if (isSelected) {
+                                                if (selectedParticipants.size > 1) selectedParticipants - member else selectedParticipants
+                                            } else {
+                                                selectedParticipants + member
+                                            }
+                                        },
+                                        label = { Text(member) },
+                                        leadingIcon = if (isSelected) {
+                                            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }
+                                        } else null
+                                    )
+                                }
+                                AssistChip(
+                                    onClick = {
+                                        haptics.click()
+                                        showCreateParticipantDialog = true
+                                    },
+                                    label = { Text("+ Create New") },
+                                    colors = AssistChipDefaults.assistChipColors(
+                                        labelColor = MaterialTheme.colorScheme.primary
+                                    )
+                                )
+                            }
+                            if (selectedParticipants.size < 2) {
+                                Text(
+                                    "Select or add at least one other participant to split with.",
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                            }
+
+                            // Split Method selector
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                FilterChip(
+                                    selected = splitMethod == SplitMethod.EQUAL,
+                                    onClick = { haptics.selection(); splitMethod = SplitMethod.EQUAL },
+                                    label = { Text("Equal Split") }
+                                )
+                                FilterChip(
+                                    selected = splitMethod == SplitMethod.CUSTOM,
+                                    onClick = { haptics.selection(); splitMethod = SplitMethod.CUSTOM },
+                                    label = { Text("Custom Split") }
+                                )
+                            }
+
+                            if (splitMethod == SplitMethod.EQUAL) {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Text("Calculated Shares (${selectedParticipants.size} people):", style = MaterialTheme.typography.labelMedium)
+                                        selectedParticipants.forEach { person ->
+                                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                                Text(person, style = MaterialTheme.typography.bodyMedium)
+                                                Text(money(equalShares[person] ?: 0L), style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Custom Split fields
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("Enter each person's share:", style = MaterialTheme.typography.labelMedium)
+                                    selectedParticipants.forEach { person ->
+                                        OutlinedTextField(
+                                            value = customShares[person] ?: "",
+                                            onValueChange = { customShares[person] = it },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            label = { Text("$person's share (₹)") },
+                                            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                            singleLine = true
+                                        )
+                                    }
+                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text("Total allocated:", style = MaterialTheme.typography.bodySmall)
+                                        Text("${money(customSum)} of ${money(paise)}", style = MaterialTheme.typography.bodySmall, color = if (customSum == paise) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                                    }
+                                    if (customSum != paise) {
+                                        Text("Shares must equal the transaction amount.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
             }
         }
 
-        if (initial == null && onSaveRecurring != null) {
+        // Exclude from calculations switch
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                    Text("Exclude from calculations", style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                    Spacer(Modifier.height(2.dp))
+                    Text("Does not affect account balance, spending, income, or budgets", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = isExcludedFromCalculations, onCheckedChange = { haptics.selection(); isExcludedFromCalculations = it })
+            }
+        }
+
+        if (onSaveRecurring != null) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
                 modifier = Modifier.fillMaxWidth().animateContentSize()
@@ -195,6 +380,40 @@ fun AddTransactionScreen(
         Spacer(Modifier.height(16.dp))
         Button({
             haptics.confirm()
+
+            val finalSplitDetails = if (shared && !isIncome && !isTransfer) {
+                val sharesPaise = if (splitMethod == SplitMethod.EQUAL) {
+                    equalShares
+                } else {
+                    selectedParticipants.associateWith { parsePaise(customShares[it].orEmpty()) }
+                }
+                SharedExpenseHelper.serialize(
+                    SplitDetails(
+                        payer = "You",
+                        splitMethod = splitMethod,
+                        participants = selectedParticipants.toList(),
+                        shares = sharesPaise
+                    )
+                )
+            } else ""
+
+            val finalSharedWith = if (shared && !isIncome && !isTransfer) {
+                selectedParticipants.filter {
+                    !it.equals("You", ignoreCase = true) &&
+                    !it.equals("Kartik", ignoreCase = true) &&
+                    !it.equals("Me", ignoreCase = true)
+                }.joinToString(", ")
+            } else ""
+
+            val myShareFinal = if (shared && !isIncome && !isTransfer) {
+                if (splitMethod == SplitMethod.EQUAL) {
+                    equalShares["You"] ?: equalShares["Kartik"] ?: equalShares["Me"]
+                        ?: if (selectedParticipants.isNotEmpty()) paise / selectedParticipants.size else paise
+                } else {
+                    parsePaise(customShares["You"] ?: customShares["Kartik"] ?: customShares["Me"].orEmpty())
+                }
+            } else null
+
             if (isRecurring && onSaveRecurring != null) {
                 val recurring = RecurringTransactionEntity(
                     description = description.trim(),
@@ -208,19 +427,84 @@ fun AddTransactionScreen(
                     nextOccurrenceEpochDay = dateEpochDay,
                     isEnabled = true,
                     isShared = shared && !isIncome && !isTransfer,
-                    mySharePaise = if (shared && !isIncome && !isTransfer) parsePaise(share) else null,
-                    sharedWith = if (shared && !isIncome && !isTransfer) sharedWith.trim() else "",
+                    mySharePaise = myShareFinal,
+                    sharedWith = finalSharedWith,
                     destinationAccountId = if (isTransfer) toAccount!!.id else null,
                 )
                 onSaveRecurring(recurring)
+                if (initial != null) {
+                    if (isTransfer) {
+                        val fromId = fromAccount?.id ?: initial.accountId
+                        val toId = toAccount?.id ?: initial.destinationAccountId
+                        onSaved(
+                            TransactionEntity(
+                                id = initial.id,
+                                dateEpochDay = dateEpochDay,
+                                description = description.trim(),
+                                amountPaise = paise,
+                                categoryId = 0,
+                                accountId = fromId,
+                                type = TransactionType.TRANSFER,
+                                destinationAccountId = toId,
+                                isExcludedFromCalculations = isExcludedFromCalculations
+                            )
+                        )
+                    } else {
+                        val accId = account?.id ?: initial.accountId
+                        val catId = category?.id ?: initial.categoryId
+                        onSaved(
+                            TransactionEntity(
+                                id = initial.id,
+                                dateEpochDay = dateEpochDay,
+                                description = description.trim(),
+                                amountPaise = paise,
+                                categoryId = catId,
+                                accountId = accId,
+                                type = if (isIncome) TransactionType.INCOME else TransactionType.EXPENSE,
+                                isShared = shared && !isIncome,
+                                mySharePaise = myShareFinal,
+                                sharedWith = finalSharedWith,
+                                isExcludedFromCalculations = isExcludedFromCalculations,
+                                splitDetails = finalSplitDetails
+                            )
+                        )
+                    }
+                }
             } else if (isTransfer) {
                 val fromId = fromAccount?.id ?: initial?.accountId ?: 0L
                 val toId = toAccount?.id ?: initial?.destinationAccountId
-                onSaved(TransactionEntity(id = initial?.id ?: 0, dateEpochDay = dateEpochDay, description = description.trim(), amountPaise = paise, categoryId = 0, accountId = fromId, type = TransactionType.TRANSFER, destinationAccountId = toId))
+                onSaved(
+                    TransactionEntity(
+                        id = initial?.id ?: 0,
+                        dateEpochDay = dateEpochDay,
+                        description = description.trim(),
+                        amountPaise = paise,
+                        categoryId = 0,
+                        accountId = fromId,
+                        type = TransactionType.TRANSFER,
+                        destinationAccountId = toId,
+                        isExcludedFromCalculations = isExcludedFromCalculations
+                    )
+                )
             } else {
                 val accId = account?.id ?: initial?.accountId ?: 0L
                 val catId = category?.id ?: initial?.categoryId ?: 0L
-                onSaved(TransactionEntity(id = initial?.id ?: 0, dateEpochDay = dateEpochDay, description = description.trim(), amountPaise = paise, categoryId = catId, accountId = accId, type = if (isIncome) TransactionType.INCOME else TransactionType.EXPENSE, isShared = shared && !isIncome, mySharePaise = if (shared && !isIncome) parsePaise(share) else null, sharedWith = if (shared && !isIncome) sharedWith.trim() else ""))
+                onSaved(
+                    TransactionEntity(
+                        id = initial?.id ?: 0,
+                        dateEpochDay = dateEpochDay,
+                        description = description.trim(),
+                        amountPaise = paise,
+                        categoryId = catId,
+                        accountId = accId,
+                        type = if (isIncome) TransactionType.INCOME else TransactionType.EXPENSE,
+                        isShared = shared && !isIncome,
+                        mySharePaise = myShareFinal,
+                        sharedWith = finalSharedWith,
+                        isExcludedFromCalculations = isExcludedFromCalculations,
+                        splitDetails = finalSplitDetails
+                    )
+                )
             }
         }, Modifier.fillMaxWidth(), enabled = canSave) {
             Text(
@@ -237,6 +521,45 @@ fun AddTransactionScreen(
     if (showEndDatePicker) {
         val pickerState = rememberDatePickerState(initialSelectedDateMillis = LocalDate.ofEpochDay(endDateEpochDay).atStartOfDay().toInstant(ZoneOffset.UTC).toEpochMilli())
         DatePickerDialog(onDismissRequest = { showEndDatePicker = false }, confirmButton = { TextButton({ haptics.confirm(); pickerState.selectedDateMillis?.let { endDateEpochDay = Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate().toEpochDay() }; showEndDatePicker = false }) { Text("OK") } }, dismissButton = { TextButton({ showEndDatePicker = false }) { Text("Cancel") } }) { DatePicker(state = pickerState) }
+    }
+    if (showCreateParticipantDialog) {
+        AlertDialog(
+            onDismissRequest = { showCreateParticipantDialog = false; newParticipantName = "" },
+            title = { Text("New Participant") },
+            text = {
+                OutlinedTextField(
+                    value = newParticipantName,
+                    onValueChange = { newParticipantName = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val name = newParticipantName.trim()
+                        if (name.isNotBlank()) {
+                            haptics.confirm()
+                            if (!availableMembers.contains(name)) {
+                                availableMembers.add(name)
+                            }
+                            selectedParticipants = selectedParticipants + name
+                            showCreateParticipantDialog = false
+                            newParticipantName = ""
+                        }
+                    },
+                    enabled = newParticipantName.trim().isNotBlank()
+                ) {
+                    Text("Add")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCreateParticipantDialog = false; newParticipantName = "" }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 

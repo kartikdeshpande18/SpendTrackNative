@@ -154,7 +154,7 @@ class DashboardScrollAndRecurringArtifactRegressionTest {
     }
 
     @Test
-    fun testRecurringScheduleButtonHasNoDuplicateLabelInSource() {
+    fun testRecurringScheduleButtonUsesSentenceCaseLabel() {
         val candidates = listOf(
             File("src/main/java/com/spendtrack/app/ui/recurring/RecurringTransactionsScreen.kt"),
             File("app/src/main/java/com/spendtrack/app/ui/recurring/RecurringTransactionsScreen.kt")
@@ -162,11 +162,11 @@ class DashboardScrollAndRecurringArtifactRegressionTest {
         val sourceFile = candidates.firstOrNull { it.exists() }
         assertNotNull("RecurringTransactionsScreen.kt source file must exist", sourceFile)
         val content = sourceFile!!.readText()
-        val lowerCount = Regex("""Text\("Add recurring schedule"\)""").findAll(content).count()
-        val properCount = Regex("""Text\("Add Recurring Schedule"\)""").findAll(content).count()
+        val sentenceCaseCount = Regex("""Text\("Add recurring schedule"\)""").findAll(content).count()
+        val titleCaseCount = Regex("""Text\("Add Recurring Schedule"\)""").findAll(content).count()
 
-        assertEquals("Duplicate lowercase 'Add recurring schedule' must not exist in button", 0, lowerCount)
-        assertEquals("Exactly one 'Add Recurring Schedule' button text must exist", 1, properCount)
+        assertEquals("Exactly one sentence-case schedule button label must exist", 1, sentenceCaseCount)
+        assertEquals("Title-case duplicate schedule button label must not exist", 0, titleCaseCount)
     }
 }
 

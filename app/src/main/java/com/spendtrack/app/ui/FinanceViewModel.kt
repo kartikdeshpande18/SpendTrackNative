@@ -68,7 +68,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         runCatching { repository.updateTransaction(value) }.onFailure { it.printStackTrace() }
     }
     fun addAccount(name: String, card: Boolean, opening: Long, maskedNumber: String = "", creditLimit: Long? = null, statementCycle: Int? = null, dueDay: Int? = null, minimumBalance: Long = 0) = viewModelScope.launch { repository.addAccount(name, card, opening, maskedNumber, creditLimit, statementCycle, dueDay, minimumBalance) }
-    fun addCategory(name: String, income: Boolean) = viewModelScope.launch { repository.addCategory(name, income) }
+    fun addCategory(name: String, income: Boolean, colorHex: String? = null) = viewModelScope.launch { repository.addCategory(name, income, colorHex) }
     fun updateAccount(account: AccountEntity) = viewModelScope.launch { repository.updateAccount(account) }
     fun deleteAccount(account: AccountEntity) = viewModelScope.launch { repository.deleteAccount(account) }
     fun updateCategory(category: CategoryEntity) = viewModelScope.launch { repository.updateCategory(category) }
@@ -83,6 +83,15 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun updateOwed(owed: OwedEntity) = viewModelScope.launch { repository.updateOwed(owed) }
     fun deleteOwed(owed: OwedEntity) = viewModelScope.launch { repository.deleteOwed(owed) }
     fun settleOwed(owed: OwedEntity, amountPaise: Long) = viewModelScope.launch { repository.settleOwed(owed, amountPaise) }
+    fun settleOwed(owedId: Long, amountPaise: Long, accountId: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay(), settlementNote: String = "") = viewModelScope.launch {
+        runCatching { repository.settleOwed(owedId, amountPaise, accountId, dateEpochDay, settlementNote) }.onFailure { it.printStackTrace() }
+    }
+    fun repayLoan(loanId: Long, accountId: Long, amountPaise: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay(), note: String = "") = viewModelScope.launch {
+        runCatching { repository.repayLoan(loanId, accountId, amountPaise, dateEpochDay, note) }.onFailure { it.printStackTrace() }
+    }
+    fun postSavingsInterest(accountId: Long, amountPaise: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay(), periodLabel: String = "") = viewModelScope.launch {
+        runCatching { repository.postSavingsInterest(accountId, amountPaise, dateEpochDay, periodLabel) }.onFailure { it.printStackTrace() }
+    }
     fun payCard(cardId: Long, sourceId: Long, amountPaise: Long, dateEpochDay: Long) = viewModelScope.launch { repository.payCard(cardId, sourceId, amountPaise, dateEpochDay) }
     fun addRecurringTransaction(schedule: RecurringTransactionEntity) = viewModelScope.launch { repository.addRecurringTransaction(schedule) }
     fun updateRecurringTransaction(schedule: RecurringTransactionEntity) = viewModelScope.launch { repository.updateRecurringTransaction(schedule) }

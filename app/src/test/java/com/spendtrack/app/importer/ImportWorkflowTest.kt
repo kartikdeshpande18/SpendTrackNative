@@ -833,6 +833,14 @@ class ImportWorkflowTest {
             override suspend fun delete(entity: TransactionEntity) { transactionsList.removeAll { it.id == entity.id } }
             override suspend fun clear() { transactionsList.clear() }
             override suspend fun getById(id: Long): TransactionEntity? = transactionsList.firstOrNull { it.id == id }
+            override suspend fun getByOriginalExpenseId(originalExpenseId: Long): List<TransactionEntity> =
+                transactionsList.filter { it.originalExpenseId == originalExpenseId }
+            override fun observeDateRange(startEpochDay: Long, endEpochDay: Long): Flow<List<TransactionEntity>> =
+                flowOf(transactionsList.filter { it.dateEpochDay in startEpochDay..endEpochDay })
+            override suspend fun getDateRange(startEpochDay: Long, endEpochDay: Long): List<TransactionEntity> =
+                transactionsList.filter { it.dateEpochDay in startEpochDay..endEpochDay }
+            override fun observeRecent(limit: Int): Flow<List<TransactionEntity>> =
+                flowOf(transactionsList.sortedByDescending { it.dateEpochDay }.take(limit))
         }
 
         private val _cardPaymentsDao = object : CardPaymentDao {
@@ -870,6 +878,8 @@ class ImportWorkflowTest {
             override suspend fun transactionCount(categoryId: Long): Int = 0
             override suspend fun budgetCount(categoryId: Long): Int = 0
             override suspend fun recurringCount(categoryId: Long): Int = 0
+            override suspend fun getById(id: Long): CategoryEntity? = categoriesList.firstOrNull { it.id == id }
+            override suspend fun getByName(name: String): CategoryEntity? = categoriesList.firstOrNull { it.name.equals(name, ignoreCase = true) }
         }
 
         override fun accounts(): AccountDao = _accountsDao

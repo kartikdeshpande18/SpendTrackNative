@@ -9,12 +9,33 @@ data class ReminderLeadTimes(val firstDays: Int, val secondDays: Int) {
 /** Persistent, local-only reminder lead times. The worker reads these values on every daily run. */
 object ReminderPreferences {
     private const val FILE_NAME = "spendtrack_reminders"
+    private const val KEY_ENABLED = "notifications_enabled"
     private const val CARD_FIRST = "card_first_days"
     private const val CARD_SECOND = "card_second_days"
     private const val LOAN_FIRST = "loan_first_days"
     private const val LOAN_SECOND = "loan_second_days"
     private const val DEFAULT_FIRST = 10
     private const val DEFAULT_SECOND = 5
+
+    fun isNotificationsEnabled(context: Context): Boolean {
+        return context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE).getBoolean(KEY_ENABLED, true)
+    }
+
+    fun setNotificationsEnabled(context: Context, enabled: Boolean) {
+        context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean(KEY_ENABLED, enabled)
+            .apply()
+    }
+
+    fun hasBeenNotified(context: Context, notificationKey: String): Boolean {
+        return context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE).getBoolean("notif_$notificationKey", false)
+    }
+
+    fun markNotified(context: Context, notificationKey: String) {
+        context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE).edit()
+            .putBoolean("notif_$notificationKey", true)
+            .apply()
+    }
 
     fun cardLeadTimes(context: Context): ReminderLeadTimes = read(context, CARD_FIRST, CARD_SECOND)
 

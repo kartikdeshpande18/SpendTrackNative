@@ -18,7 +18,7 @@ import androidx.room.TypeConverters
         RecurringOccurrenceEntity::class,
         ImportHistoryEntity::class
     ],
-    version = 9,
+    version = 11,
     exportSchema = false,
 )
 @TypeConverters(SpendTrackConverters::class)

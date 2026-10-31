@@ -12,6 +12,12 @@ import com.spendtrack.app.data.local.RecurringTransactionScheduler
 import com.spendtrack.app.data.local.SpendTrackDatabase
 import com.spendtrack.app.data.local.TransactionEntity
 import com.spendtrack.app.data.local.TransactionType
+import com.spendtrack.app.data.local.OwedDirection
+import com.spendtrack.app.data.local.OwedEntity
+import com.spendtrack.app.data.local.SharedExpenseHelper
+import com.spendtrack.app.data.local.SavingsInterestCalculator
+import com.spendtrack.app.data.local.InterestCreditFrequency
+import com.spendtrack.app.data.local.InterestCalculationMethod
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
@@ -45,10 +51,12 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
             val destAccount = transaction.destinationAccountId?.let { database.accounts().getById(it) }
             val sourceDelta = if (account.isCreditCard) transaction.amountPaise else -transaction.amountPaise
             val id = database.transactions().insert(transaction)
-            database.accounts().update(account.copy(balancePaise = account.balancePaise + sourceDelta))
-            if (destAccount != null) {
-                val destDelta = if (destAccount.isCreditCard) -transaction.amountPaise else transaction.amountPaise
-                database.accounts().update(destAccount.copy(balancePaise = destAccount.balancePaise + destDelta))
+            if (!transaction.isExcludedFromCalculations) {
+                database.accounts().update(account.copy(balancePaise = account.balancePaise + sourceDelta))
+                if (destAccount != null) {
+                    val destDelta = if (destAccount.isCreditCard) -transaction.amountPaise else transaction.amountPaise
+                    database.accounts().update(destAccount.copy(balancePaise = destAccount.balancePaise + destDelta))
+                }
             }
             id
         } else {
@@ -59,7 +67,9 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
                 else -> transaction.amountPaise
             }
             val id = database.transactions().insert(transaction)
-            database.accounts().update(account.copy(balancePaise = account.balancePaise + delta))
+            if (!transaction.isExcludedFromCalculations) {
+                database.accounts().update(account.copy(balancePaise = account.balancePaise + delta))
+            }
             recordSharedRecovery(transaction.copy(id = id))
             id
         }
@@ -72,18 +82,20 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
             val destAccount = transaction.destinationAccountId?.let { database.accounts().getById(it) }
             database.transactions().delete(transaction)
             database.owed().deleteForTransaction(transaction.id)
-            if (account != null) {
-                val sourceDelta = if (account.isCreditCard) transaction.amountPaise else -transaction.amountPaise
-                database.accounts().update(account.copy(balancePaise = account.balancePaise - sourceDelta))
-            }
-            if (destAccount != null) {
-                val destDelta = if (destAccount.isCreditCard) -transaction.amountPaise else transaction.amountPaise
-                database.accounts().update(destAccount.copy(balancePaise = destAccount.balancePaise - destDelta))
+            if (!transaction.isExcludedFromCalculations) {
+                if (account != null) {
+                    val sourceDelta = if (account.isCreditCard) transaction.amountPaise else -transaction.amountPaise
+                    database.accounts().update(account.copy(balancePaise = account.balancePaise - sourceDelta))
+                }
+                if (destAccount != null) {
+                    val destDelta = if (destAccount.isCreditCard) -transaction.amountPaise else transaction.amountPaise
+                    database.accounts().update(destAccount.copy(balancePaise = destAccount.balancePaise - destDelta))
+                }
             }
         } else {
             database.transactions().delete(transaction)
             database.owed().deleteForTransaction(transaction.id)
-            if (account != null) {
+            if ((!transaction.isExcludedFromCalculations || transaction.isLoanRepayment) && account != null) {
                 val delta = when {
                     account.isCreditCard && transaction.type == TransactionType.EXPENSE -> transaction.amountPaise
                     account.isCreditCard -> -transaction.amountPaise
@@ -92,15 +104,43 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
                 }
                 database.accounts().update(account.copy(balancePaise = account.balancePaise - delta))
             }
+            if (transaction.isLoanRepayment) {
+                transaction.originalExpenseId?.let { database.loans().getById(it) }?.let { loan ->
+                    database.loans().update(
+                        loan.copy(
+                            currentOutstandingPaise = loan.currentOutstandingPaise + transaction.amountPaise,
+                            principalPaidPaise = (loan.principalPaidPaise - transaction.amountPaise).coerceAtLeast(0L)
+                        )
+                    )
+                }
+            }
         }
     }
 
     suspend fun updateTransaction(transaction: TransactionEntity) = database.withTransaction {
         val previous = database.transactions().getById(transaction.id) ?: return@withTransaction
+        val updated = if (previous.isLoanRepayment) {
+            require(transaction.type == TransactionType.EXPENSE) { "A loan repayment must remain an expense" }
+            require(transaction.amountPaise > 0L) { "Repayment amount must be positive" }
+            val account = database.accounts().getById(transaction.accountId) ?: error("Choose a valid account")
+            require(!account.isCreditCard) { "Loan repayment cannot be paid from a credit card" }
+            val loan = previous.originalExpenseId?.let { database.loans().getById(it) }
+            if (loan != null) {
+                require(transaction.amountPaise <= loan.currentOutstandingPaise + previous.amountPaise) {
+                    "Repayment cannot exceed outstanding principal"
+                }
+            }
+            transaction.copy(
+                isExcludedFromCalculations = true,
+                originalExpenseId = previous.originalExpenseId,
+                isLoanRepayment = true
+            )
+        } else transaction
 
         // Collect all balance adjustments by account ID, then apply them at the end.
         val adjustments = mutableMapOf<Long, Long>()
         fun adjust(accountId: Long, delta: Long) { adjustments[accountId] = (adjustments[accountId] ?: 0L) + delta }
+        fun affectsBalance(value: TransactionEntity) = !value.isExcludedFromCalculations || value.isLoanRepayment
 
         // Helper: balance delta for a non-transfer transaction on a given account.
         fun incExpDelta(account: AccountEntity, value: TransactionEntity): Long = when {
@@ -110,39 +150,43 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
             else -> value.amountPaise
         }
 
-        // 1. Reverse the previous transaction's effect.
-        val prevSource = database.accounts().getById(previous.accountId)
-        if (prevSource != null) {
-            if (previous.type == TransactionType.TRANSFER) {
-                val srcDelta = if (prevSource.isCreditCard) previous.amountPaise else -previous.amountPaise
-                adjust(prevSource.id, -srcDelta)
-            } else {
-                adjust(prevSource.id, -incExpDelta(prevSource, previous))
+        // 1. Reverse the previous transaction's balance effect.
+        if (affectsBalance(previous)) {
+            val prevSource = database.accounts().getById(previous.accountId)
+            if (prevSource != null) {
+                if (previous.type == TransactionType.TRANSFER) {
+                    val srcDelta = if (prevSource.isCreditCard) previous.amountPaise else -previous.amountPaise
+                    adjust(prevSource.id, -srcDelta)
+                } else {
+                    adjust(prevSource.id, -incExpDelta(prevSource, previous))
+                }
             }
-        }
-        if (previous.type == TransactionType.TRANSFER && previous.destinationAccountId != null) {
-            val prevDest = database.accounts().getById(previous.destinationAccountId)
-            if (prevDest != null) {
-                val dstDelta = if (prevDest.isCreditCard) -previous.amountPaise else previous.amountPaise
-                adjust(prevDest.id, -dstDelta)
+            if (previous.type == TransactionType.TRANSFER && previous.destinationAccountId != null) {
+                val prevDest = database.accounts().getById(previous.destinationAccountId)
+                if (prevDest != null) {
+                    val dstDelta = if (prevDest.isCreditCard) -previous.amountPaise else previous.amountPaise
+                    adjust(prevDest.id, -dstDelta)
+                }
             }
         }
 
-        // 2. Apply the new transaction's effect.
-        val newSource = database.accounts().getById(transaction.accountId)
-        if (newSource != null) {
-            if (transaction.type == TransactionType.TRANSFER) {
-                val srcDelta = if (newSource.isCreditCard) transaction.amountPaise else -transaction.amountPaise
-                adjust(newSource.id, srcDelta)
-            } else {
-                adjust(newSource.id, incExpDelta(newSource, transaction))
+        // 2. Apply the new transaction's balance effect.
+        if (affectsBalance(updated)) {
+            val newSource = database.accounts().getById(updated.accountId)
+            if (newSource != null) {
+                if (updated.type == TransactionType.TRANSFER) {
+                    val srcDelta = if (newSource.isCreditCard) updated.amountPaise else -updated.amountPaise
+                    adjust(newSource.id, srcDelta)
+                } else {
+                    adjust(newSource.id, incExpDelta(newSource, updated))
+                }
             }
-        }
-        if (transaction.type == TransactionType.TRANSFER && transaction.destinationAccountId != null) {
-            val newDest = database.accounts().getById(transaction.destinationAccountId)
-            if (newDest != null) {
-                val dstDelta = if (newDest.isCreditCard) -transaction.amountPaise else transaction.amountPaise
-                adjust(newDest.id, dstDelta)
+            if (updated.type == TransactionType.TRANSFER && updated.destinationAccountId != null) {
+                val newDest = database.accounts().getById(updated.destinationAccountId)
+                if (newDest != null) {
+                    val dstDelta = if (newDest.isCreditCard) -updated.amountPaise else updated.amountPaise
+                    adjust(newDest.id, dstDelta)
+                }
             }
         }
 
@@ -154,15 +198,111 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
             }
         }
 
-        database.transactions().update(transaction)
+        if (previous.isLoanRepayment) {
+            previous.originalExpenseId?.let { database.loans().getById(it) }?.let { loan ->
+                database.loans().update(
+                    loan.copy(
+                        currentOutstandingPaise = loan.currentOutstandingPaise + previous.amountPaise,
+                        principalPaidPaise = (loan.principalPaidPaise - previous.amountPaise).coerceAtLeast(0L)
+                    )
+                )
+            }
+        }
+        if (updated.isLoanRepayment) {
+            updated.originalExpenseId?.let { database.loans().getById(it) }?.let { loan ->
+                database.loans().update(
+                    loan.copy(
+                        currentOutstandingPaise = loan.currentOutstandingPaise - updated.amountPaise,
+                        principalPaidPaise = loan.principalPaidPaise + updated.amountPaise
+                    )
+                )
+            }
+        }
+
+        database.transactions().update(updated)
         database.owed().deleteForTransaction(previous.id)
-        if (transaction.type != TransactionType.TRANSFER) recordSharedRecovery(transaction)
+        if (updated.type != TransactionType.TRANSFER) recordSharedRecovery(updated)
     }
 
     private suspend fun recordSharedRecovery(transaction: TransactionEntity) {
+        if (transaction.type != TransactionType.EXPENSE || !transaction.isShared) return
+
+        // 1. Check if detailed split information exists
+        val split = SharedExpenseHelper.deserialize(transaction.splitDetails)
+        if (split != null && split.shares.isNotEmpty()) {
+            val payer = split.payer
+            val isUserPayer = payer.equals("You", ignoreCase = true) || payer.equals("Kartik", ignoreCase = true) || payer.equals("Me", ignoreCase = true)
+            if (isUserPayer) {
+                // I paid for the group -> participants owe me their shares
+                for ((person, share) in split.shares) {
+                    if (!person.equals(payer, ignoreCase = true) && !person.equals("You", ignoreCase = true) && !person.equals("Kartik", ignoreCase = true) && !person.equals("Me", ignoreCase = true) && share > 0L) {
+                        database.owed().insert(
+                            OwedEntity(
+                                personName = person.trim(),
+                                amountPaise = share,
+                                originalAmountPaise = share,
+                                repaidAmountPaise = 0L,
+                                direction = OwedDirection.OWED_TO_ME,
+                                note = transaction.description,
+                                sourceTransactionId = transaction.id
+                            )
+                        )
+                    }
+                }
+            } else {
+                // Another person paid -> I owe the payer my share
+                val myShare = split.shares["You"] ?: split.shares["Kartik"] ?: split.shares["Me"] ?: (transaction.mySharePaise ?: 0L)
+                if (myShare > 0L) {
+                    database.owed().insert(
+                        OwedEntity(
+                            personName = payer.trim(),
+                            amountPaise = myShare,
+                            originalAmountPaise = myShare,
+                            repaidAmountPaise = 0L,
+                            direction = OwedDirection.I_OWE,
+                            note = transaction.description,
+                            sourceTransactionId = transaction.id
+                        )
+                    )
+                }
+            }
+            return
+        }
+
+        // 2. Comma-separated names in sharedWith or single person
         val recoverable = transaction.amountPaise - (transaction.mySharePaise ?: transaction.amountPaise)
-        if (transaction.type == TransactionType.EXPENSE && transaction.isShared && recoverable > 0 && transaction.sharedWith.isNotBlank()) {
-            database.owed().insert(com.spendtrack.app.data.local.OwedEntity(personName = transaction.sharedWith.trim(), amountPaise = recoverable, direction = com.spendtrack.app.data.local.OwedDirection.OWED_TO_ME, note = transaction.description, sourceTransactionId = transaction.id))
+        if (recoverable > 0 && transaction.sharedWith.isNotBlank()) {
+            val names = transaction.sharedWith.split(",").map { it.trim() }.filter { it.isNotBlank() }
+            if (names.size > 1) {
+                val base = recoverable / names.size
+                var remainder = recoverable % names.size
+                for (name in names) {
+                    val share = base + if (remainder > 0L) { remainder--; 1L } else 0L
+                    database.owed().insert(
+                        OwedEntity(
+                            personName = name,
+                            amountPaise = share,
+                            originalAmountPaise = share,
+                            repaidAmountPaise = 0L,
+                            direction = OwedDirection.OWED_TO_ME,
+                            note = transaction.description,
+                            sourceTransactionId = transaction.id
+                        )
+                    )
+                }
+            } else if (names.size == 1) {
+                database.owed().insert(
+                    OwedEntity(
+                        personName = names[0],
+                        amountPaise = recoverable,
+                        originalAmountPaise = recoverable,
+                        repaidAmountPaise = 0L,
+                        direction = OwedDirection.OWED_TO_ME,
+                        note = transaction.description,
+                        sourceTransactionId = transaction.id
+                    )
+                )
+            }
         }
     }
 
@@ -191,13 +331,22 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
         )
     }
 
-    suspend fun addCategory(name: String, income: Boolean) {
-        database.categories().insert(CategoryEntity(name = name, isIncomeCategory = income))
+    suspend fun addCategory(name: String, income: Boolean, colorHex: String? = null, iconName: String? = null) {
+        database.categories().insert(CategoryEntity(name = name, isIncomeCategory = income, colorHex = colorHex, iconName = iconName))
     }
 
     suspend fun updateAccount(account: AccountEntity) {
         val sanitizedMinBalance = if (account.isCreditCard) 0L else account.minimumBalancePaise.coerceAtLeast(0L)
-        database.accounts().update(account.copy(minimumBalancePaise = sanitizedMinBalance))
+        val baselineInterestDay = if (!account.isCreditCard && account.interestRateBps > 0 && account.lastInterestPostingEpochDay == null) {
+            LocalDate.now().minusDays(1).toEpochDay()
+        } else account.lastInterestPostingEpochDay
+        database.accounts().update(
+            account.copy(
+                minimumBalancePaise = sanitizedMinBalance,
+                interestCalculationMethod = InterestCalculationMethod.DAILY.name,
+                lastInterestPostingEpochDay = baselineInterestDay,
+            )
+        )
     }
 
     suspend fun deleteAccount(account: AccountEntity): Boolean = database.withTransaction {
@@ -211,10 +360,15 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
     suspend fun updateCategory(category: CategoryEntity) = database.categories().update(category)
 
     suspend fun deleteCategory(category: CategoryEntity): Boolean = database.withTransaction {
-        if (category.isSystemFallback ||
-            database.categories().transactionCount(category.id) > 0 ||
-            database.categories().budgetCount(category.id) > 0 ||
-            database.categories().recurringCount(category.id) > 0) return@withTransaction false
+        if (category.isSystemFallback) return@withTransaction false
+        val hasTransactions = database.categories().transactionCount(category.id) > 0
+        val hasBudgets = database.categories().budgetCount(category.id) > 0
+        val hasRecurring = database.categories().recurringCount(category.id) > 0
+
+        if (hasTransactions || hasBudgets || hasRecurring) {
+            database.categories().update(category.copy(isDisabled = true))
+            return@withTransaction true
+        }
         database.categories().delete(category)
         true
     }
@@ -243,9 +397,252 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
     suspend fun deleteLoan(loan: com.spendtrack.app.data.local.LoanEntity) = database.loans().delete(loan)
     suspend fun updateOwed(owed: com.spendtrack.app.data.local.OwedEntity) = database.owed().update(owed)
     suspend fun deleteOwed(owed: com.spendtrack.app.data.local.OwedEntity) = database.owed().delete(owed)
+
+    suspend fun settleOwed(
+        owedId: Long,
+        amountPaise: Long,
+        accountId: Long,
+        dateEpochDay: Long = LocalDate.now().toEpochDay(),
+        settlementNote: String = ""
+    ): Long = database.withTransaction {
+        val owed = database.owed().getById(owedId) ?: error("Owed record not found")
+        require(amountPaise > 0) { "Settlement amount must be positive" }
+        require(amountPaise <= owed.amountPaise) { "Settlement amount ($amountPaise) cannot exceed outstanding balance (${owed.amountPaise})" }
+        val account = database.accounts().getById(accountId) ?: error("Account not found")
+
+        val isIncoming = owed.direction == OwedDirection.OWED_TO_ME
+        val transactionType = if (isIncoming) TransactionType.INCOME else TransactionType.EXPENSE
+
+        // Balance delta:
+        // When a person repays me: credit account (+ for bank/cash, - for credit card)
+        // When I repay someone: debit account (- for bank/cash, + for credit card)
+        val delta = when {
+            account.isCreditCard && isIncoming -> -amountPaise
+            account.isCreditCard -> amountPaise
+            isIncoming -> amountPaise
+            else -> -amountPaise
+        }
+
+        val desc = when {
+            settlementNote.isNotBlank() -> settlementNote
+            isIncoming -> "Settlement from ${owed.personName}${if (owed.note.isNotBlank()) ": ${owed.note}" else ""}"
+            else -> "Settlement to ${owed.personName}${if (owed.note.isNotBlank()) ": ${owed.note}" else ""}"
+        }
+
+        // Avoid duplicate transaction entries on retry
+        val existingLinked = if (owed.sourceTransactionId != null) {
+            database.transactions().getByOriginalExpenseId(owed.sourceTransactionId)
+                .firstOrNull { it.dateEpochDay == dateEpochDay && it.amountPaise == amountPaise && it.accountId == accountId && it.description == desc }
+        } else null
+
+        val txId = if (existingLinked != null) {
+            existingLinked.id
+        } else {
+            val transaction = TransactionEntity(
+                dateEpochDay = dateEpochDay,
+                description = desc,
+                amountPaise = amountPaise,
+                categoryId = 0L,
+                accountId = accountId,
+                type = transactionType,
+                isExcludedFromCalculations = true,
+                originalExpenseId = owed.sourceTransactionId
+            )
+            val newId = database.transactions().insert(transaction)
+            database.accounts().update(account.copy(balancePaise = account.balancePaise + delta))
+            newId
+        }
+
+        val originalAmt = if (owed.originalAmountPaise > 0L) owed.originalAmountPaise else owed.amountPaise
+        val newRepaid = owed.repaidAmountPaise + amountPaise
+        val remaining = (owed.amountPaise - amountPaise).coerceAtLeast(0L)
+
+        database.owed().update(owed.copy(amountPaise = remaining, originalAmountPaise = originalAmt, repaidAmountPaise = newRepaid))
+        txId
+    }
+
     suspend fun settleOwed(owed: com.spendtrack.app.data.local.OwedEntity, amountPaise: Long) = database.withTransaction {
-        val remaining = (owed.amountPaise - amountPaise).coerceAtLeast(0)
-        if (remaining == 0L) database.owed().delete(owed) else database.owed().update(owed.copy(amountPaise = remaining))
+        val defaultAccount = database.accounts().observeAll().first().firstOrNull { !it.isCreditCard }
+            ?: database.accounts().observeAll().first().firstOrNull()
+        if (defaultAccount != null) {
+            settleOwed(owed.id, amountPaise, defaultAccount.id)
+        } else {
+            val remaining = (owed.amountPaise - amountPaise).coerceAtLeast(0)
+            if (remaining == 0L) database.owed().delete(owed) else database.owed().update(owed.copy(amountPaise = remaining))
+        }
+    }
+
+    suspend fun repayLoan(
+        loanId: Long,
+        accountId: Long,
+        amountPaise: Long,
+        dateEpochDay: Long = LocalDate.now().toEpochDay(),
+        note: String = ""
+    ): Long = database.withTransaction {
+        val loan = database.loans().getById(loanId) ?: error("Loan not found")
+        require(amountPaise > 0) { "Repayment amount must be positive" }
+        require(amountPaise <= loan.currentOutstandingPaise) { "Repayment cannot exceed outstanding principal" }
+        val account = database.accounts().getById(accountId) ?: error("Choose a valid account")
+        require(!account.isCreditCard) { "Loan repayment cannot be paid from a credit card" }
+
+        val newOutstanding = loan.currentOutstandingPaise - amountPaise
+        val newPaidPrincipal = loan.principalPaidPaise + amountPaise
+        database.loans().update(
+            loan.copy(
+                currentOutstandingPaise = newOutstanding,
+                principalPaidPaise = newPaidPrincipal
+            )
+        )
+
+        // Deduct payment from selected account
+        database.accounts().update(account.copy(balancePaise = account.balancePaise - amountPaise))
+
+        // Record repayment transaction linked to the loan, excluded from reporting
+        val desc = "Loan Repayment: ${loan.name}" + if (note.isNotBlank()) " — $note" else ""
+        val tx = TransactionEntity(
+            dateEpochDay = dateEpochDay,
+            description = desc,
+            amountPaise = amountPaise,
+            categoryId = 0L,
+            accountId = accountId,
+            type = TransactionType.EXPENSE,
+            isExcludedFromCalculations = true,
+            originalExpenseId = loanId,
+            isLoanRepayment = true
+        )
+        database.transactions().insert(tx)
+    }
+
+    suspend fun postSavingsInterest(
+        accountId: Long,
+        amountPaise: Long,
+        dateEpochDay: Long = LocalDate.now().toEpochDay(),
+        periodLabel: String = ""
+    ): Long = database.withTransaction {
+        val account = database.accounts().getById(accountId) ?: error("Account not found")
+        require(!account.isCreditCard) { "Interest cannot be posted to a credit card" }
+        require(amountPaise > 0) { "Interest amount must be positive" }
+
+        val dateStr = periodLabel.ifBlank { LocalDate.ofEpochDay(dateEpochDay).toString() }
+        val desc = "Interest for $dateStr"
+
+        // Prevent duplicate interest posting on retry
+        val existing = database.transactions().getDateRange(dateEpochDay, dateEpochDay)
+            .firstOrNull { it.accountId == accountId && it.amountPaise == amountPaise && it.description == desc }
+        if (existing != null) {
+            return@withTransaction existing.id
+        }
+
+        val existingInterestCategory = database.categories().getByName("Interest")
+        val catId = if (existingInterestCategory != null) {
+            existingInterestCategory.id
+        } else {
+            database.categories().insert(CategoryEntity(name = "Interest", isIncomeCategory = true))
+        }
+
+        // Credit to the savings account
+        database.accounts().update(
+            account.copy(
+                balancePaise = account.balancePaise + amountPaise,
+                lastInterestPostingEpochDay = dateEpochDay
+            )
+        )
+
+        // Record transaction
+        val tx = TransactionEntity(
+            dateEpochDay = dateEpochDay,
+            description = desc,
+            amountPaise = amountPaise,
+            categoryId = catId,
+            accountId = accountId,
+            type = TransactionType.INCOME,
+            isExcludedFromCalculations = false
+        )
+        database.transactions().insert(tx)
+    }
+
+    suspend fun processDueSavingsInterest(today: LocalDate = LocalDate.now()): Int = database.withTransaction {
+        val allTransactions = database.transactions().observeAll().first()
+        val interestCategoryId = database.categories().getByName("Interest")?.id
+        var categoryId = interestCategoryId
+        var postedCount = 0
+
+        database.accounts().observeAll().first().forEach { account ->
+            if (account.isCreditCard || account.interestRateBps <= 0) return@forEach
+            val frequency = runCatching { InterestCreditFrequency.valueOf(account.interestCreditFrequency) }
+                .getOrDefault(InterestCreditFrequency.QUARTERLY)
+            val yesterday = today.minusDays(1)
+            val processedThrough = when (frequency) {
+                InterestCreditFrequency.DAILY -> yesterday
+                InterestCreditFrequency.MONTHLY -> today.withDayOfMonth(1).minusDays(1)
+                InterestCreditFrequency.QUARTERLY -> {
+                    val quarterStartMonth = ((today.monthValue - 1) / 3) * 3 + 1
+                    today.withMonth(quarterStartMonth).withDayOfMonth(1).minusDays(1)
+                }
+            }
+            val defaultStart = when (frequency) {
+                InterestCreditFrequency.DAILY -> processedThrough
+                InterestCreditFrequency.MONTHLY -> processedThrough.withDayOfMonth(1)
+                InterestCreditFrequency.QUARTERLY -> {
+                    val quarterStartMonth = ((processedThrough.monthValue - 1) / 3) * 3 + 1
+                    processedThrough.withMonth(quarterStartMonth).withDayOfMonth(1)
+                }
+            }
+            val start = account.lastInterestPostingEpochDay?.let { LocalDate.ofEpochDay(it).plusDays(1) } ?: defaultStart
+            if (start.isAfter(processedThrough)) return@forEach
+
+            val accountTransactions = allTransactions.asSequence()
+                .filter { !it.isExcludedFromCalculations && (it.accountId == account.id || it.destinationAccountId == account.id) }
+                .map { transaction ->
+                    if (transaction.type == TransactionType.TRANSFER && transaction.accountId != account.id) {
+                        transaction.copy(type = TransactionType.INCOME, destinationAccountId = null)
+                    } else transaction
+                }
+                .toList()
+            val dailyBalances = SavingsInterestCalculator.reconstructDailyBalances(
+                currentBalancePaise = account.balancePaise,
+                todayEpochDay = today.toEpochDay(),
+                accountTransactions = accountTransactions,
+                startEpochDay = start.toEpochDay(),
+                endEpochDay = processedThrough.toEpochDay(),
+            )
+            val interestPaise = SavingsInterestCalculator.calculateInterestPaise(
+                dailyBalances = dailyBalances,
+                fallbackBalancePaise = account.balancePaise,
+                interestRateBps = account.interestRateBps,
+                method = InterestCalculationMethod.DAILY,
+                startEpochDay = start.toEpochDay(),
+                endEpochDay = processedThrough.toEpochDay(),
+            )
+            if (interestPaise <= 0L) return@forEach
+
+            if (categoryId == null) {
+                categoryId = database.categories().insert(CategoryEntity(name = "Interest", isIncomeCategory = true))
+            }
+            val periodLabel = when (frequency) {
+                InterestCreditFrequency.DAILY -> "Daily savings interest through $processedThrough"
+                InterestCreditFrequency.MONTHLY -> "Savings interest $start–$processedThrough"
+                InterestCreditFrequency.QUARTERLY -> "Savings interest $start–$processedThrough"
+            }
+            database.accounts().update(
+                account.copy(
+                    balancePaise = account.balancePaise + interestPaise,
+                    lastInterestPostingEpochDay = processedThrough.toEpochDay(),
+                )
+            )
+            database.transactions().insert(
+                TransactionEntity(
+                    dateEpochDay = today.toEpochDay(),
+                    description = periodLabel,
+                    amountPaise = interestPaise,
+                    categoryId = categoryId,
+                    accountId = account.id,
+                    type = TransactionType.INCOME,
+                )
+            )
+            postedCount++
+        }
+        postedCount
     }
 
     suspend fun payCard(cardId: Long, sourceId: Long, amountPaise: Long, dateEpochDay: Long) = database.withTransaction {
@@ -255,6 +652,17 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
         database.accounts().update(card.copy(balancePaise = card.balancePaise - amountPaise))
         database.accounts().update(source.copy(balancePaise = source.balancePaise - amountPaise))
         database.cardPayments().insert(com.spendtrack.app.data.local.CardPaymentEntity(cardAccountId = cardId, sourceAccountId = sourceId, amountPaise = amountPaise, dateEpochDay = dateEpochDay))
+        val tx = TransactionEntity(
+            dateEpochDay = dateEpochDay,
+            description = "Bill Payment: ${card.name}",
+            amountPaise = amountPaise,
+            categoryId = 0L,
+            accountId = sourceId,
+            destinationAccountId = cardId,
+            type = TransactionType.TRANSFER,
+            isExcludedFromCalculations = false
+        )
+        database.transactions().insert(tx)
     }
 
     suspend fun addFixedDeposit(

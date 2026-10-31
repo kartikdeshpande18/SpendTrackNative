@@ -127,10 +127,10 @@ fun FixedDepositsScreen(
         ) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { haptics.click(); onBack() }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    IconButton(onClick = { haptics.click(); onBack() }, modifier = Modifier.size(40.dp)) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
                     }
-                    Text("Fixed Deposits", style = MaterialTheme.typography.displaySmall)
+                    Text("Fixed deposits", style = MaterialTheme.typography.titleLarge)
                 }
             }
 
@@ -141,7 +141,7 @@ fun FixedDepositsScreen(
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                 ) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Active Principal", style = MaterialTheme.typography.titleMedium)
+                        Text("Active principal", style = MaterialTheme.typography.titleMedium)
                         Text(money(activePrincipalPaise), style = MaterialTheme.typography.headlineMedium)
                         Text(
                             "${activeDeposits.size} Active · ${maturedDeposits.size} Matured · Maturity Value: ${formatMaturityAmount(activeMaturityPaise)}",
@@ -160,7 +160,7 @@ fun FixedDepositsScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Add Fixed Deposit")
+                    Text("Add fixed deposit")
                 }
             }
 
@@ -191,7 +191,7 @@ fun FixedDepositsScreen(
                                 if (selectedTab == 0) "No active fixed deposits" else "No matured fixed deposits",
                                 style = MaterialTheme.typography.titleMedium
                             )
-                            Text("Tap 'Add Fixed Deposit' above to track a deposit", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Tap 'Add fixed deposit' above to track a deposit", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -214,7 +214,7 @@ fun FixedDepositsScreen(
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text(fd.name, style = MaterialTheme.typography.titleLarge)
-                                Text("Linked Account : $accountName", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                                Text("Linked account: $accountName", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
                             }
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 if (fd.isExisting) {
@@ -245,12 +245,12 @@ fun FixedDepositsScreen(
                                 Text(money(fd.principalPaise), style = MaterialTheme.typography.titleMedium)
                             }
                             Column(modifier = Modifier.weight(1.2f)) {
-                                Text("Interest Rate", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Interest rate", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 Text(String.format(Locale.US, "%.2f%%", fd.interestRateBps / 100.0), style = MaterialTheme.typography.titleMedium)
                                 Text(fd.compoundingFrequency.displayName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Column(modifier = Modifier.weight(1.1f), horizontalAlignment = Alignment.End) {
-                                Text("Maturity Amount", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End)
+                                Text("Maturity amount", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End)
                                 Text(formatMaturityAmount(fd.maturityAmountPaise), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.End)
                             }
                         }
@@ -280,7 +280,7 @@ fun FixedDepositsScreen(
                                     },
                                     modifier = Modifier.padding(end = 8.dp)
                                 ) {
-                                    Text("Mature Now")
+                            Text("Mature now")
                                 }
                             }
                             IconButton(onClick = {
@@ -396,12 +396,12 @@ fun FixedDepositFormScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { haptics.click(); onBack() }) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            IconButton(onClick = { haptics.click(); onBack() }, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
             }
             Text(
                 if (initial == null) "Add Fixed Deposit" else if (isMatured) "Edit Matured Deposit" else "Edit Fixed Deposit",
-                style = MaterialTheme.typography.displaySmall
+                style = MaterialTheme.typography.titleLarge
             )
         }
 
@@ -652,7 +652,7 @@ fun FixedDepositFormScreen(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Mature Now")
+                            Text("Mature now")
                     }
                 }
                 if (onDelete != null) {

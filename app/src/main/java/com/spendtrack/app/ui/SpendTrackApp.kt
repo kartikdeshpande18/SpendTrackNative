@@ -1,6 +1,9 @@
 package com.spendtrack.app.ui
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
@@ -11,6 +14,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -18,7 +22,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
@@ -28,6 +33,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import com.spendtrack.app.ui.spending.DateFilterType
 import com.spendtrack.app.ui.spending.TransactionDateFilter
@@ -35,6 +42,8 @@ import com.spendtrack.app.ui.spending.CustomDateRangeDialog
 import com.spendtrack.app.ui.spending.MonthSelectorDialog
 
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -44,6 +53,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalUriHandler
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context.CLIPBOARD_SERVICE
+import android.widget.Toast
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -59,6 +73,8 @@ import com.spendtrack.app.ui.transactions.AddTransactionScreen
 import com.spendtrack.app.ui.fd.FixedDepositsScreen
 import com.spendtrack.app.ui.recurring.RecurringTransactionsScreen
 import com.spendtrack.app.ui.theme.SpendTrackTheme
+import com.spendtrack.app.ui.theme.AppThemeMode
+import com.spendtrack.app.ui.theme.ThemePreferences
 import com.spendtrack.app.ui.animation.SpendTrackMotion
 import com.spendtrack.app.ui.haptics.rememberSpendTrackHaptics
 import androidx.compose.material.icons.outlined.Settings
@@ -70,11 +86,19 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.util.Locale
 
-private enum class Overlay { NONE, TRANSACTION, EDIT_TRANSACTION, ACCOUNTS, CATEGORIES, BUDGETS, DATA, REMINDERS, ADD_LOAN, ADD_OWED, CARD_PAYMENT, LOAN_OWED_CHOOSER, FIXED_DEPOSITS, RECURRING_TRANSACTIONS, IMPORT_STATEMENT }
+private enum class Overlay { NONE, TRANSACTION, EDIT_TRANSACTION, ACCOUNTS, CATEGORIES, BUDGETS, DATA, REMINDERS, APPEARANCE, ABOUT, ADD_LOAN, ADD_OWED, CARD_PAYMENT, LOAN_OWED_CHOOSER, FIXED_DEPOSITS, RECURRING_TRANSACTIONS, IMPORT_STATEMENT }
 private enum class ReminderType { CARD, LOAN }
 
 @Composable
 fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
+    val context = LocalContext.current
+    var themeMode by rememberSaveable { mutableStateOf(ThemePreferences.mode(context)) }
+    var trueBlack by rememberSaveable { mutableStateOf(ThemePreferences.isTrueBlackEnabled(context)) }
+    val darkTheme = when (themeMode) {
+        AppThemeMode.SYSTEM -> isSystemInDarkTheme()
+        AppThemeMode.LIGHT -> false
+        AppThemeMode.DARK -> true
+    }
     var route by rememberSaveable { mutableStateOf("home") }
     var overlay by rememberSaveable { mutableStateOf(Overlay.NONE) }
     var editingTransactionId by rememberSaveable { mutableLongStateOf(0L) }
@@ -106,8 +130,17 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
             route != "home" -> route = "home"
         }
     }
-    SpendTrackTheme {
+    SpendTrackTheme(darkTheme = darkTheme, trueBlack = trueBlack) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+            val activeOwedParticipants = remember(owed) {
+                owed.filter { it.amountPaise > 0 }
+                    .map { it.personName.trim() }
+                    .filter { it.isNotBlank() }
+                    .distinct()
+                    .ifEmpty {
+                        owed.map { it.personName.trim() }.filter { it.isNotBlank() }.distinct()
+                    }
+            }
             val effectiveOverlay = if (overlay == Overlay.LOAN_OWED_CHOOSER) Overlay.NONE else overlay
             AnimatedContent(
                 targetState = effectiveOverlay,
@@ -120,16 +153,33 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                         categories = categories,
                         onSaved = { viewModel.addTransaction(it); overlay = Overlay.NONE },
                         onCancel = { overlay = Overlay.NONE },
-                        onSaveRecurring = { viewModel.addRecurringTransaction(it); overlay = Overlay.NONE }
+                        onSaveRecurring = { viewModel.addRecurringTransaction(it); overlay = Overlay.NONE },
+                        owedParticipants = activeOwedParticipants
                     )
                     Overlay.EDIT_TRANSACTION -> transactions.find { it.id == editingTransactionId }?.let { transaction ->
-                        AddTransactionScreen(accounts, categories, onSaved = { viewModel.updateTransaction(it); overlay = Overlay.NONE }, onCancel = { overlay = Overlay.NONE }, initial = transaction)
+                        AddTransactionScreen(
+                            accounts = accounts,
+                            categories = categories,
+                            onSaved = { viewModel.updateTransaction(it); overlay = Overlay.NONE },
+                            onCancel = { overlay = Overlay.NONE },
+                            initial = transaction,
+                            onSaveRecurring = { viewModel.addRecurringTransaction(it); overlay = Overlay.NONE },
+                            owedParticipants = activeOwedParticipants
+                        )
                     }
                     Overlay.ACCOUNTS -> AccountsScreen(accounts, onBack = { overlay = Overlay.NONE }, onAdd = { name, card, opening, lastFour, limit, cycle, due, minBal -> viewModel.addAccount(name, card, opening, lastFour, limit, cycle, due, minBal) }, onUpdate = viewModel::updateAccount, onDelete = viewModel::deleteAccount, onPayCard = { overlay = Overlay.CARD_PAYMENT })
-                    Overlay.CATEGORIES -> CategoriesScreen(categories, onBack = { overlay = Overlay.NONE }, onAdd = viewModel::addCategory, onUpdate = viewModel::updateCategory, onDelete = viewModel::deleteCategory)
+                    Overlay.CATEGORIES -> CategoriesScreen(categories, onBack = { overlay = Overlay.NONE }, onAdd = { name, inc -> viewModel.addCategory(name, inc) }, onUpdate = viewModel::updateCategory, onDelete = viewModel::deleteCategory)
                     Overlay.BUDGETS -> BudgetsScreen(budgets, categories, transactions, onBack = { overlay = Overlay.NONE }, onSave = viewModel::saveBudget, onDelete = viewModel::deleteBudget, ensureMonth = viewModel::ensureBudgetMonth)
                     Overlay.DATA -> DataScreen(viewModel, onBack = { overlay = Overlay.NONE }, onImportStatement = { overlay = Overlay.IMPORT_STATEMENT })
                     Overlay.REMINDERS -> RemindersScreen(onBack = { overlay = Overlay.NONE })
+                    Overlay.APPEARANCE -> AppearanceScreen(
+                        themeMode = themeMode,
+                        trueBlack = trueBlack,
+                        onThemeModeChange = { themeMode = it; ThemePreferences.setMode(context, it) },
+                        onTrueBlackChange = { trueBlack = it; ThemePreferences.setTrueBlackEnabled(context, it) },
+                        onBack = { overlay = Overlay.NONE }
+                    )
+                    Overlay.ABOUT -> AboutScreen(onBack = { overlay = Overlay.NONE })
                     Overlay.ADD_LOAN -> AddLoanScreen(onBack = { overlay = Overlay.NONE }, onSave = { viewModel.addLoan(it); overlay = Overlay.NONE })
                     Overlay.ADD_OWED -> AddOwedScreen(onBack = { overlay = Overlay.NONE }, onSave = { viewModel.addOwed(it); overlay = Overlay.NONE })
                     Overlay.CARD_PAYMENT -> CardPaymentScreen(accounts, onBack = { overlay = Overlay.NONE }, onPay = { cardId, sourceId, amount -> viewModel.payCard(cardId, sourceId, amount, LocalDate.now().toEpochDay()); overlay = Overlay.NONE })
@@ -249,9 +299,21 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                                     onUpdate = viewModel::updateAccount,
                                     onDelete = viewModel::deleteAccount,
                                     onPayCard = { overlay = Overlay.CARD_PAYMENT },
-                                    onSettings = { route = "settings" },
+                                    onSettings = { route = "settings" }
                                 )
-                                "loans_owed" -> LoansOwed(loans, owed, bottomContentPadding, onUpdateLoan = viewModel::updateLoan, onDeleteLoan = viewModel::deleteLoan, onUpdateOwed = viewModel::updateOwed, onDeleteOwed = viewModel::deleteOwed, onSettleOwed = viewModel::settleOwed, onSettings = { route = "settings" })
+                                "loans_owed" -> LoansOwed(
+                                    loans = loans,
+                                    owed = owed,
+                                    accounts = accounts,
+                                    bottomContentPadding = bottomContentPadding,
+                                    onUpdateLoan = viewModel::updateLoan,
+                                    onDeleteLoan = viewModel::deleteLoan,
+                                    onRepayLoan = { loanId, accId, amount -> viewModel.repayLoan(loanId, accId, amount) },
+                                    onUpdateOwed = viewModel::updateOwed,
+                                    onDeleteOwed = viewModel::deleteOwed,
+                                    onSettleOwed = { owedId, amount, accId -> viewModel.settleOwed(owedId, amount, accId) },
+                                    onSettings = { route = "settings" }
+                                )
                                 else -> {
                                     val activeFdCount = remember(fixedDeposits) { fixedDeposits.count { it.status == FixedDepositStatus.ACTIVE } }
                                     val activeRecurringCount = remember(recurringTransactions) { recurringTransactions.count { it.isEnabled } }
@@ -269,7 +331,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                                     onBudgets = { overlay = Overlay.BUDGETS },
                                     onData = { overlay = Overlay.DATA },
                                     onReminders = { overlay = Overlay.REMINDERS },
-                                    onImportStatement = { overlay = Overlay.IMPORT_STATEMENT }
+                                    onAppearance = { overlay = Overlay.APPEARANCE },
+                                    onAbout = { overlay = Overlay.ABOUT }
                                 )
                             }
                             }
@@ -390,22 +453,15 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         val preferredGapPx = 12.dp.roundToPx()
         val minGapPx = 8.dp.roundToPx()
         val minMarginPx = 12.dp.roundToPx()
-
-        // Responsive gap calculation to ensure entire group fits within screen margins
         var gapPx = preferredGapPx
         var totalWidth = pillPlaceable.width + gapPx + fabPlaceable.width
-
         if (totalWidth > layoutWidth - 2 * minMarginPx) {
             gapPx = maxOf(minGapPx, layoutWidth - 2 * minMarginPx - pillPlaceable.width - fabPlaceable.width)
             totalWidth = pillPlaceable.width + gapPx + fabPlaceable.width
         }
-
-        // Center the COMBINED composition (Navigation Pill + Gap + FAB)
         val groupStartX = ((layoutWidth - totalWidth) / 2).coerceAtLeast(minMarginPx)
         val pillX = groupStartX
         val fabX = groupStartX + pillPlaceable.width + gapPx
-
-        // Vertically align visual centers
         val pillY = (layoutHeight - pillPlaceable.height) / 2
         val fabY = (layoutHeight - fabPlaceable.height) / 2
 
@@ -430,6 +486,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     onSettings: () -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     var showMonthPicker by remember { mutableStateOf(false) }
     val isCurrentMonth = selectedMonth == YearMonth.now()
     val startEpoch = remember(selectedMonth) { selectedMonth.atDay(1).toEpochDay() }
@@ -438,10 +496,10 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         transactions.filter { it.dateEpochDay in startEpoch..endEpoch }
     }
     val spending = remember(inMonth) {
-        inMonth.filter { it.type == TransactionType.EXPENSE }.sumOf { it.mySharePaise ?: it.amountPaise }
+        inMonth.filter { it.type == TransactionType.EXPENSE && !it.isExcludedFromCalculations }.sumOf { it.mySharePaise ?: it.amountPaise }
     }
     val income = remember(inMonth) {
-        inMonth.filter { it.type == TransactionType.INCOME }.sumOf { it.amountPaise }
+        inMonth.filter { it.type == TransactionType.INCOME && !it.isExcludedFromCalculations }.sumOf { it.amountPaise }
     }
     val cash = remember(accounts) {
         accounts.filterNot { it.isCreditCard }.sumOf { it.balancePaise }
@@ -469,10 +527,20 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         )
     }
 
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 20.dp), contentPadding = PaddingValues(top = 8.dp, bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = bottomContentPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         item {
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    coroutineScope.launch { listState.animateScrollToItem(0) }
+                },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -514,7 +582,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric("Savings", money(availableSavings), Modifier.weight(1f)); SmallMetric("Card Dues", money(cards), Modifier.weight(1f)) } }
         item { CategorySpendingDonut(inMonth, categories) }
         item { DailyTransactionBarChart(transactions, selectedMonth = selectedMonth) }
-        item { Text("Top 3 Budget Categories", style = MaterialTheme.typography.titleLarge) }
+        item { Text("Top 3 budget categories", style = MaterialTheme.typography.titleLarge) }
         if (topBudgets.isEmpty()) {
             item { TopBudgetCategoriesEmptyCard() }
         } else {
@@ -522,7 +590,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 TopBudgetCategoryCard(item)
             }
         }
-        item { Text("Recent Transactions", style = MaterialTheme.typography.titleLarge) }
+        item { Text("Recent transactions", style = MaterialTheme.typography.titleLarge) }
         if (transactions.isEmpty()) {
             item { SummaryCard("No Transactions Yet", "", "Tap + to record your first transaction") }
         } else {
@@ -556,6 +624,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     onSettings: () -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
+    val coroutineScope = rememberCoroutineScope()
     var categoryExpanded by remember { mutableStateOf(false) }
     var dateExpanded by remember { mutableStateOf(false) }
     var showCustomDateRangeDialog by remember { mutableStateOf(false) }
@@ -572,6 +641,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
             accounts = accounts
         )
     }
+    var displayCount by remember(visible) { mutableIntStateOf(50) }
+    val displayedItems = remember(visible, displayCount) { visible.take(displayCount) }
     val classification = remember(transactions, categoryFilter, dateFilter) {
         TransactionDateFilter.filterForChart(
             transactions = transactions,
@@ -606,7 +677,12 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     ) {
         item {
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    coroutineScope.launch { listState.animateScrollToItem(0) }
+                },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -621,7 +697,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 value = query,
                 onValueChange = onQueryChange,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Search Transactions") },
+                label = { Text("Search transactions") },
                 singleLine = true,
                 shape = MaterialTheme.shapes.large
             )
@@ -654,7 +730,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                         onDismissRequest = { categoryExpanded = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("All Categories") },
+                            text = { Text("All categories") },
                             onClick = {
                                 haptics.selection()
                                 onCategoryFilterChange(null)
@@ -694,7 +770,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                         onDismissRequest = { dateExpanded = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("All Dates") },
+                            text = { Text("All dates") },
                             onClick = {
                                 haptics.selection()
                                 onDateFilterChange(TransactionDateFilter(DateFilterType.ALL_DATES))
@@ -702,7 +778,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("This Month") },
+                            text = { Text("This month") },
                             onClick = {
                                 haptics.selection()
                                 onDateFilterChange(TransactionDateFilter(DateFilterType.THIS_MONTH))
@@ -710,7 +786,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Last 7 Days") },
+                            text = { Text("Last 7 days") },
                             onClick = {
                                 haptics.selection()
                                 onDateFilterChange(TransactionDateFilter(DateFilterType.LAST_7_DAYS))
@@ -718,7 +794,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Last 30 Days") },
+                            text = { Text("Last 30 days") },
                             onClick = {
                                 haptics.selection()
                                 onDateFilterChange(TransactionDateFilter(DateFilterType.LAST_30_DAYS))
@@ -726,7 +802,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Custom Range…") },
+                            text = { Text("Custom range…") },
                             onClick = {
                                 haptics.selection()
                                 dateExpanded = false
@@ -746,7 +822,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 )
             }
         }
-        items(visible, key = { it.id }) { t ->
+        items(displayedItems, key = { it.id }) { t ->
             TransactionCard(
                 transaction = t,
                 accounts = accounts,
@@ -756,6 +832,16 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 onEdit = onEdit,
                 onDelete = remove
             )
+        }
+        if (visible.size > displayCount) {
+            item {
+                OutlinedButton(
+                    onClick = { displayCount += 50 },
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                ) {
+                    Text("Load more (${visible.size - displayCount} remaining)")
+                }
+            }
         }
     }
 }
@@ -804,7 +890,13 @@ fun TransactionCard(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val title = if (isTransfer) "Transfer" else transaction.description.ifBlank { "Transaction" }
+                    val title = if (isTransfer && transaction.description.isNotBlank()) {
+                        transaction.description
+                    } else if (isTransfer) {
+                        "Transfer"
+                    } else {
+                        transaction.description.ifBlank { "Transaction" }
+                    }
                     Text(
                         text = title,
                         style = MaterialTheme.typography.titleMedium,
@@ -868,6 +960,29 @@ fun TransactionCard(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
+                if (transaction.isExcludedFromCalculations) {
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        shape = MaterialTheme.shapes.extraSmall,
+                        modifier = Modifier.padding(top = 2.dp)
+                    ) {
+                        Text(
+                            text = "Excluded from calculations",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                if (!transaction.sharedWith.isNullOrBlank()) {
+                    Text(
+                        text = "Shared with: ${transaction.sharedWith}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.secondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
 
             if (onEdit != null || onDelete != null) {
@@ -910,27 +1025,42 @@ fun TransactionCard(
 @Composable private fun LoansOwed(
     loans: List<LoanEntity>,
     owed: List<OwedEntity>,
+    accounts: List<AccountEntity> = emptyList(),
     bottomContentPadding: Dp,
     onUpdateLoan: (LoanEntity) -> Unit,
     onDeleteLoan: (LoanEntity) -> Unit,
+    onRepayLoan: (Long, Long, Long) -> Unit,
     onUpdateOwed: (OwedEntity) -> Unit,
     onDeleteOwed: (OwedEntity) -> Unit,
-    onSettleOwed: (OwedEntity, Long) -> Unit,
+    onSettleOwed: (Long, Long, Long) -> Unit,
     onSettings: () -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
     val owedToMe = remember(owed) { owed.filter { it.direction == OwedDirection.OWED_TO_ME }.sumOf { it.amountPaise } }
     val iOwe = remember(owed) { owed.filter { it.direction == OwedDirection.I_OWE }.sumOf { it.amountPaise } }
     var managingLoan by remember { mutableStateOf<LoanEntity?>(null) }
     var managingOwed by remember { mutableStateOf<OwedEntity?>(null) }
-    LazyColumn(Modifier.fillMaxSize().padding(20.dp), contentPadding = PaddingValues(bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    var settlingOwed by remember { mutableStateOf<OwedEntity?>(null) }
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize().padding(20.dp),
+        contentPadding = PaddingValues(bottom = bottomContentPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         item {
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    coroutineScope.launch { listState.animateScrollToItem(0) }
+                },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Loans & Owed", style = MaterialTheme.typography.displaySmall)
+                Text("Loans & balances", style = MaterialTheme.typography.headlineSmall)
                 IconButton(onClick = { haptics.selection(); onSettings() }) {
                     Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -938,14 +1068,67 @@ fun TransactionCard(
         }
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric("Owed to you", money(owedToMe), Modifier.weight(1f)); SmallMetric("You owe", money(iOwe), Modifier.weight(1f)) } }
         item { Text("Loans", style = MaterialTheme.typography.titleLarge) }
-        if (loans.isEmpty()) item { SummaryCard("No loans", "", "") }
+        if (loans.isEmpty()) item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("No loans tracked yet", style = MaterialTheme.typography.titleMedium)
+                    Text("Tap + to add a loan.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        }
         items(loans, key = { "loan_${it.id}" }) { loan -> LoanCard(loan) { haptics.click(); managingLoan = loan } }
-        item { Text("People", style = MaterialTheme.typography.titleLarge) }
-        if (owed.isEmpty()) item { SummaryCard("No owed entries", "", "") }
-        items(owed, key = { "owed_${it.id}" }) { entry -> ManageableCard(entry.personName, money(entry.amountPaise), if (entry.direction == OwedDirection.OWED_TO_ME) "Owes you" else "You owe") { haptics.click(); managingOwed = entry } }
+        item { Text("Personal balances", style = MaterialTheme.typography.titleLarge) }
+        if (owed.isEmpty()) item { SummaryCard("No personal balances", "", "") }
+        items(owed, key = { "owed_${it.id}" }) { entry ->
+            ManageableCard(
+                entry.personName,
+                money(entry.amountPaise),
+                if (entry.amountPaise <= 0L) "Settled" else if (entry.direction == OwedDirection.OWED_TO_ME) "Owes you" else "You owe",
+            ) { haptics.click(); managingOwed = entry }
+        }
     }
-    managingLoan?.let { loan -> LoanManageDialog(loan, onDismiss = { managingLoan = null }, onSave = { haptics.confirm(); onUpdateLoan(it); managingLoan = null }, onDelete = { haptics.reject(); onDeleteLoan(loan); managingLoan = null }) }
-    managingOwed?.let { entry -> OwedManageDialog(entry, onDismiss = { managingOwed = null }, onSave = { haptics.confirm(); onUpdateOwed(it); managingOwed = null }, onDelete = { haptics.reject(); onDeleteOwed(entry); managingOwed = null }, onSettle = { amount -> haptics.confirm(); onSettleOwed(entry, amount); managingOwed = null }) }
+    managingLoan?.let { loan ->
+        LoanManageDialog(
+            loan = loan,
+            accounts = accounts,
+            onDismiss = { managingLoan = null },
+            onSave = { haptics.confirm(); onUpdateLoan(it); managingLoan = null },
+            onDelete = { haptics.reject(); onDeleteLoan(loan); managingLoan = null },
+            onRepay = { accountId, amount ->
+                haptics.confirm()
+                onRepayLoan(loan.id, accountId, amount)
+                managingLoan = null
+            }
+        )
+    }
+    managingOwed?.let { entry ->
+        OwedManageDialog(
+            owed = entry,
+            onDismiss = { managingOwed = null },
+            onSave = { haptics.confirm(); onUpdateOwed(it); managingOwed = null },
+            onDelete = { haptics.reject(); onDeleteOwed(entry); managingOwed = null },
+            onOpenSettle = {
+                val target = entry
+                managingOwed = null
+                settlingOwed = target
+            }
+        )
+    }
+    settlingOwed?.let { entry ->
+        SettleOwedDialog(
+            owed = entry,
+            accounts = accounts,
+            onDismiss = { settlingOwed = null },
+            onSettle = { amount, accountId ->
+                haptics.confirm()
+                onSettleOwed(entry.id, amount, accountId)
+                settlingOwed = null
+            }
+        )
+    }
 }
 
 @Composable private fun Settings(
@@ -962,7 +1145,8 @@ fun TransactionCard(
     onBudgets: () -> Unit,
     onData: () -> Unit,
     onReminders: () -> Unit,
-    onImportStatement: () -> Unit
+    onAppearance: () -> Unit,
+    onAbout: () -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
     LazyColumn(Modifier.fillMaxSize().padding(20.dp), contentPadding = PaddingValues(bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -972,36 +1156,160 @@ fun TransactionCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                ActionIcon(Icons.Default.ArrowBack, "Back", onClick = { haptics.click(); onBack() })
-                Text("Settings", style = MaterialTheme.typography.displaySmall)
+                ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = { haptics.click(); onBack() })
+                Text("Settings", style = MaterialTheme.typography.titleLarge)
             }
         }
         item { SettingsCard("Accounts", "$accounts accounts and cards") { haptics.click(); onAccounts() } }
         item { SettingsCard("Categories", "$categories categories") { haptics.click(); onCategories() } }
-        item { SettingsCard("Fixed Deposits", "$activeFdCount active deposits") { haptics.click(); onFixedDeposits() } }
-        item { SettingsCard("Recurring Transactions", "$activeRecurringCount active schedules") { haptics.click(); onRecurring() } }
+        item { SettingsCard("Fixed deposits", "$activeFdCount active deposits") { haptics.click(); onFixedDeposits() } }
+        item { SettingsCard("Recurring transactions", "$activeRecurringCount active schedules") { haptics.click(); onRecurring() } }
         item { SettingsCard("Budget", "Category budgets") { haptics.click(); onBudgets() } }
         item { SettingsCard("Data", "Backup and restore") { haptics.click(); onData() } }
-        item { SettingsCard("Alerts & Reminders", "Card and loan notifications") { haptics.click(); onReminders() } }
-        item { SettingsCard("Import Statements", "Bulk import from PDF") { haptics.click(); onImportStatement() } }
+        item { SettingsCard("Appearance", "Theme and display options") { haptics.click(); onAppearance() } }
+        item { SettingsCard("About", "App information and links") { haptics.click(); onAbout() } }
+        item { SettingsCard("Alerts & reminders", "Card and loan notifications") { haptics.click(); onReminders() } }
     }
 }
 @Composable private fun SettingsCard(title: String, sub: String, onClick: () -> Unit = {}) { Card(Modifier.fillMaxWidth().clickable(onClick = onClick), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) { Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.titleLarge); Text(sub, color = MaterialTheme.colorScheme.onSurfaceVariant) }; Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) } } }
 
+@Composable private fun AppearanceScreen(
+    themeMode: AppThemeMode,
+    trueBlack: Boolean,
+    onThemeModeChange: (AppThemeMode) -> Unit,
+    onTrueBlackChange: (Boolean) -> Unit,
+    onBack: () -> Unit,
+) {
+    val haptics = rememberSpendTrackHaptics()
+    LazyColumn(
+        Modifier.fillMaxSize().statusBarsPadding().padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
+                Text("Appearance", style = MaterialTheme.typography.titleLarge)
+            }
+        }
+        item { Text("Theme", style = MaterialTheme.typography.titleLarge) }
+        items(AppThemeMode.entries) { mode ->
+            Card(
+                modifier = Modifier.fillMaxWidth().clickable { haptics.selection(); onThemeModeChange(mode) },
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            ) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(mode.label, style = MaterialTheme.typography.titleMedium)
+                        Text(mode.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    RadioButton(selected = themeMode == mode, onClick = { haptics.selection(); onThemeModeChange(mode) })
+                }
+            }
+        }
+        item { Text("Additional options", style = MaterialTheme.typography.titleLarge) }
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("True black", style = MaterialTheme.typography.titleMedium)
+                        Text("Use pure black surfaces when dark theme is active.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = trueBlack, onCheckedChange = { haptics.selection(); onTrueBlackChange(it) })
+                }
+            }
+        }
+    }
+}
+
+@Composable private fun AboutScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val uriHandler = LocalUriHandler.current
+    val clipboard = context.getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+    val version = context.packageManager.getPackageInfo(context.packageName, 0).versionName.orEmpty()
+    fun copy(label: String, value: String) {
+        clipboard.setPrimaryClip(ClipData.newPlainText(label, value))
+        Toast.makeText(context, "$label copied", Toast.LENGTH_SHORT).show()
+    }
+    fun open(uri: String) { runCatching { uriHandler.openUri(uri) } }
+    LazyColumn(
+        Modifier.fillMaxSize().statusBarsPadding().padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
+                Text("About", style = MaterialTheme.typography.titleLarge)
+            }
+        }
+        item { Text("SpendTrack", style = MaterialTheme.typography.headlineSmall) }
+        item { SettingsCard("Read the README", "Project guide and feature details") { open("https://github.com/kartikdeshpande18/SpendTrackNative#readme") } }
+        item { SettingsCard("Latest release", "View the newest app release") { open("https://github.com/kartikdeshpande18/SpendTrackNative/releases/latest") } }
+        item { SettingsCard("Report an issue", "Open a GitHub issue") { open("https://github.com/kartikdeshpande18/SpendTrackNative/issues/new") } }
+        item {
+            Card(Modifier.fillMaxWidth().clickable { open("upi://pay?pa=kartik.deshpande%40slc&pn=Kartik%20Deshpande&cu=INR") }, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Sponsor", style = MaterialTheme.typography.titleMedium)
+                        Text("UPI · kartik.deshpande@slc", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TextButton(onClick = { copy("UPI ID", "kartik.deshpande@slc") }) { Text("Copy") }
+                }
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth().clickable { copy("Version", version) }.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Version", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(version)
+            }
+        }
+    }
+}
+
 @Composable private fun RemindersScreen(onBack: () -> Unit) {
     val haptics = rememberSpendTrackHaptics()
     val context = LocalContext.current
+    var isEnabled by remember { mutableStateOf(ReminderPreferences.isNotificationsEnabled(context)) }
     var cardTimes by remember { mutableStateOf(ReminderPreferences.cardLeadTimes(context)) }
     var loanTimes by remember { mutableStateOf(ReminderPreferences.loanLeadTimes(context)) }
     var editing by remember { mutableStateOf<ReminderType?>(null) }
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Alerts & Reminders", style = MaterialTheme.typography.displaySmall) }
-        item { ReminderSettingsCard("Card Reminders", cardTimes.summary()) { haptics.click(); editing = ReminderType.CARD } }
-        item { ReminderSettingsCard("Loan Reminders", loanTimes.summary()) { haptics.click(); editing = ReminderType.LOAN } }
+        item { Row(verticalAlignment = Alignment.CenterVertically) { ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Alerts & reminders", style = MaterialTheme.typography.titleLarge) } }
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.extraExtraLarge,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text("Bill reminders", style = MaterialTheme.typography.titleLarge)
+                        Text(if (isEnabled) "Notifications enabled" else "Notifications disabled", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = isEnabled, onCheckedChange = {
+                        haptics.selection()
+                        isEnabled = it
+                        ReminderPreferences.setNotificationsEnabled(context, it)
+                    })
+                }
+            }
+        }
+        item { ReminderSettingsCard("Card reminders", cardTimes.summary()) { haptics.click(); editing = ReminderType.CARD } }
+        item { ReminderSettingsCard("Loan reminders", loanTimes.summary()) { haptics.click(); editing = ReminderType.LOAN } }
     }
     when (editing) {
-        ReminderType.CARD -> ReminderConfigDialog("Card Reminders", cardTimes, onDismiss = { editing = null }) { value -> haptics.confirm(); ReminderPreferences.saveCardLeadTimes(context, value); cardTimes = value; editing = null }
-        ReminderType.LOAN -> ReminderConfigDialog("Loan Reminders", loanTimes, onDismiss = { editing = null }) { value -> haptics.confirm(); ReminderPreferences.saveLoanLeadTimes(context, value); loanTimes = value; editing = null }
+        ReminderType.CARD -> ReminderConfigDialog("Card reminders", cardTimes, onDismiss = { editing = null }) { value -> haptics.confirm(); ReminderPreferences.saveCardLeadTimes(context, value); cardTimes = value; editing = null }
+        ReminderType.LOAN -> ReminderConfigDialog("Loan reminders", loanTimes, onDismiss = { editing = null }) { value -> haptics.confirm(); ReminderPreferences.saveLoanLeadTimes(context, value); loanTimes = value; editing = null }
         null -> Unit
     }
 }
@@ -1042,15 +1350,15 @@ fun TransactionCard(
     val createDocument = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> backupText?.let { text -> if (uri != null) { runCatching { context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(text) } }.onSuccess { status = "Backup saved" }.onFailure { status = "Backup failed" } }; backupText = null } }
     val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) pendingRestore = runCatching { context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: error("Unable to read file") }.getOrElse { status = "Restore failed"; null } }
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Data", style = MaterialTheme.typography.displaySmall) }
+        item { Row(verticalAlignment = Alignment.CenterVertically) { ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Data", style = MaterialTheme.typography.titleLarge) } }
         if (onImportStatement != null) {
-            item { Button({ onImportStatement() }, Modifier.fillMaxWidth()) { Text("Import Statement (PDF)") } }
+            item { Button({ onImportStatement() }, Modifier.fillMaxWidth()) { Text("Import statement (PDF)") } }
         }
-        item { OutlinedButton({ viewModel.exportBackup { result -> result.onSuccess { backupText = it; createDocument.launch("spendtrack-backup.json") }.onFailure { status = "Backup failed" } } }, Modifier.fillMaxWidth()) { Text("Create Backup") } }
-        item { OutlinedButton({ openDocument.launch(arrayOf("application/json", "text/plain")) }, Modifier.fillMaxWidth()) { Text("Restore Backup") } }
+        item { OutlinedButton({ viewModel.exportBackup { result -> result.onSuccess { backupText = it; createDocument.launch("spendtrack-backup.json") }.onFailure { status = "Backup failed" } } }, Modifier.fillMaxWidth()) { Text("Create backup") } }
+        item { OutlinedButton({ openDocument.launch(arrayOf("application/json", "text/plain")) }, Modifier.fillMaxWidth()) { Text("Restore backup") } }
         if (status.isNotBlank()) item { Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
-    pendingRestore?.let { text -> AlertDialog(onDismissRequest = { pendingRestore = null }, title = { Text("Restore Backup?") }, text = { Text("This replaces the current local data.") }, confirmButton = { TextButton({ viewModel.restoreBackup(text) { result -> status = if (result.isSuccess) "Backup restored" else "Restore failed"; pendingRestore = null } }) { Text("Restore") } }, dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("Cancel") } }) }
+    pendingRestore?.let { text -> AlertDialog(onDismissRequest = { pendingRestore = null }, title = { Text("Restore backup?") }, text = { Text("This replaces the current local data.") }, confirmButton = { TextButton({ viewModel.restoreBackup(text) { result -> status = if (result.isSuccess) "Backup restored" else "Restore failed"; pendingRestore = null } }) { Text("Restore") } }, dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("Cancel") } }) }
 }
 @Composable private fun SummaryCard(title: String, value: String, sub: String) {
     Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraExtraLarge, colors = CardDefaults.cardColors(containerColor = if (title == "Net Worth") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer)) {
@@ -1081,7 +1389,7 @@ fun TransactionCard(
         }
     }
 }
-@Composable private fun ActionDialog(close: () -> Unit) { AlertDialog(onDismissRequest = close, title = { Text("Add to Loans & Owed") }, text = { Text("Loan and owed-entry forms are still to be completed.") }, confirmButton = { TextButton(close) { Text("OK") } }) }
+@Composable private fun ActionDialog(close: () -> Unit) { AlertDialog(onDismissRequest = close, title = { Text("Add a loan or personal balance") }, text = { Text("Loan and owed-entry forms are still to be completed.") }, confirmButton = { TextButton(close) { Text("OK") } }) }
 
 @Composable private fun AccountsScreen(
     accounts: List<AccountEntity>,
@@ -1114,10 +1422,10 @@ fun TransactionCard(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (onSettings == null) {
-                        ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack)
+                        ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text("Accounts", style = MaterialTheme.typography.displaySmall)
+                    Text("Accounts", style = MaterialTheme.typography.titleLarge)
                 }
                 if (onSettings != null) {
                     IconButton(onClick = { haptics.selection(); onSettings() }) {
@@ -1128,11 +1436,11 @@ fun TransactionCard(
         }
         if (adding) item {
             Card(Modifier.fillMaxWidth().animateContentSize()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Add Account", style = MaterialTheme.typography.titleLarge)
+                Text("Add account", style = MaterialTheme.typography.titleLarge)
                 OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(if (card) "Card name" else "Account name") }, singleLine = true)
                 OutlinedTextField(opening, { opening = it }, Modifier.fillMaxWidth(), label = { Text(if (card) "Current outstanding (₹)" else "Opening balance (₹)") }, singleLine = true)
                 if (!card) {
-                    OutlinedTextField(minBalance, { minBalance = it }, Modifier.fillMaxWidth(), label = { Text("Minimum Balance (₹)") }, singleLine = true)
+                    OutlinedTextField(minBalance, { minBalance = it }, Modifier.fillMaxWidth(), label = { Text("Minimum balance (₹)") }, singleLine = true)
                 }
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Checkbox(card, { haptics.selection(); card = it }); Text("Credit card") }
                 if (card) {
@@ -1147,8 +1455,25 @@ fun TransactionCard(
                     name = ""; opening = ""; minBalance = ""; card = false; lastFour = ""; limit = ""; cycle = ""; due = ""; adding = false
                 }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Save") }
             } }
-        } else item { Button({ haptics.click(); adding = true }, Modifier.fillMaxWidth()) { Text("Add Account Or Card") } }
-        items(accounts, key = { it.id }) { account -> ManageableCard(account.name, money(account.balancePaise), if (account.isCreditCard) "Credit card" else "Savings account") { haptics.click(); managing = account } }
+        } else item { Button({ haptics.click(); adding = true }, Modifier.fillMaxWidth()) { Text("Add account or card") } }
+        items(accounts, key = { it.id }) { account ->
+            val subtitle = if (account.isCreditCard) {
+                val lim = account.creditLimitPaise
+                if (lim != null && lim > 0) {
+                    val util = ((account.balancePaise.toDouble() / lim) * 100).toInt()
+                    "Limit: ${money(lim)} ($util% used)"
+                } else {
+                    "Credit card"
+                }
+            } else {
+                if (account.interestRateBps > 0) {
+                    "Savings · ${"%.2f".format(Locale.US, account.interestRateBps / 100.0)}% p.a."
+                } else {
+                    "Savings account"
+                }
+            }
+            ManageableCard(account.name, money(account.balancePaise), subtitle) { haptics.click(); managing = account }
+        }
     }
     managing?.let { AccountManageDialog(it, onDismiss = { managing = null }, onSave = { onUpdate(it); managing = null }, onDelete = { onDelete(it); managing = null }, onPayCard = { managing = null; onPayCard() }) }
 }
@@ -1162,33 +1487,50 @@ fun TransactionCard(
     val incomeCategories = categories.filter { it.isIncomeCategory }
     val expenseCategories = categories.filterNot { it.isIncomeCategory }
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Categories", style = MaterialTheme.typography.displaySmall) }
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
+                Text("Categories", style = MaterialTheme.typography.titleLarge)
+            }
+        }
         if (adding) item {
             Card(Modifier.fillMaxWidth().animateContentSize()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Category name") }, singleLine = true)
                 Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Checkbox(income, { haptics.selection(); income = it }); Text("Income category") }
-                Button(onClick = { haptics.confirm(); onAdd(name.trim(), income); name = ""; income = false; adding = false }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Save Category") }
+                Button(onClick = { haptics.confirm(); onAdd(name.trim(), income); name = ""; income = false; adding = false }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Save category") }
             } }
-        } else item { Button({ haptics.click(); adding = true }, Modifier.fillMaxWidth()) { Text("Add Category") } }
-        item { Text("Income Categories", style = MaterialTheme.typography.titleLarge) }
-        if (incomeCategories.isEmpty()) item { Text("No Income Categories", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        items(incomeCategories, key = { it.id }) { category -> ManageableCard(category.name, "Income", "") { haptics.click(); managing = category } }
-        item { Text("Expense Categories", style = MaterialTheme.typography.titleLarge) }
-        if (expenseCategories.isEmpty()) item { Text("No Expense Categories", color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        items(expenseCategories, key = { it.id }) { category -> ManageableCard(category.name, "Expense", "") { haptics.click(); managing = category } }
+        } else item { Button({ haptics.click(); adding = true }, Modifier.fillMaxWidth()) { Text("Add category") } }
+        item { Text("Income categories", style = MaterialTheme.typography.titleLarge) }
+        if (incomeCategories.isEmpty()) item { Text("No income categories", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        items(incomeCategories, key = { it.id }) { category ->
+            val subtitle = if (category.isDisabled) "Income · Disabled" else "Income"
+            ManageableCard(category.name, subtitle, "") { haptics.click(); managing = category }
+        }
+        item { Text("Expense categories", style = MaterialTheme.typography.titleLarge) }
+        if (expenseCategories.isEmpty()) item { Text("No expense categories", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        items(expenseCategories, key = { it.id }) { category ->
+            val subtitle = if (category.isDisabled) "Expense · Disabled" else "Expense"
+            ManageableCard(category.name, subtitle, "") { haptics.click(); managing = category }
+        }
     }
     managing?.let { CategoryManageDialog(it, onDismiss = { managing = null }, onSave = { onUpdate(it); managing = null }, onDelete = { onDelete(it); managing = null }) }
 }
 
 @Composable private fun ManageableCard(title: String, value: String, subtitle: String, onManage: () -> Unit) {
-    Card(Modifier.fillMaxWidth()) { Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+    Card(Modifier.fillMaxWidth()) { Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.titleMedium); Text(value, style = MaterialTheme.typography.titleLarge); if (subtitle.isNotBlank()) Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         ActionIcon(Icons.Default.Edit, "Manage", onClick = onManage)
     } }
 }
 
 @Composable private fun ActionIcon(icon: ImageVector, description: String, tint: Color? = null, onClick: () -> Unit) {
-    IconButton(onClick = onClick) { Icon(icon, contentDescription = description, tint = tint ?: LocalContentColor.current) }
+    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) { Icon(icon, contentDescription = description, tint = tint ?: LocalContentColor.current, modifier = Modifier.size(20.dp)) }
+}
+
+@Composable fun SpendTrackBackButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
+    }
 }
 
 @Composable private fun AccountManageDialog(account: AccountEntity, onDismiss: () -> Unit, onSave: (AccountEntity) -> Unit, onDelete: () -> Unit, onPayCard: () -> Unit) {
@@ -1203,15 +1545,35 @@ fun TransactionCard(
             } else ""
         )
     }
+    var interestRate by remember(account.id) {
+        mutableStateOf(if (account.interestRateBps > 0) "%.2f".format(Locale.US, account.interestRateBps / 100.0) else "")
+    }
+    var interestFreq by remember(account.id) {
+        mutableStateOf(runCatching { InterestCreditFrequency.valueOf(account.interestCreditFrequency) }.getOrDefault(InterestCreditFrequency.QUARTERLY))
+    }
     var lastFour by remember(account.id) { mutableStateOf(account.maskedNumber) }; var limit by remember(account.id) { mutableStateOf(account.creditLimitPaise?.let { "%.2f".format(Locale.US, it / 100.0) }.orEmpty()) }; var cycle by remember(account.id) { mutableStateOf(account.statementCycleDay?.toString().orEmpty()) }; var due by remember(account.id) { mutableStateOf(account.dueDay?.toString().orEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Manage Account") },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        title = { Text("Manage account") },
+        text = { Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Name") }, singleLine = true)
             OutlinedTextField(balance, { balance = it }, Modifier.fillMaxWidth(), label = { Text(if (account.isCreditCard) "Current outstanding (₹)" else "Current balance (₹)") }, singleLine = true)
             if (!account.isCreditCard) {
-                OutlinedTextField(minBalance, { minBalance = it }, Modifier.fillMaxWidth(), label = { Text("Minimum Balance (₹)") }, singleLine = true)
+                OutlinedTextField(minBalance, { minBalance = it }, Modifier.fillMaxWidth(), label = { Text("Minimum balance (₹)") }, singleLine = true)
+                OutlinedTextField(interestRate, { interestRate = it }, Modifier.fillMaxWidth(), label = { Text("Interest rate (% p.a.)") }, placeholder = { Text("e.g. 3.5") }, singleLine = true)
+                Text("Interest posting frequency", style = MaterialTheme.typography.labelMedium)
+                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                    InterestCreditFrequency.entries.forEachIndexed { index, frequency ->
+                        SegmentedButton(
+                            selected = interestFreq == frequency,
+                            onClick = { haptics.selection(); interestFreq = frequency },
+                            shape = SegmentedButtonDefaults.itemShape(index, InterestCreditFrequency.entries.size),
+                            icon = {},
+                            label = { Text(frequency.displayName, style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false) },
+                        )
+                    }
+                }
+                Text("Calculated from daily closing balances and credited ${interestFreq.displayName.lowercase()}.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (account.isCreditCard) { OutlinedTextField(lastFour, { lastFour = it.take(4) }, Modifier.fillMaxWidth(), label = { Text("Last four digits") }, singleLine = true); OutlinedTextField(limit, { limit = it }, Modifier.fillMaxWidth(), label = { Text("Credit limit (₹)") }, singleLine = true); Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { OutlinedTextField(cycle, { cycle = it }, Modifier.weight(1f), label = { Text("Statement day") }, singleLine = true); OutlinedTextField(due, { due = it }, Modifier.weight(1f), label = { Text("Due day") }, singleLine = true) } }
             Text("Accounts with transactions cannot be deleted.", style = MaterialTheme.typography.bodySmall)
@@ -1230,7 +1592,7 @@ fun TransactionCard(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     ) {
-                        Text("Pay Bill")
+                        Text("Pay bill")
                     }
                 }
                 Row(
@@ -1255,6 +1617,7 @@ fun TransactionCard(
                             onClick = {
                                 haptics.confirm()
                                 val parsedMin = if (!account.isCreditCard) parsePaise(minBalance).coerceAtLeast(0L) else 0L
+                                val parsedRateBps = ((interestRate.toDoubleOrNull() ?: 0.0) * 100).toInt().coerceAtLeast(0)
                                 onSave(
                                     account.copy(
                                         name = name.trim(),
@@ -1263,7 +1626,10 @@ fun TransactionCard(
                                         creditLimitPaise = parsePaise(limit).takeIf { account.isCreditCard && it > 0 },
                                         statementCycleDay = cycle.toIntOrNull()?.takeIf { account.isCreditCard && it in 1..31 },
                                         dueDay = due.toIntOrNull()?.takeIf { account.isCreditCard && it in 1..31 },
-                                        minimumBalancePaise = parsedMin
+                                        minimumBalancePaise = parsedMin,
+                                        interestRateBps = parsedRateBps,
+                                        interestCalculationMethod = InterestCalculationMethod.DAILY.name,
+                                        interestCreditFrequency = interestFreq.name
                                     )
                                 )
                             },
@@ -1283,15 +1649,17 @@ fun TransactionCard(
     val haptics = rememberSpendTrackHaptics()
     var name by remember(category.id) { mutableStateOf(category.name) }
     var income by remember(category.id) { mutableStateOf(category.isIncomeCategory) }
+    var disabled by remember(category.id) { mutableStateOf(category.isDisabled) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Manage Category") },
+        title = { Text("Manage category") },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Category name") }, singleLine = true)
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Checkbox(income, { haptics.selection(); income = it }); Text("Income category") }
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Checkbox(disabled, { haptics.selection(); disabled = it }); Text("Disable category (hide from new transactions)") }
             Text("Default categories and categories used by transactions or budgets cannot be deleted.", style = MaterialTheme.typography.bodySmall)
         } },
-        confirmButton = { TextButton({ haptics.confirm(); onSave(category.copy(name = name.trim(), isIncomeCategory = income)) }, enabled = name.isNotBlank()) { Text("Save") } },
+        confirmButton = { TextButton({ haptics.confirm(); onSave(category.copy(name = name.trim(), isIncomeCategory = income, isDisabled = disabled)) }, enabled = name.isNotBlank()) { Text("Save") } },
         dismissButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (!category.isSystemFallback) {
@@ -1337,7 +1705,7 @@ fun TransactionCard(
         map
     }
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Budget", style = MaterialTheme.typography.displaySmall); Text(displayMonth(month), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { Row(verticalAlignment = Alignment.CenterVertically) { ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Budget", style = MaterialTheme.typography.titleLarge) }; Text(displayMonth(month), color = MaterialTheme.colorScheme.onSurfaceVariant) }
         if (adding) item {
             Card(Modifier.fillMaxWidth().animateContentSize()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.fillMaxWidth()) {
@@ -1345,9 +1713,9 @@ fun TransactionCard(
                     DropdownMenu(categoryMenu, { categoryMenu = false }) { expenseCategories.forEachIndexed { index, category -> DropdownMenuItem({ Text(category.name) }, { haptics.selection(); categoryIndex = index; categoryMenu = false }) } }
                 }
                 OutlinedTextField(limit, { limit = it }, Modifier.fillMaxWidth(), label = { Text("Monthly limit (₹)") }, singleLine = true)
-                Button(onClick = { haptics.confirm(); expenseCategories.getOrNull(categoryIndex)?.let { onSave(it.id, month, parsePaise(limit)); limit = ""; adding = false } }, enabled = parsePaise(limit) > 0 && expenseCategories.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Save Budget") }
+                Button(onClick = { haptics.confirm(); expenseCategories.getOrNull(categoryIndex)?.let { onSave(it.id, month, parsePaise(limit)); limit = ""; adding = false } }, enabled = parsePaise(limit) > 0 && expenseCategories.isNotEmpty(), modifier = Modifier.fillMaxWidth()) { Text("Save budget") }
             } }
-        } else item { Button({ haptics.click(); adding = true }, Modifier.fillMaxWidth()) { Text("Add Budget") } }
+        } else item { Button({ haptics.click(); adding = true }, Modifier.fillMaxWidth()) { Text("Add budget") } }
         if (current.isEmpty()) item { SummaryCard("No Budgets", "", "") }
         items(current, key = { it.id }) { budget ->
             val category = categoryMap[budget.categoryId]?.name ?: "Category"
@@ -1371,80 +1739,98 @@ fun TransactionCard(
     } }
 }
 
-@Composable private fun LoanManageDialog(loan: LoanEntity, onDismiss: () -> Unit, onSave: (LoanEntity) -> Unit, onDelete: () -> Unit) {
+@Composable private fun LoanManageDialog(
+    loan: LoanEntity,
+    accounts: List<AccountEntity> = emptyList(),
+    onDismiss: () -> Unit,
+    onSave: (LoanEntity) -> Unit,
+    onDelete: () -> Unit,
+    onRepay: (Long, Long) -> Unit
+) {
     val haptics = rememberSpendTrackHaptics()
     var name by remember(loan.id) { mutableStateOf(loan.name) }
     var repayment by remember(loan.id) { mutableStateOf("") }
+    val paymentAccounts = remember(accounts) { accounts.filterNot { it.isCreditCard } }
+    var selectedAccountIndex by remember(paymentAccounts) { mutableIntStateOf(0) }
+    var accountMenuExpanded by remember { mutableStateOf(false) }
+    val selectedAccount = paymentAccounts.getOrNull(selectedAccountIndex)
     val repaymentPaise = parsePaise(repayment).coerceAtMost(loan.currentOutstandingPaise)
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Manage Loan") },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Loan name") }, singleLine = true)
-            OutlinedTextField(repayment, { repayment = it }, Modifier.fillMaxWidth(), label = { Text("Principal repayment (₹)") }, singleLine = true)
-            Text("Outstanding ${money(loan.currentOutstandingPaise)}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    haptics.confirm()
-                    onSave(loan.copy(name = name.trim(), currentOutstandingPaise = loan.currentOutstandingPaise - repaymentPaise, principalPaidPaise = loan.principalPaidPaise + repaymentPaise))
-                },
-                enabled = name.isNotBlank()
-            ) {
-                Text(if (repaymentPaise > 0) "Pay EMI" else "Save")
-            }
-        },
-        dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(
-                    onClick = { haptics.reject(); onDelete() },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text("Delete")
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Loan name") }, singleLine = true)
+                OutlinedTextField(
+                    repayment,
+                    { repayment = it },
+                    Modifier.fillMaxWidth(),
+                    label = { Text("Principal repayment / EMI (₹)") },
+                    placeholder = { if (loan.emiPaise > 0) Text("EMI: ${money(loan.emiPaise)}") else null },
+                    singleLine = true
+                )
+                if (paymentAccounts.isNotEmpty()) {
+                    Box(Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { accountMenuExpanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Pay from:")
+                                Text(selectedAccount?.name ?: "Select account")
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = accountMenuExpanded,
+                            onDismissRequest = { accountMenuExpanded = false }
+                        ) {
+                            paymentAccounts.forEachIndexed { index, acc ->
+                                DropdownMenuItem(
+                                    text = { Text("${acc.name} (${money(acc.balancePaise)})") },
+                                    onClick = {
+                                        haptics.selection()
+                                        selectedAccountIndex = index
+                                        accountMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
-                TextButton(onClick = { haptics.click(); onDismiss() }) {
-                    Text("Cancel")
-                }
+                Text("Outstanding: ${money(loan.currentOutstandingPaise)} · Paid: ${money(loan.principalPaidPaise)}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
         },
-    )
-}
-
-@Composable private fun OwedManageDialog(owed: OwedEntity, onDismiss: () -> Unit, onSave: (OwedEntity) -> Unit, onDelete: () -> Unit, onSettle: (Long) -> Unit) {
-    val haptics = rememberSpendTrackHaptics()
-    var person by remember(owed.id) { mutableStateOf(owed.personName) }
-    var note by remember(owed.id) { mutableStateOf(owed.note) }
-    var settlement by remember(owed.id) { mutableStateOf("") }
-    val settlementPaise = parsePaise(settlement).coerceAtMost(owed.amountPaise)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Manage Owed Entry") },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(person, { person = it }, Modifier.fillMaxWidth(), label = { Text("Person") }, singleLine = true)
-            OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), label = { Text("Note") }, singleLine = true)
-            OutlinedTextField(settlement, { settlement = it }, Modifier.fillMaxWidth(), label = { Text("Settlement amount (₹)") }, singleLine = true)
-            Text("Outstanding ${money(owed.amountPaise)}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        } },
         confirmButton = {
-            TextButton(
-                onClick = {
-                    haptics.confirm()
-                    onSave(owed.copy(personName = person.trim(), note = note.trim()))
-                },
-                enabled = person.isNotBlank()
-            ) {
-                Text("Save")
-            }
-        },
-        dismissButton = {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                if (settlementPaise > 0) {
-                    TextButton(onClick = { haptics.confirm(); onSettle(settlementPaise) }) {
-                        Text("Settle")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (repaymentPaise > 0 && selectedAccount != null) {
+                    Button(
+                        onClick = {
+                            haptics.confirm()
+                            onRepay(selectedAccount.id, repaymentPaise)
+                        }
+                    ) {
+                        Text("Pay ${money(repaymentPaise)}")
                     }
                 }
                 TextButton(
+                    onClick = {
+                        haptics.confirm()
+                        onSave(loan.copy(name = name.trim()))
+                    },
+                    enabled = name.isNotBlank()
+                ) {
+                    Text("Save")
+                }
+            }
+        },
+        dismissButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                TextButton(
                     onClick = { haptics.reject(); onDelete() },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -1454,7 +1840,241 @@ fun TransactionCard(
                     Text("Cancel")
                 }
             }
+        }
+    )
+}
+
+@Composable private fun OwedManageDialog(
+    owed: OwedEntity,
+    onDismiss: () -> Unit,
+    onSave: (OwedEntity) -> Unit,
+    onDelete: () -> Unit,
+    onOpenSettle: (() -> Unit)? = null
+) {
+    val haptics = rememberSpendTrackHaptics()
+    var person by remember(owed.id) { mutableStateOf(owed.personName) }
+    var note by remember(owed.id) { mutableStateOf(owed.note) }
+    val isIncoming = owed.direction == OwedDirection.OWED_TO_ME
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Manage Owed Entry") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = if (isIncoming) "Owed to you" else "You owe",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = money(owed.amountPaise),
+                            style = MaterialTheme.typography.titleLarge
+                        )
+                        if (owed.repaidAmountPaise > 0) {
+                            Text(
+                                text = "Already repaid: ${money(owed.repaidAmountPaise)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                OutlinedTextField(
+                    value = person,
+                    onValueChange = { person = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Person") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = note,
+                    onValueChange = { note = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Note") },
+                    singleLine = true
+                )
+
+                if (owed.amountPaise > 0 && onOpenSettle != null) {
+                    Button(
+                        onClick = {
+                            haptics.click()
+                            onOpenSettle()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Record Settlement")
+                    }
+                }
+            }
         },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = { haptics.click(); onDismiss() }) {
+                    Text("Cancel")
+                }
+                Button(
+                    onClick = {
+                        haptics.confirm()
+                        onSave(owed.copy(personName = person.trim(), note = note.trim()))
+                    },
+                    enabled = person.isNotBlank()
+                ) {
+                    Text("Save")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = { haptics.reject(); onDelete() },
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text("Delete")
+            }
+        }
+    )
+}
+
+@Composable private fun SettleOwedDialog(
+    owed: OwedEntity,
+    accounts: List<AccountEntity> = emptyList(),
+    onDismiss: () -> Unit,
+    onSettle: (Long, Long) -> Unit
+) {
+    val haptics = rememberSpendTrackHaptics()
+    val isIncoming = owed.direction == OwedDirection.OWED_TO_ME
+    val eligibleAccounts = remember(accounts, isIncoming) {
+        if (isIncoming) accounts else accounts.filterNot { it.isCreditCard }
+    }
+    var selectedAccountIndex by remember(eligibleAccounts) { mutableIntStateOf(0) }
+    var accountMenuExpanded by remember { mutableStateOf(false) }
+    val selectedAccount = eligibleAccounts.getOrNull(selectedAccountIndex)
+
+    var isFullSettlement by remember(owed.id) { mutableStateOf(true) }
+    var customAmountText by remember(owed.id) { mutableStateOf("") }
+
+    val effectivePaise = if (isFullSettlement) {
+        owed.amountPaise
+    } else {
+        parsePaise(customAmountText).coerceAtMost(owed.amountPaise)
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Record settlement") },
+        text = {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(
+                    text = if (isIncoming) {
+                        "Receive settlement from ${owed.personName}"
+                    } else {
+                        "Pay settlement to ${owed.personName}"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = isFullSettlement,
+                        onClick = {
+                            haptics.selection()
+                            isFullSettlement = true
+                            customAmountText = ""
+                        },
+                        label = { Text("Full (${money(owed.amountPaise)})") },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = !isFullSettlement,
+                        onClick = {
+                            haptics.selection()
+                            isFullSettlement = false
+                        },
+                        label = { Text("Custom amount") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                if (!isFullSettlement) {
+                    OutlinedTextField(
+                        value = customAmountText,
+                        onValueChange = { customAmountText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = LocalTextStyle.current.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Start),
+                        label = { Text("Custom amount (₹)") },
+                        placeholder = { Text("Max: ${money(owed.amountPaise)}") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true
+                    )
+                }
+
+                if (eligibleAccounts.isNotEmpty()) {
+                    Box(Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { accountMenuExpanded = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(if (isIncoming) "Deposit to:" else "Pay from:")
+                                Text(selectedAccount?.name ?: "Select account")
+                            }
+                        }
+                        DropdownMenu(
+                            expanded = accountMenuExpanded,
+                            onDismissRequest = { accountMenuExpanded = false }
+                        ) {
+                            eligibleAccounts.forEachIndexed { index, acc ->
+                                DropdownMenuItem(
+                                    text = { Text("${acc.name} (${money(acc.balancePaise)})") },
+                                    onClick = {
+                                        haptics.selection()
+                                        selectedAccountIndex = index
+                                        accountMenuExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (effectivePaise > 0 && selectedAccount != null) {
+                        haptics.confirm()
+                        onSettle(effectivePaise, selectedAccount.id)
+                    }
+                },
+                enabled = effectivePaise > 0 && selectedAccount != null
+            ) {
+                Text("Confirm Settlement (${money(effectivePaise)})")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { haptics.click(); onDismiss() }) {
+                Text("Cancel")
+            }
+        }
     )
 }
 
@@ -1500,7 +2120,7 @@ fun TransactionCard(
     var showDatePicker by remember { mutableStateOf(false) }
     val toPaise = { value: String -> parsePaise(value) }
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Add Loan", style = MaterialTheme.typography.displaySmall)
+        ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Add loan", style = MaterialTheme.typography.titleLarge)
         OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Loan name") }, singleLine = true)
         OutlinedTextField(principal, { principal = it }, Modifier.fillMaxWidth(), label = { Text("Original principal (₹)") }, singleLine = true)
         OutlinedTextField(outstanding, { outstanding = it }, Modifier.fillMaxWidth(), label = { Text("Current outstanding (₹)") }, singleLine = true)
@@ -1522,7 +2142,7 @@ fun TransactionCard(
     var person by remember { mutableStateOf("") }; var amount by remember { mutableStateOf("") }; var note by remember { mutableStateOf("") }; var owesMe by remember { mutableStateOf(true) }
     val paise = parsePaise(amount)
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Add Owed Entry", style = MaterialTheme.typography.displaySmall)
+        ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Add owed entry", style = MaterialTheme.typography.titleLarge)
         OutlinedTextField(person, { person = it }, Modifier.fillMaxWidth(), label = { Text("Person") }, singleLine = true)
         OutlinedTextField(amount, { amount = it }, Modifier.fillMaxWidth(), label = { Text("Amount (₹)") }, singleLine = true)
         OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), label = { Text("Note") }, singleLine = true)
@@ -1541,7 +2161,7 @@ fun TransactionCard(
     val card = cards.getOrNull(cardIndex); val source = sources.getOrNull(sourceIndex)
     val amountPaise = if (fullPayment) card?.balancePaise ?: 0 else parsePaise(amount)
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        ActionIcon(Icons.Default.ArrowBack, "Back", onClick = onBack); Text("Pay Card Bill", style = MaterialTheme.typography.displaySmall)
+        ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Pay Card Bill", style = MaterialTheme.typography.titleLarge)
         Box(Modifier.fillMaxWidth()) {
             OutlinedButton({ cardMenu = true }, Modifier.fillMaxWidth(), enabled = cards.isNotEmpty()) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Credit card"); Text(card?.name ?: "No card due") } }
             DropdownMenu(cardMenu, { cardMenu = false }) { cards.forEachIndexed { index, item -> DropdownMenuItem({ Text("${item.name} · ${money(item.balancePaise)}") }, { haptics.selection(); cardIndex = index; cardMenu = false }) } }

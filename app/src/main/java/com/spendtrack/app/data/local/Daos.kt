@@ -34,6 +34,8 @@ interface CategoryDao {
     @Query("SELECT COUNT(*) FROM transactions WHERE categoryId = :categoryId") suspend fun transactionCount(categoryId: Long): Int
     @Query("SELECT COUNT(*) FROM budgets WHERE categoryId = :categoryId") suspend fun budgetCount(categoryId: Long): Int
     @Query("SELECT COUNT(*) FROM recurring_transactions WHERE categoryId = :categoryId") suspend fun recurringCount(categoryId: Long): Int
+    @Query("SELECT * FROM categories WHERE id = :id") suspend fun getById(id: Long): CategoryEntity?
+    @Query("SELECT * FROM categories WHERE name = :name LIMIT 1") suspend fun getByName(name: String): CategoryEntity?
 }
 
 @Dao
@@ -46,6 +48,14 @@ interface TransactionDao {
     @Delete suspend fun delete(entity: TransactionEntity)
     @Query("DELETE FROM transactions") suspend fun clear()
     @Query("SELECT * FROM transactions WHERE id = :id") suspend fun getById(id: Long): TransactionEntity?
+    @Query("SELECT * FROM transactions WHERE originalExpenseId = :originalExpenseId ORDER BY dateEpochDay DESC, id DESC")
+    suspend fun getByOriginalExpenseId(originalExpenseId: Long): List<TransactionEntity>
+    @Query("SELECT * FROM transactions WHERE dateEpochDay BETWEEN :startEpochDay AND :endEpochDay ORDER BY dateEpochDay DESC, id DESC")
+    fun observeDateRange(startEpochDay: Long, endEpochDay: Long): Flow<List<TransactionEntity>>
+    @Query("SELECT * FROM transactions WHERE dateEpochDay BETWEEN :startEpochDay AND :endEpochDay ORDER BY dateEpochDay DESC, id DESC")
+    suspend fun getDateRange(startEpochDay: Long, endEpochDay: Long): List<TransactionEntity>
+    @Query("SELECT * FROM transactions ORDER BY dateEpochDay DESC, id DESC LIMIT :limit")
+    fun observeRecent(limit: Int): Flow<List<TransactionEntity>>
 }
 
 @Dao
@@ -74,6 +84,7 @@ interface LoanDao {
     @Update suspend fun update(entity: LoanEntity)
     @Delete suspend fun delete(entity: LoanEntity)
     @Query("DELETE FROM loans") suspend fun clear()
+    @Query("SELECT * FROM loans WHERE id = :id") suspend fun getById(id: Long): LoanEntity?
 }
 
 @Dao
@@ -86,6 +97,9 @@ interface OwedDao {
     @Delete suspend fun delete(entity: OwedEntity)
     @Query("DELETE FROM owed") suspend fun clear()
     @Query("DELETE FROM owed WHERE sourceTransactionId = :transactionId") suspend fun deleteForTransaction(transactionId: Long)
+    @Query("SELECT * FROM owed WHERE id = :id") suspend fun getById(id: Long): OwedEntity?
+    @Query("SELECT * FROM owed WHERE sourceTransactionId = :transactionId") suspend fun getBySourceTransactionId(transactionId: Long): List<OwedEntity>
+    @Query("SELECT * FROM owed WHERE personName = :personName") suspend fun getByPerson(personName: String): List<OwedEntity>
 }
 
 @Dao

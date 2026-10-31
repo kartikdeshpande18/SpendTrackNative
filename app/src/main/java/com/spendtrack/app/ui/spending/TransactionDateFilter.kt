@@ -137,6 +137,7 @@ data class TransactionDateFilter(
             val range = dateFilter.dateRangeEpochDays(today)
             val isCustomRange = dateFilter.type == DateFilterType.CUSTOM_RANGE
             return transactions.filter { t ->
+                if (t.isExcludedFromCalculations) return@filter false
                 val matchesCategory = categoryFilter == null || t.categoryId == categoryFilter
                 if (!matchesCategory) return@filter false
                 when {

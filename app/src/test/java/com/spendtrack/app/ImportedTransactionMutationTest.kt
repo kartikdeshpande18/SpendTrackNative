@@ -473,6 +473,14 @@ class ImportedTransactionMutationTest {
             override suspend fun delete(entity: TransactionEntity) { transactionsList.removeAll { it.id == entity.id } }
             override suspend fun clear() { transactionsList.clear() }
             override suspend fun getById(id: Long): TransactionEntity? = transactionsList.firstOrNull { it.id == id }
+            override suspend fun getByOriginalExpenseId(originalExpenseId: Long): List<TransactionEntity> =
+                transactionsList.filter { it.originalExpenseId == originalExpenseId }
+            override fun observeDateRange(startEpochDay: Long, endEpochDay: Long): Flow<List<TransactionEntity>> =
+                flowOf(transactionsList.filter { it.dateEpochDay in startEpochDay..endEpochDay })
+            override suspend fun getDateRange(startEpochDay: Long, endEpochDay: Long): List<TransactionEntity> =
+                transactionsList.filter { it.dateEpochDay in startEpochDay..endEpochDay }
+            override fun observeRecent(limit: Int): Flow<List<TransactionEntity>> =
+                flowOf(transactionsList.sortedByDescending { it.dateEpochDay }.take(limit))
         }
 
         private val _cardPaymentsDao = object : CardPaymentDao {
@@ -511,6 +519,8 @@ class ImportedTransactionMutationTest {
             override suspend fun transactionCount(categoryId: Long): Int = 0
             override suspend fun budgetCount(categoryId: Long): Int = 0
             override suspend fun recurringCount(categoryId: Long): Int = 0
+            override suspend fun getById(id: Long): CategoryEntity? = categoriesList.firstOrNull { it.id == id }
+            override suspend fun getByName(name: String): CategoryEntity? = categoriesList.firstOrNull { it.name.equals(name, ignoreCase = true) }
         }
 
         private val _owedDao = object : OwedDao {
@@ -530,6 +540,11 @@ class ImportedTransactionMutationTest {
             override suspend fun deleteForTransaction(transactionId: Long) {
                 owedList.removeAll { it.sourceTransactionId == transactionId }
             }
+            override suspend fun getById(id: Long): OwedEntity? = owedList.firstOrNull { it.id == id }
+            override suspend fun getBySourceTransactionId(transactionId: Long): List<OwedEntity> =
+                owedList.filter { it.sourceTransactionId == transactionId }
+            override suspend fun getByPerson(personName: String): List<OwedEntity> =
+                owedList.filter { it.personName.equals(personName, ignoreCase = true) }
         }
 
         private val _budgetDao = object : BudgetDao {

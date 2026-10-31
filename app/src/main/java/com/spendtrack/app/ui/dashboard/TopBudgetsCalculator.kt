@@ -38,7 +38,7 @@ object TopBudgetsCalculator {
         val endEpoch = parsedYm.atEndOfMonth().toEpochDay()
         var total = 0L
         for (t in transactions) {
-            if (t.type == TransactionType.EXPENSE && t.categoryId == categoryId && t.dateEpochDay in startEpoch..endEpoch) {
+            if (t.type == TransactionType.EXPENSE && !t.isExcludedFromCalculations && t.categoryId == categoryId && t.dateEpochDay in startEpoch..endEpoch) {
                 total += (t.mySharePaise ?: t.amountPaise)
             }
         }
@@ -70,7 +70,7 @@ object TopBudgetsCalculator {
 
         val spendingByCategory = HashMap<Long, Long>()
         for (t in transactions) {
-            if (t.type == TransactionType.EXPENSE && t.dateEpochDay in startEpoch..endEpoch) {
+            if (t.type == TransactionType.EXPENSE && !t.isExcludedFromCalculations && t.dateEpochDay in startEpoch..endEpoch) {
                 val catId = t.categoryId
                 if (catId != null) {
                     val amount = t.mySharePaise ?: t.amountPaise

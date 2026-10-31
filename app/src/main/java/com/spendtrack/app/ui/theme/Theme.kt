@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 
 /** Compact type scale for phone-sized financial UI; `sp` still follows the user's font setting. */
 val SpendTrackExpressiveTypography = Typography(
@@ -31,6 +32,7 @@ val SpendTrackExpressiveTypography = Typography(
 fun SpendTrackTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
+    trueBlack: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current
@@ -42,8 +44,19 @@ fun SpendTrackTheme(
         else -> expressiveLightColorScheme()
     }
 
+    val appliedColorScheme = if (darkTheme && trueBlack) colorScheme.copy(
+        background = Color.Black,
+        surface = Color.Black,
+        surfaceDim = Color.Black,
+        surfaceContainerLowest = Color.Black,
+        surfaceContainerLow = Color(0xFF090909),
+        surfaceContainer = Color(0xFF101010),
+        surfaceContainerHigh = Color(0xFF191919),
+        surfaceContainerHighest = Color(0xFF222222),
+    ) else colorScheme
+
     MaterialExpressiveTheme(
-        colorScheme = colorScheme,
+        colorScheme = appliedColorScheme,
         typography = SpendTrackExpressiveTypography,
         content = content
     )

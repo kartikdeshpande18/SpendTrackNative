@@ -1,6 +1,8 @@
 package com.spendtrack.app.data.local
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
+import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -17,6 +19,10 @@ data class AccountEntity(
     val statementCycleDay: Int? = null,
     val dueDay: Int? = null,
     val minimumBalancePaise: Long = 0,
+    val interestRateBps: Int = 0,
+    val interestCalculationMethod: String = "DAILY",
+    val interestCreditFrequency: String = "QUARTERLY",
+    val lastInterestPostingEpochDay: Long? = null,
 )
 
 @Entity(tableName = "categories")
@@ -25,9 +31,22 @@ data class CategoryEntity(
     val name: String,
     val isIncomeCategory: Boolean = false,
     val isSystemFallback: Boolean = false,
+    val colorHex: String? = null,
+    val iconName: String? = null,
+    val isDisabled: Boolean = false,
 )
 
-@Entity(tableName = "transactions")
+@Entity(
+    tableName = "transactions",
+    indices = [
+        Index(value = ["dateEpochDay"]),
+        Index(value = ["accountId"]),
+        Index(value = ["destinationAccountId"]),
+        Index(value = ["categoryId"]),
+        Index(value = ["type"]),
+        Index(value = ["originalExpenseId"])
+    ]
+)
 data class TransactionEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val dateEpochDay: Long,
@@ -40,7 +59,15 @@ data class TransactionEntity(
     val mySharePaise: Long? = null,
     val sharedWith: String = "",
     val destinationAccountId: Long? = null,
-)
+    @ColumnInfo(name = "isExcludedFromReports")
+    val isExcludedFromCalculations: Boolean = false,
+    val originalExpenseId: Long? = null,
+    val isLoanRepayment: Boolean = false,
+    val splitDetails: String = "",
+) {
+    val isExcludedFromReports: Boolean
+        get() = isExcludedFromCalculations
+}
 
 enum class TransactionType { EXPENSE, INCOME, TRANSFER }
 
@@ -75,6 +102,8 @@ data class OwedEntity(
     val direction: OwedDirection,
     val note: String = "",
     val sourceTransactionId: Long? = null,
+    val originalAmountPaise: Long = 0L,
+    val repaidAmountPaise: Long = 0L,
 )
 
 enum class OwedDirection { OWED_TO_ME, I_OWE }

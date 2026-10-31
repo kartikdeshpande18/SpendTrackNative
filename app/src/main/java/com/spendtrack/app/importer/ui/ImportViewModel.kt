@@ -379,7 +379,8 @@ class ImportViewModel(
         type: ImporterTransactionType,
         categoryId: Long?,
         sourceAccountId: Long,
-        destinationAccountId: Long?
+        destinationAccountId: Long?,
+        isExcludedFromCalculations: Boolean = false
     ) {
         updateTransactionInReview(txId) { tx ->
             tx.copy(
@@ -390,6 +391,7 @@ class ImportViewModel(
                 categoryId = categoryId,
                 sourceAccountId = sourceAccountId,
                 destinationAccountId = destinationAccountId,
+                isExcludedFromCalculations = isExcludedFromCalculations,
                 reviewStatus = ReviewStatus.EDITED,
                 isEdited = true
             )

@@ -70,10 +70,10 @@ fun RecurringTransactionsScreen(
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { haptics.click(); onBack() }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                IconButton(onClick = { haptics.click(); onBack() }, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
                 }
-                Text("Recurring Transactions", style = MaterialTheme.typography.displaySmall)
+                Text("Recurring transactions", style = MaterialTheme.typography.titleLarge)
             }
         }
 
@@ -84,7 +84,7 @@ fun RecurringTransactionsScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
             ) {
                 Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Scheduled Commitments", style = MaterialTheme.typography.titleMedium)
+                    Text("Scheduled commitments", style = MaterialTheme.typography.titleMedium)
                     Text(
                         "${activeSchedules.size} Active · ${pausedSchedules.size} Paused",
                         style = MaterialTheme.typography.headlineMedium
@@ -108,7 +108,7 @@ fun RecurringTransactionsScreen(
             ) {
                 Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Add Recurring Schedule")
+                Text("Add recurring schedule")
             }
         }
 
@@ -274,7 +274,7 @@ fun RecurringTransactionsScreen(
     scheduleToDelete?.let { schedule ->
         AlertDialog(
             onDismissRequest = { scheduleToDelete = null },
-            title = { Text("Delete Recurring Schedule?") },
+            title = { Text("Delete recurring schedule?") },
             text = {
                 Text("This will stop future recurring occurrences. Transactions already created by this schedule will NOT be deleted.")
             },
@@ -362,7 +362,7 @@ private fun EditRecurringScheduleDialog(
                 ) {
                     Text(
                         text = "Edit Recurring Schedule",
-                        style = MaterialTheme.typography.headlineSmall
+                        style = MaterialTheme.typography.titleLarge
                     )
                     Text(
                         text = "Changes apply to future occurrences only. Historical transactions already generated will not be modified.",
@@ -403,7 +403,7 @@ private fun EditRecurringScheduleDialog(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("End Date")
+                                Text("End date")
                                 Text(LocalDate.ofEpochDay(endDateEpochDay).toString())
                             }
                         }

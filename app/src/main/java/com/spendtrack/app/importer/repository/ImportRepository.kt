@@ -33,7 +33,7 @@ class ImportRepository(private val db: SpendTrackDatabase) {
                 for (tx in acceptedTransactions) {
                     val account = db.accounts().getById(tx.sourceAccountId)
                     val isCardPayment = tx.transactionType == ImporterTransactionType.CARD_PAYMENT ||
-                            (account?.isCreditCard == true && tx.direction == Direction.CREDIT && 
+                            (!tx.isEdited && account?.isCreditCard == true && tx.direction == Direction.CREDIT &&
                              (tx.normalizedMerchant.contains("payment", ignoreCase = true) || 
                               tx.normalizedMerchant.contains("repayment", ignoreCase = true) ||
                               tx.rawNarration.contains("payment", ignoreCase = true) ||
@@ -44,6 +44,7 @@ class ImportRepository(private val db: SpendTrackDatabase) {
                         isCardPayment -> {
                             val cardAccountId = tx.destinationAccountId ?: tx.sourceAccountId
                             val sourceAccountId = tx.sourceAccountId
+
                             val cardPayment = CardPaymentEntity(
                                 cardAccountId = cardAccountId,
                                 sourceAccountId = sourceAccountId,
@@ -66,6 +67,12 @@ class ImportRepository(private val db: SpendTrackDatabase) {
                         }
                         tx.transactionType == ImporterTransactionType.TRANSFER -> {
                             val destAccountId = tx.destinationAccountId
+
+                            // Deduplication check: check if an identical transaction already exists
+                            val existingTx = db.transactions().getDateRange(tx.dateEpochDay, tx.dateEpochDay)
+                                .firstOrNull { it.accountId == tx.sourceAccountId && it.amountPaise == tx.amountPaise && it.description == tx.normalizedMerchant && it.type == TransactionType.TRANSFER }
+                            if (existingTx != null) continue
+
                             val transactionEntity = TransactionEntity(
                                 dateEpochDay = tx.dateEpochDay,
                                 description = tx.normalizedMerchant,
@@ -73,36 +80,49 @@ class ImportRepository(private val db: SpendTrackDatabase) {
                                 categoryId = tx.categoryId ?: 0L,
                                 accountId = tx.sourceAccountId,
                                 type = TransactionType.TRANSFER,
-                                destinationAccountId = destAccountId
+                                destinationAccountId = destAccountId,
+                                isExcludedFromCalculations = tx.isExcludedFromCalculations
                             )
                             db.transactions().insert(transactionEntity)
 
-                            val source = db.accounts().getById(tx.sourceAccountId)
-                            if (source != null) {
-                                val srcDelta = when {
-                                    source.isCreditCard && tx.direction == Direction.DEBIT -> tx.amountPaise
-                                    source.isCreditCard -> -tx.amountPaise
-                                    tx.direction == Direction.DEBIT -> -tx.amountPaise
-                                    else -> tx.amountPaise
+                            if (!tx.isExcludedFromCalculations) {
+                                val source = db.accounts().getById(tx.sourceAccountId)
+                                if (source != null) {
+                                    val srcDelta = when {
+                                        source.isCreditCard && tx.direction == Direction.DEBIT -> tx.amountPaise
+                                        source.isCreditCard -> -tx.amountPaise
+                                        tx.direction == Direction.DEBIT -> -tx.amountPaise
+                                        else -> tx.amountPaise
+                                    }
+                                    db.accounts().update(source.copy(balancePaise = source.balancePaise + srcDelta))
                                 }
-                                db.accounts().update(source.copy(balancePaise = source.balancePaise + srcDelta))
-                            }
-                            if (destAccountId != null) {
-                                val dest = db.accounts().getById(destAccountId)
-                                if (dest != null) {
-                                    val dstDelta = if (dest.isCreditCard) -tx.amountPaise else tx.amountPaise
-                                    db.accounts().update(dest.copy(balancePaise = dest.balancePaise + dstDelta))
+                                if (destAccountId != null) {
+                                    val dest = db.accounts().getById(destAccountId)
+                                    if (dest != null) {
+                                        val dstDelta = if (dest.isCreditCard) -tx.amountPaise else tx.amountPaise
+                                        db.accounts().update(dest.copy(balancePaise = dest.balancePaise + dstDelta))
+                                    }
                                 }
                             }
                         }
                         else -> {
                             val type = when {
+                                tx.isEdited -> when (tx.transactionType) {
+                                    ImporterTransactionType.INCOME, ImporterTransactionType.REFUND, ImporterTransactionType.INTEREST -> TransactionType.INCOME
+                                    ImporterTransactionType.TRANSFER -> TransactionType.TRANSFER
+                                    else -> TransactionType.EXPENSE
+                                }
                                 account?.isCreditCard != true && tx.direction == Direction.CREDIT -> TransactionType.INCOME
                                 tx.transactionType == ImporterTransactionType.INCOME ||
                                 tx.transactionType == ImporterTransactionType.REFUND ||
                                 tx.transactionType == ImporterTransactionType.INTEREST -> TransactionType.INCOME
                                 else -> TransactionType.EXPENSE
                             }
+
+                            // Deduplication check
+                            val existingTx = db.transactions().getDateRange(tx.dateEpochDay, tx.dateEpochDay)
+                                .firstOrNull { it.accountId == tx.sourceAccountId && it.amountPaise == tx.amountPaise && it.description == tx.normalizedMerchant && it.type == type }
+                            if (existingTx != null) continue
 
                             val transactionEntity = TransactionEntity(
                                 dateEpochDay = tx.dateEpochDay,
@@ -111,11 +131,12 @@ class ImportRepository(private val db: SpendTrackDatabase) {
                                 categoryId = tx.categoryId ?: 0L,
                                 accountId = tx.sourceAccountId,
                                 type = type,
-                                destinationAccountId = tx.destinationAccountId
+                                destinationAccountId = tx.destinationAccountId,
+                                isExcludedFromCalculations = tx.isExcludedFromCalculations
                             )
                             db.transactions().insert(transactionEntity)
 
-                            if (account != null) {
+                            if (!tx.isExcludedFromCalculations && account != null) {
                                 val delta = when {
                                     account.isCreditCard && type == TransactionType.EXPENSE -> tx.amountPaise
                                     account.isCreditCard -> -tx.amountPaise

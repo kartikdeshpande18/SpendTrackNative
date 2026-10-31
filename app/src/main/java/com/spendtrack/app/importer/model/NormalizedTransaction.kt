@@ -24,7 +24,10 @@ data class NormalizedTransaction(
     val existingMatchDescription: String? = null,
     val existingMatchAmountPaise: Long? = null,
     val existingMatchDateEpochDay: Long? = null,
+    val isExcludedFromCalculations: Boolean = false,
 ) {
+    val isExcludedFromReports: Boolean
+        get() = isExcludedFromCalculations
     val isAccepted: Boolean
         get() = reviewStatus == ReviewStatus.ACCEPTED || reviewStatus == ReviewStatus.EDITED
 }
