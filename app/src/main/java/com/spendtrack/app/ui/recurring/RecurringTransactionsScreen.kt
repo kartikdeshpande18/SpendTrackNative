@@ -384,7 +384,7 @@ private fun EditRecurringScheduleDialog(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Text("Frequency", style = MaterialTheme.typography.labelMedium)
+                    Text("Frequency", style = MaterialTheme.typography.bodyMedium)
                     RecurrenceFrequencySelector(
                         selectedFrequency = frequency,
                         onFrequencySelected = { frequency = it }

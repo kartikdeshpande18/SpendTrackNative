@@ -14,7 +14,7 @@ object DatabaseProvider {
                 context.applicationContext,
                 SpendTrackDatabase::class.java,
                 "spendtrack.db",
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                 .build()
                 .also { instance = it }
         }
@@ -93,6 +93,12 @@ object DatabaseProvider {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE `transactions` ADD COLUMN `isLoanRepayment` INTEGER NOT NULL DEFAULT 0")
             db.execSQL("UPDATE `transactions` SET `isLoanRepayment` = 1 WHERE `description` LIKE 'Loan Repayment:%'")
+        }
+    }
+    internal val MIGRATION_11_12 = object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("CREATE TABLE IF NOT EXISTS `people` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `normalizedName` TEXT NOT NULL, `isActive` INTEGER NOT NULL)")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_people_normalizedName` ON `people` (`normalizedName`)")
         }
     }
 }

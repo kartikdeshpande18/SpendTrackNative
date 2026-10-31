@@ -13,6 +13,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.spendtrack.app.data.local.*
 import com.spendtrack.app.ui.parsePaise
@@ -32,7 +34,8 @@ fun AddTransactionScreen(
     onCancel: () -> Unit,
     initial: TransactionEntity? = null,
     onSaveRecurring: ((RecurringTransactionEntity) -> Unit)? = null,
-    owedParticipants: List<String> = emptyList()
+    owedParticipants: List<String> = emptyList(),
+    onCreatePerson: (String) -> Unit = {}
 ) {
     val haptics = rememberSpendTrackHaptics()
     var description by remember(initial?.id) { mutableStateOf(initial?.description.orEmpty()) }; var amount by remember(initial?.id) { mutableStateOf(initial?.let { "%.2f".format(java.util.Locale.US, it.amountPaise / 100.0) }.orEmpty()) }
@@ -40,7 +43,7 @@ fun AddTransactionScreen(
     var isExcludedFromCalculations by remember(initial?.id) { mutableStateOf(initial?.isExcludedFromCalculations ?: false) }
     var shared by remember(initial?.id) { mutableStateOf(initial?.isShared == true) }; var share by remember(initial?.id) { mutableStateOf(initial?.mySharePaise?.let { "%.2f".format(java.util.Locale.US, it / 100.0) }.orEmpty()) }; var sharedWith by remember(initial?.id) { mutableStateOf(initial?.sharedWith.orEmpty()) }
 
-    // Multi-participant split state (dynamically derived from owed section, without hardcoding)
+    // Multi-participant split state comes from the central people directory.
     val initialSplit = remember(initial?.id) { initial?.splitDetails?.let { SharedExpenseHelper.deserialize(it) } }
     val availableMembers = remember(initial?.id, owedParticipants) {
         val list = mutableStateListOf<String>()
@@ -289,50 +292,22 @@ fun AddTransactionScreen(
             }
         }
 
-        // Exclude from calculations switch
-        Card(
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                    Text("Exclude from calculations", style = MaterialTheme.typography.bodyMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-                    Spacer(Modifier.height(2.dp))
-                    Text("Does not affect account balance, spending, income, or budgets", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = isExcludedFromCalculations, onCheckedChange = { haptics.selection(); isExcludedFromCalculations = it })
-            }
-        }
+        TransactionToggleCard(
+            title = "Exlcude from Calculations",
+            checked = isExcludedFromCalculations,
+            onCheckedChange = { haptics.selection(); isExcludedFromCalculations = it }
+        )
 
         if (onSaveRecurring != null) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth().animateContentSize()
+            TransactionToggleCard(
+                title = "Make Recurring",
+                description = "Automatically creates transactions on schedule",
+                checked = isRecurring,
+                onCheckedChange = { haptics.selection(); isRecurring = it }
             ) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 16.dp)
-                        ) {
-                            Text("Make Recurring", style = MaterialTheme.typography.titleMedium)
-                            Spacer(Modifier.height(2.dp))
-                            Text("Automatically creates transactions on schedule", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        Switch(checked = isRecurring, onCheckedChange = { haptics.selection(); isRecurring = it })
-                    }
                     AnimatedVisibility(visible = isRecurring) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("Frequency", style = MaterialTheme.typography.labelMedium)
+                            Text("Frequency", style = MaterialTheme.typography.bodyMedium)
                             RecurrenceFrequencySelector(
                                 selectedFrequency = frequency,
                                 onFrequencySelected = { frequency = it }
@@ -373,7 +348,6 @@ fun AddTransactionScreen(
                             )
                         }
                     }
-                }
             }
         }
 
@@ -541,10 +515,10 @@ fun AddTransactionScreen(
                         val name = newParticipantName.trim()
                         if (name.isNotBlank()) {
                             haptics.confirm()
-                            if (!availableMembers.contains(name)) {
-                                availableMembers.add(name)
-                            }
-                            selectedParticipants = selectedParticipants + name
+                            val canonical = availableMembers.firstOrNull { it.equals(name, ignoreCase = true) } ?: name
+                            if (!availableMembers.any { it.equals(name, ignoreCase = true) }) availableMembers.add(name)
+                            onCreatePerson(name)
+                            selectedParticipants = selectedParticipants + canonical
                             showCreateParticipantDialog = false
                             newParticipantName = ""
                         }
@@ -563,10 +537,62 @@ fun AddTransactionScreen(
     }
 }
 
+@Composable
+private fun TransactionToggleCard(
+    title: String,
+    description: String? = null,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    content: @Composable ColumnScope.() -> Unit = {}
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth().animateContentSize()
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f).padding(end = 16.dp)) {
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                    if (!description.isNullOrBlank()) {
+                        Spacer(Modifier.height(2.dp))
+                        Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                Switch(checked = checked, onCheckedChange = onCheckedChange)
+            }
+            content()
+        }
+    }
+}
+
 @Composable private fun SelectionMenu(label: String, value: String, options: List<String>, enabled: Boolean, expanded: Boolean, setExpanded: (Boolean) -> Unit, select: (Int) -> Unit) {
     val haptics = rememberSpendTrackHaptics()
     Box(Modifier.fillMaxWidth()) {
-        OutlinedButton({ haptics.click(); setExpanded(true) }, Modifier.fillMaxWidth(), enabled = enabled) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(label); Text(value) } }
+        OutlinedButton({ haptics.click(); setExpanded(true) }, Modifier.fillMaxWidth(), enabled = enabled) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = label,
+                    modifier = Modifier.weight(0.42f),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = value,
+                    modifier = Modifier.weight(0.58f),
+                    textAlign = if (value.length > 20) TextAlign.Center else TextAlign.End,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
         DropdownMenu(expanded, { setExpanded(false) }) { options.forEachIndexed { index, option -> DropdownMenuItem(text = { Text(option) }, onClick = { haptics.selection(); select(index); setExpanded(false) }) } }
     }
 }

@@ -4,6 +4,9 @@ import java.math.BigDecimal
 import java.math.RoundingMode
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.temporal.TemporalAdjusters
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 enum class InterestCalculationMethod(val displayName: String) {
     DAILY("Daily balance"),
@@ -15,6 +18,34 @@ enum class InterestCreditFrequency(val displayName: String) {
     DAILY("Daily"),
     MONTHLY("Monthly"),
     QUARTERLY("Quarterly")
+}
+
+data class SavingsInterestPeriod(val start: LocalDate, val end: LocalDate)
+
+object SavingsInterestPeriods {
+    private val formatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy", Locale.ENGLISH)
+
+    fun containing(date: LocalDate, frequency: InterestCreditFrequency): SavingsInterestPeriod = when (frequency) {
+        InterestCreditFrequency.DAILY -> SavingsInterestPeriod(date, date)
+        InterestCreditFrequency.MONTHLY -> SavingsInterestPeriod(
+            date.withDayOfMonth(1), date.with(TemporalAdjusters.lastDayOfMonth())
+        )
+        InterestCreditFrequency.QUARTERLY -> {
+            val startMonth = ((date.monthValue - 1) / 3) * 3 + 1
+            val start = date.withMonth(startMonth).withDayOfMonth(1)
+            SavingsInterestPeriod(start, start.plusMonths(3).minusDays(1))
+        }
+    }
+
+    fun lastCompletedThrough(today: LocalDate, frequency: InterestCreditFrequency): LocalDate = when (frequency) {
+        InterestCreditFrequency.DAILY -> today.minusDays(1)
+        InterestCreditFrequency.MONTHLY -> today.withDayOfMonth(1).minusDays(1)
+        InterestCreditFrequency.QUARTERLY -> containing(today, frequency).start.minusDays(1)
+    }
+
+    fun description(frequency: InterestCreditFrequency, period: SavingsInterestPeriod): String =
+        if (frequency == InterestCreditFrequency.DAILY) "Interest for ${period.end.format(formatter)}"
+        else "Interest for ${period.start.format(formatter)} - ${period.end.format(formatter)}"
 }
 
 object SavingsInterestCalculator {

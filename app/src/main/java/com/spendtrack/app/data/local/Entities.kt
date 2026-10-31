@@ -108,6 +108,14 @@ data class OwedEntity(
 
 enum class OwedDirection { OWED_TO_ME, I_OWE }
 
+@Entity(tableName = "people", indices = [Index(value = ["normalizedName"], unique = true)])
+data class PersonEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val name: String,
+    val normalizedName: String,
+    val isActive: Boolean = true
+)
+
 /** A transfer, intentionally separate from transactions so it never becomes spending or income. */
 @Entity(tableName = "card_payments")
 data class CardPaymentEntity(

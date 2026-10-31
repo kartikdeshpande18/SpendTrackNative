@@ -18,9 +18,13 @@ import com.spendtrack.app.data.local.SharedExpenseHelper
 import com.spendtrack.app.data.local.SavingsInterestCalculator
 import com.spendtrack.app.data.local.InterestCreditFrequency
 import com.spendtrack.app.data.local.InterestCalculationMethod
+import com.spendtrack.app.data.local.SavingsInterestPeriod
+import com.spendtrack.app.data.local.SavingsInterestPeriods
+import com.spendtrack.app.data.local.PersonEntity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
+import java.util.Locale
 
 /** Local-only accounting gateway. Balance-changing writes run atomically. */
 class FinanceRepository(private val database: SpendTrackDatabase) {
@@ -33,6 +37,96 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
     val cardPayments = database.cardPayments().observeAll()
     val fixedDeposits = database.fixedDeposits().observeAll()
     val recurringTransactions: Flow<List<RecurringTransactionEntity>> = database.recurringTransactions().observeAll()
+    val people: Flow<List<PersonEntity>> = database.people().observeAll()
+    val activePeople: Flow<List<PersonEntity>> = database.people().observeActive()
+
+    private fun normalizePersonName(name: String) = name.trim().replace(Regex("\\s+"), " ").lowercase(Locale.ROOT)
+
+    private suspend fun ensurePerson(name: String) {
+        val clean = name.trim().replace(Regex("\\s+"), " ")
+        if (clean.isBlank() || clean.equals("you", true) || clean.equals("me", true) || clean.equals("kartik", true)) return
+        val key = normalizePersonName(clean)
+        val existing = database.people().getByNormalizedName(key)
+        if (existing == null) database.people().insert(PersonEntity(name = clean, normalizedName = key))
+    }
+
+    suspend fun syncPeopleFromHistory() = database.withTransaction {
+        database.owed().observeAll().first().forEach { ensurePerson(it.personName) }
+        database.transactions().observeAll().first().forEach { transaction ->
+            val split = SharedExpenseHelper.deserialize(transaction.splitDetails)
+            split?.participants?.forEach { ensurePerson(it) }
+            split?.shares?.keys?.forEach { ensurePerson(it) }
+            transaction.sharedWith.split(",").forEach { ensurePerson(it) }
+        }
+        database.recurringTransactions().observeAll().first().filter { it.isShared }
+            .flatMap { it.sharedWith.split(",") }.forEach { ensurePerson(it) }
+    }
+
+    suspend fun createPerson(name: String): Long = database.withTransaction {
+        val clean = name.trim().replace(Regex("\\s+"), " ")
+        require(clean.isNotBlank()) { "Person name cannot be blank" }
+        val key = normalizePersonName(clean)
+        val existing = database.people().getByNormalizedName(key)
+        if (existing != null) {
+            if (!existing.isActive) database.people().update(existing.copy(isActive = true))
+            existing.id
+        } else database.people().insert(PersonEntity(name = clean, normalizedName = key))
+    }
+
+    suspend fun renamePerson(personId: Long, name: String) = database.withTransaction {
+        val person = database.people().getById(personId) ?: error("Person not found")
+        val clean = name.trim().replace(Regex("\\s+"), " ")
+        require(clean.isNotBlank()) { "Person name cannot be blank" }
+        val key = normalizePersonName(clean)
+        val duplicate = database.people().getByNormalizedName(key)
+        require(duplicate == null || duplicate.id == personId) { "A person with this name already exists" }
+        if (clean == person.name) return@withTransaction
+        database.transactions().observeAll().first().forEach { tx ->
+            val split = SharedExpenseHelper.deserialize(tx.splitDetails)
+            val updatedSplit = split?.let {
+                it.copy(
+                    payer = it.payer.replacePersonName(person.name, clean),
+                    participants = it.participants.map { n -> n.replacePersonName(person.name, clean) },
+                    shares = it.shares.entries.associate { entry -> entry.key.replacePersonName(person.name, clean) to entry.value }
+                )
+            }
+            val updatedSharedWith = tx.sharedWith.split(",").joinToString(", ") { it.trim().replacePersonName(person.name, clean) }
+            if ((updatedSplit != null && updatedSplit != split) || updatedSharedWith != tx.sharedWith) {
+                database.transactions().update(tx.copy(
+                    splitDetails = if (updatedSplit != null) SharedExpenseHelper.serialize(updatedSplit) else tx.splitDetails,
+                    sharedWith = updatedSharedWith
+                ))
+            }
+        }
+        database.owed().observeAll().first().filter { normalizePersonName(it.personName) == person.normalizedName }
+            .forEach { database.owed().update(it.copy(personName = clean)) }
+        database.recurringTransactions().observeAll().first().filter { it.isShared }.forEach { schedule ->
+            val names = schedule.sharedWith.split(",").map { it.trim().replacePersonName(person.name, clean) }
+            if (names.joinToString(", ") != schedule.sharedWith) database.recurringTransactions().update(schedule.copy(sharedWith = names.joinToString(", ")))
+        }
+        database.people().update(person.copy(name = clean, normalizedName = key))
+    }
+
+    private fun String.replacePersonName(old: String, new: String) =
+        if (normalizePersonName(this) == normalizePersonName(old)) new else this
+
+    suspend fun setPersonActive(personId: Long, active: Boolean) = database.people().getById(personId)?.let {
+        database.people().update(it.copy(isActive = active))
+    }
+
+    suspend fun deletePerson(personId: Long) = database.withTransaction {
+        val person = database.people().getById(personId) ?: return@withTransaction
+        val owed = database.owed().observeAll().first().any { normalizePersonName(it.personName) == person.normalizedName }
+        val shared = database.transactions().observeAll().first().any { tx ->
+            val split = SharedExpenseHelper.deserialize(tx.splitDetails)
+            listOfNotNull(split?.payer).plus(split?.participants.orEmpty()).plus(split?.shares?.keys.orEmpty())
+                .any { normalizePersonName(it) == person.normalizedName } ||
+                tx.sharedWith.split(",").any { normalizePersonName(it) == person.normalizedName }
+        }
+        val recurring = database.recurringTransactions().observeAll().first().any { it.sharedWith.split(",").any { n -> normalizePersonName(n) == person.normalizedName } }
+        require(!owed && !shared && !recurring) { "Person has historical records and cannot be deleted" }
+        database.people().delete(person)
+    }
 
     suspend fun ensureStarterData() = database.withTransaction {
         if (database.categories().count() > 0) return@withTransaction
@@ -46,6 +140,10 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
     }
 
     suspend fun addTransaction(transaction: TransactionEntity): Long = database.withTransaction {
+        val split = SharedExpenseHelper.deserialize(transaction.splitDetails)
+        split?.participants?.forEach { ensurePerson(it) }
+        split?.shares?.keys?.forEach { ensurePerson(it) }
+        transaction.sharedWith.split(",").forEach { ensurePerson(it) }
         val account = database.accounts().getById(transaction.accountId) ?: error("Choose a valid account")
         if (transaction.type == TransactionType.TRANSFER) {
             val destAccount = transaction.destinationAccountId?.let { database.accounts().getById(it) }
@@ -136,6 +234,10 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
                 isLoanRepayment = true
             )
         } else transaction
+        val split = SharedExpenseHelper.deserialize(updated.splitDetails)
+        split?.participants?.forEach { ensurePerson(it) }
+        split?.shares?.keys?.forEach { ensurePerson(it) }
+        updated.sharedWith.split(",").forEach { ensurePerson(it) }
 
         // Collect all balance adjustments by account ID, then apply them at the end.
         val adjustments = mutableMapOf<Long, Long>()
@@ -391,7 +493,12 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
     suspend fun deleteBudget(budget: com.spendtrack.app.data.local.BudgetEntity) = database.budgets().delete(budget)
 
     suspend fun addLoan(loan: com.spendtrack.app.data.local.LoanEntity) = database.loans().insert(loan)
-    suspend fun addOwed(owed: com.spendtrack.app.data.local.OwedEntity) = database.owed().insert(owed)
+    suspend fun addOwed(owed: com.spendtrack.app.data.local.OwedEntity) = database.withTransaction {
+        require(database.people().getByNormalizedName(normalizePersonName(owed.personName))?.isActive == true) {
+            "Choose an active person from Shared Expenses"
+        }
+        database.owed().insert(owed)
+    }
 
     suspend fun updateLoan(loan: com.spendtrack.app.data.local.LoanEntity) = database.loans().update(loan)
     suspend fun deleteLoan(loan: com.spendtrack.app.data.local.LoanEntity) = database.loans().delete(loan)
@@ -516,19 +623,26 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
     suspend fun postSavingsInterest(
         accountId: Long,
         amountPaise: Long,
-        dateEpochDay: Long = LocalDate.now().toEpochDay(),
-        periodLabel: String = ""
+        postingDateEpochDay: Long = LocalDate.now().toEpochDay(),
+        calculationPeriodStartEpochDay: Long = postingDateEpochDay,
+        calculationPeriodEndEpochDay: Long = calculationPeriodStartEpochDay
     ): Long = database.withTransaction {
         val account = database.accounts().getById(accountId) ?: error("Account not found")
         require(!account.isCreditCard) { "Interest cannot be posted to a credit card" }
         require(amountPaise > 0) { "Interest amount must be positive" }
 
-        val dateStr = periodLabel.ifBlank { LocalDate.ofEpochDay(dateEpochDay).toString() }
-        val desc = "Interest for $dateStr"
+        val frequency = runCatching { InterestCreditFrequency.valueOf(account.interestCreditFrequency) }
+            .getOrDefault(InterestCreditFrequency.QUARTERLY)
+        val period = SavingsInterestPeriod(
+            LocalDate.ofEpochDay(calculationPeriodStartEpochDay),
+            LocalDate.ofEpochDay(calculationPeriodEndEpochDay)
+        )
+        require(!period.end.isBefore(period.start)) { "Invalid interest calculation period" }
+        val desc = SavingsInterestPeriods.description(frequency, period)
 
         // Prevent duplicate interest posting on retry
-        val existing = database.transactions().getDateRange(dateEpochDay, dateEpochDay)
-            .firstOrNull { it.accountId == accountId && it.amountPaise == amountPaise && it.description == desc }
+        val existing = database.transactions().observeAll().first()
+            .firstOrNull { it.accountId == accountId && it.type == TransactionType.INCOME && it.description == desc }
         if (existing != null) {
             return@withTransaction existing.id
         }
@@ -544,13 +658,13 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
         database.accounts().update(
             account.copy(
                 balancePaise = account.balancePaise + amountPaise,
-                lastInterestPostingEpochDay = dateEpochDay
+                lastInterestPostingEpochDay = calculationPeriodEndEpochDay
             )
         )
 
         // Record transaction
         val tx = TransactionEntity(
-            dateEpochDay = dateEpochDay,
+            dateEpochDay = postingDateEpochDay,
             description = desc,
             amountPaise = amountPaise,
             categoryId = catId,
@@ -562,7 +676,7 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
     }
 
     suspend fun processDueSavingsInterest(today: LocalDate = LocalDate.now()): Int = database.withTransaction {
-        val allTransactions = database.transactions().observeAll().first()
+        val allTransactions = database.transactions().observeAll().first().toMutableList()
         val interestCategoryId = database.categories().getByName("Interest")?.id
         var categoryId = interestCategoryId
         var postedCount = 0
@@ -571,76 +685,60 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
             if (account.isCreditCard || account.interestRateBps <= 0) return@forEach
             val frequency = runCatching { InterestCreditFrequency.valueOf(account.interestCreditFrequency) }
                 .getOrDefault(InterestCreditFrequency.QUARTERLY)
-            val yesterday = today.minusDays(1)
-            val processedThrough = when (frequency) {
-                InterestCreditFrequency.DAILY -> yesterday
-                InterestCreditFrequency.MONTHLY -> today.withDayOfMonth(1).minusDays(1)
-                InterestCreditFrequency.QUARTERLY -> {
-                    val quarterStartMonth = ((today.monthValue - 1) / 3) * 3 + 1
-                    today.withMonth(quarterStartMonth).withDayOfMonth(1).minusDays(1)
+            val through = SavingsInterestPeriods.lastCompletedThrough(today, frequency)
+            var nextDay = account.lastInterestPostingEpochDay?.let { LocalDate.ofEpochDay(it).plusDays(1) }
+                ?: SavingsInterestPeriods.containing(through, frequency).start
+            var currentBalance = account.balancePaise
+            var cursor = account.lastInterestPostingEpochDay
+            while (!nextDay.isAfter(through)) {
+                val period = SavingsInterestPeriods.containing(nextDay, frequency)
+                if (period.end.isAfter(through)) break
+                val description = SavingsInterestPeriods.description(frequency, period)
+                val duplicate = allTransactions.any {
+                    it.accountId == account.id && it.type == TransactionType.INCOME && it.description == description
                 }
-            }
-            val defaultStart = when (frequency) {
-                InterestCreditFrequency.DAILY -> processedThrough
-                InterestCreditFrequency.MONTHLY -> processedThrough.withDayOfMonth(1)
-                InterestCreditFrequency.QUARTERLY -> {
-                    val quarterStartMonth = ((processedThrough.monthValue - 1) / 3) * 3 + 1
-                    processedThrough.withMonth(quarterStartMonth).withDayOfMonth(1)
+                if (!duplicate) {
+                    val accountTransactions = allTransactions.asSequence()
+                        .filter { !it.isExcludedFromCalculations && (it.accountId == account.id || it.destinationAccountId == account.id) }
+                        .map { transaction ->
+                            if (transaction.type == TransactionType.TRANSFER && transaction.accountId != account.id) {
+                                transaction.copy(type = TransactionType.INCOME, destinationAccountId = null)
+                            } else transaction
+                        }
+                        .toList()
+                    val balances = SavingsInterestCalculator.reconstructDailyBalances(
+                        currentBalancePaise = currentBalance,
+                        todayEpochDay = today.toEpochDay(),
+                        accountTransactions = accountTransactions,
+                        startEpochDay = period.start.toEpochDay(),
+                        endEpochDay = period.end.toEpochDay(),
+                    )
+                    val interest = SavingsInterestCalculator.calculateInterestPaise(
+                        dailyBalances = balances,
+                        fallbackBalancePaise = currentBalance,
+                        interestRateBps = account.interestRateBps,
+                        method = InterestCalculationMethod.DAILY,
+                        startEpochDay = period.start.toEpochDay(),
+                        endEpochDay = period.end.toEpochDay(),
+                    )
+                    if (interest > 0L) {
+                        if (categoryId == null) categoryId = database.categories().insert(CategoryEntity(name = "Interest", isIncomeCategory = true))
+                        currentBalance += interest
+                        val transaction = TransactionEntity(
+                            dateEpochDay = today.toEpochDay(), description = description, amountPaise = interest,
+                            categoryId = requireNotNull(categoryId), accountId = account.id, type = TransactionType.INCOME
+                        )
+                        val txId = database.transactions().insert(transaction)
+                        allTransactions += transaction.copy(id = txId)
+                        postedCount++
+                    }
                 }
+                cursor = period.end.toEpochDay()
+                nextDay = period.end.plusDays(1)
             }
-            val start = account.lastInterestPostingEpochDay?.let { LocalDate.ofEpochDay(it).plusDays(1) } ?: defaultStart
-            if (start.isAfter(processedThrough)) return@forEach
-
-            val accountTransactions = allTransactions.asSequence()
-                .filter { !it.isExcludedFromCalculations && (it.accountId == account.id || it.destinationAccountId == account.id) }
-                .map { transaction ->
-                    if (transaction.type == TransactionType.TRANSFER && transaction.accountId != account.id) {
-                        transaction.copy(type = TransactionType.INCOME, destinationAccountId = null)
-                    } else transaction
-                }
-                .toList()
-            val dailyBalances = SavingsInterestCalculator.reconstructDailyBalances(
-                currentBalancePaise = account.balancePaise,
-                todayEpochDay = today.toEpochDay(),
-                accountTransactions = accountTransactions,
-                startEpochDay = start.toEpochDay(),
-                endEpochDay = processedThrough.toEpochDay(),
-            )
-            val interestPaise = SavingsInterestCalculator.calculateInterestPaise(
-                dailyBalances = dailyBalances,
-                fallbackBalancePaise = account.balancePaise,
-                interestRateBps = account.interestRateBps,
-                method = InterestCalculationMethod.DAILY,
-                startEpochDay = start.toEpochDay(),
-                endEpochDay = processedThrough.toEpochDay(),
-            )
-            if (interestPaise <= 0L) return@forEach
-
-            if (categoryId == null) {
-                categoryId = database.categories().insert(CategoryEntity(name = "Interest", isIncomeCategory = true))
+            if (cursor != account.lastInterestPostingEpochDay) {
+                database.accounts().update(account.copy(balancePaise = currentBalance, lastInterestPostingEpochDay = cursor))
             }
-            val periodLabel = when (frequency) {
-                InterestCreditFrequency.DAILY -> "Daily savings interest through $processedThrough"
-                InterestCreditFrequency.MONTHLY -> "Savings interest $start–$processedThrough"
-                InterestCreditFrequency.QUARTERLY -> "Savings interest $start–$processedThrough"
-            }
-            database.accounts().update(
-                account.copy(
-                    balancePaise = account.balancePaise + interestPaise,
-                    lastInterestPostingEpochDay = processedThrough.toEpochDay(),
-                )
-            )
-            database.transactions().insert(
-                TransactionEntity(
-                    dateEpochDay = today.toEpochDay(),
-                    description = periodLabel,
-                    amountPaise = interestPaise,
-                    categoryId = categoryId,
-                    accountId = account.id,
-                    type = TransactionType.INCOME,
-                )
-            )
-            postedCount++
         }
         postedCount
     }

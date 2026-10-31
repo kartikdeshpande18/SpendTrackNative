@@ -391,6 +391,7 @@ class ImportedTransactionMutationTest {
     // In-Memory Test Database
     // -------------------------------------------------------------------------
     class MutationTestSpendTrackDatabase : SpendTrackDatabase() {
+        private val _peopleDao = InMemoryPersonDao()
         val accountsList = mutableListOf<AccountEntity>()
         val categoriesList = mutableListOf<CategoryEntity>()
         val transactionsList = mutableListOf<TransactionEntity>()
@@ -567,6 +568,7 @@ class ImportedTransactionMutationTest {
         override fun transactions(): TransactionDao = _transactionsDao
         override fun cardPayments(): CardPaymentDao = _cardPaymentsDao
         override fun importHistory(): ImportHistoryDao = _importHistoryDao
+        override fun people(): PersonDao = _peopleDao
         override fun categories(): CategoryDao = _categoriesDao
         override fun owed(): OwedDao = _owedDao
         override fun budgets(): BudgetDao = _budgetDao

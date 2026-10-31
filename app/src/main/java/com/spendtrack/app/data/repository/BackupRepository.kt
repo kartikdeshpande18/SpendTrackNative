@@ -17,6 +17,7 @@ class BackupRepository(private val database: SpendTrackDatabase) {
             put("budgets", JSONArray().also { array -> database.budgets().observeAll().first().forEach { e -> array.put(JSONObject().apply { put("id",e.id); put("category",e.categoryId); put("month",e.monthKey); put("limit",e.limitPaise) }) } })
             put("loans", JSONArray().also { array -> database.loans().observeAll().first().forEach { e -> array.put(JSONObject().apply { put("id",e.id); put("name",e.name); put("principal",e.originalPrincipalPaise); put("outstanding",e.currentOutstandingPaise); put("rate",e.interestRateBps); put("emi",e.emiPaise); put("due",e.nextDueEpochDay); put("tenure",e.remainingTenureMonths); put("paidPrincipal",e.principalPaidPaise); put("paidInterest",e.interestPaidPaise); put("netWorth",e.includeInNetWorth) }) } })
             put("owed", JSONArray().also { array -> database.owed().observeAll().first().forEach { e -> array.put(JSONObject().apply { put("id",e.id); put("person",e.personName); put("amount",e.amountPaise); put("direction",e.direction.name); put("note",e.note); put("source",e.sourceTransactionId); put("originalAmountPaise",e.originalAmountPaise); put("repaidAmountPaise",e.repaidAmountPaise) }) } })
+            put("people", JSONArray().also { array -> database.people().observeAll().first().forEach { e -> array.put(JSONObject().apply { put("id", e.id); put("name", e.name); put("active", e.isActive) }) } })
             put("cardPayments", JSONArray().also { array -> database.cardPayments().observeAll().first().forEach { e -> array.put(JSONObject().apply { put("id",e.id); put("card",e.cardAccountId); put("source",e.sourceAccountId); put("amount",e.amountPaise); put("date",e.dateEpochDay) }) } })
             put("fixedDeposits", JSONArray().also { array -> database.fixedDeposits().observeAll().first().forEach { e -> array.put(JSONObject().apply { put("id",e.id); put("name",e.name); put("accountId",e.linkedAccountId); put("principal",e.principalPaise); put("rate",e.interestRateBps); put("startDate",e.startDateEpochDay); put("maturityDate",e.maturityDateEpochDay); put("maturityAmount",e.maturityAmountPaise); put("description",e.description); put("status",e.status.name); put("compoundingFrequency",e.compoundingFrequency.name); put("isExisting",e.isExisting) }) } })
             put("recurringTransactions", JSONArray().also { array -> database.recurringTransactions().observeAll().first().forEach { e -> array.put(JSONObject().apply { put("id",e.id); put("description",e.description); put("amount",e.amountPaise); put("category",e.categoryId); put("account",e.accountId); put("type",e.type.name); put("frequency",e.frequency.name); put("startDate",e.startDateEpochDay); put("endDate",e.endDateEpochDay); put("nextOccurrence",e.nextOccurrenceEpochDay); put("isEnabled",e.isEnabled); put("isShared",e.isShared); put("share",e.mySharePaise); put("sharedWith",e.sharedWith); put("destAccount",e.destinationAccountId) }) } })
@@ -29,7 +30,7 @@ class BackupRepository(private val database: SpendTrackDatabase) {
         require(root.optString("format") == "spendtrack-backup" && root.optInt("version") == 1) { "Unsupported backup file" }
         fun array(name: String) = root.optJSONArray(name) ?: JSONArray()
         database.withTransaction {
-            database.recurringOccurrences().clear(); database.recurringTransactions().clear(); database.fixedDeposits().clear(); database.cardPayments().clear(); database.transactions().clear(); database.budgets().clear(); database.loans().clear(); database.owed().clear(); database.accounts().clear(); database.categories().clear()
+            database.recurringOccurrences().clear(); database.recurringTransactions().clear(); database.fixedDeposits().clear(); database.cardPayments().clear(); database.transactions().clear(); database.budgets().clear(); database.loans().clear(); database.owed().clear(); database.people().clear(); database.accounts().clear(); database.categories().clear()
             database.accounts().insertAll(array("accounts").objects { o ->
                 val isCard = o.getBoolean("card")
                 val minBalance = if (isCard) 0L else o.optLong("minimumBalancePaise", 0L).coerceAtLeast(0L)
@@ -99,6 +100,16 @@ class BackupRepository(private val database: SpendTrackDatabase) {
                     repaidAmountPaise = repaidAmount
                 )
             })
+            database.people().let { dao ->
+                array("people").objects { o ->
+                    val name = o.getString("name").trim().replace(Regex("\\s+"), " ")
+                    PersonEntity(
+                        id = o.getLong("id"), name = name,
+                        normalizedName = name.lowercase(java.util.Locale.ROOT),
+                        isActive = o.optBoolean("active", true)
+                    )
+                }.forEach { person -> dao.insert(person) }
+            }
             database.cardPayments().insertAll(array("cardPayments").objects { o -> CardPaymentEntity(o.getLong("id"),o.getLong("card"),o.getLong("source"),o.getLong("amount"),o.getLong("date")) })
             database.fixedDeposits().insertAll(array("fixedDeposits").objects { o ->
                 val freq = runCatching { CompoundingFrequency.valueOf(o.optString("compoundingFrequency", "QUARTERLY")) }.getOrDefault(CompoundingFrequency.QUARTERLY)
@@ -148,6 +159,19 @@ class BackupRepository(private val database: SpendTrackDatabase) {
                     transactionId = o.getLong("transactionId")
                 )
             })
+            val historicalNames = database.owed().observeAll().first().map { it.personName } +
+                database.transactions().observeAll().first().flatMap { transaction ->
+                    val split = SharedExpenseHelper.deserialize(transaction.splitDetails)
+                    split?.participants.orEmpty() + split?.shares?.keys.orEmpty() + transaction.sharedWith.split(",")
+                }
+            historicalNames.forEach { rawName ->
+                val name = rawName.trim().replace(Regex("\\s+"), " ")
+                if (name.isBlank() || name.equals("you", true) || name.equals("me", true) || name.equals("kartik", true)) return@forEach
+                val normalized = name.lowercase(java.util.Locale.ROOT)
+                if (database.people().getByNormalizedName(normalized) == null) {
+                    database.people().insert(PersonEntity(name = name, normalizedName = normalized))
+                }
+            }
         }
     }
 

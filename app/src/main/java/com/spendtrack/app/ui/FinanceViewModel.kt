@@ -31,10 +31,13 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     val cardPayments = repository.cardPayments.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val fixedDeposits = repository.fixedDeposits.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val recurringTransactions = repository.recurringTransactions.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val people = repository.people.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val activePeople = repository.activePeople.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     init {
         viewModelScope.launch {
             repository.ensureStarterData()
+            repository.syncPeopleFromHistory()
             repository.matureDueDeposits()
             repository.processDueRecurringTransactions()
         }
@@ -78,6 +81,10 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun deleteBudget(budget: BudgetEntity) = viewModelScope.launch { repository.deleteBudget(budget) }
     fun addLoan(loan: LoanEntity) = viewModelScope.launch { repository.addLoan(loan) }
     fun addOwed(owed: OwedEntity) = viewModelScope.launch { repository.addOwed(owed) }
+    fun createPerson(name: String) = viewModelScope.launch { repository.createPerson(name) }
+    fun renamePerson(personId: Long, name: String) = viewModelScope.launch { repository.renamePerson(personId, name) }
+    fun setPersonActive(personId: Long, active: Boolean) = viewModelScope.launch { repository.setPersonActive(personId, active) }
+    fun deletePerson(personId: Long) = viewModelScope.launch { runCatching { repository.deletePerson(personId) }.onFailure { it.printStackTrace() } }
     fun updateLoan(loan: LoanEntity) = viewModelScope.launch { repository.updateLoan(loan) }
     fun deleteLoan(loan: LoanEntity) = viewModelScope.launch { repository.deleteLoan(loan) }
     fun updateOwed(owed: OwedEntity) = viewModelScope.launch { repository.updateOwed(owed) }
@@ -89,8 +96,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun repayLoan(loanId: Long, accountId: Long, amountPaise: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay(), note: String = "") = viewModelScope.launch {
         runCatching { repository.repayLoan(loanId, accountId, amountPaise, dateEpochDay, note) }.onFailure { it.printStackTrace() }
     }
-    fun postSavingsInterest(accountId: Long, amountPaise: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay(), periodLabel: String = "") = viewModelScope.launch {
-        runCatching { repository.postSavingsInterest(accountId, amountPaise, dateEpochDay, periodLabel) }.onFailure { it.printStackTrace() }
+    fun postSavingsInterest(accountId: Long, amountPaise: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay()) = viewModelScope.launch {
+        runCatching { repository.postSavingsInterest(accountId, amountPaise, dateEpochDay) }.onFailure { it.printStackTrace() }
     }
     fun payCard(cardId: Long, sourceId: Long, amountPaise: Long, dateEpochDay: Long) = viewModelScope.launch { repository.payCard(cardId, sourceId, amountPaise, dateEpochDay) }
     fun addRecurringTransaction(schedule: RecurringTransactionEntity) = viewModelScope.launch { repository.addRecurringTransaction(schedule) }

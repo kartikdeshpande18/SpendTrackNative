@@ -103,6 +103,22 @@ interface OwedDao {
 }
 
 @Dao
+interface PersonDao {
+    @Query("SELECT * FROM people ORDER BY isActive DESC, name COLLATE NOCASE ASC")
+    fun observeAll(): Flow<List<PersonEntity>>
+    @Query("SELECT * FROM people WHERE isActive = 1 ORDER BY name COLLATE NOCASE ASC")
+    fun observeActive(): Flow<List<PersonEntity>>
+    @Query("SELECT * FROM people WHERE normalizedName = :normalizedName LIMIT 1")
+    suspend fun getByNormalizedName(normalizedName: String): PersonEntity?
+    @Query("SELECT * FROM people WHERE id = :id")
+    suspend fun getById(id: Long): PersonEntity?
+    @Insert suspend fun insert(person: PersonEntity): Long
+    @Update suspend fun update(person: PersonEntity)
+    @Delete suspend fun delete(person: PersonEntity)
+    @Query("DELETE FROM people") suspend fun clear()
+}
+
+@Dao
 interface CardPaymentDao {
     @Query("SELECT * FROM card_payments ORDER BY dateEpochDay DESC, id DESC")
     fun observeAll(): Flow<List<CardPaymentEntity>>

@@ -38,6 +38,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import com.spendtrack.app.ui.spending.DateFilterType
 import com.spendtrack.app.ui.spending.TransactionDateFilter
+import com.spendtrack.app.ui.spending.TransactionKindFilter
+import com.spendtrack.app.ui.spending.TransactionAmountRange
 import com.spendtrack.app.ui.spending.CustomDateRangeDialog
 import com.spendtrack.app.ui.spending.MonthSelectorDialog
 
@@ -85,12 +87,19 @@ import com.spendtrack.app.ui.dashboard.TopBudgetCategoriesEmptyCard
 import java.time.LocalDate
 import java.time.YearMonth
 import java.util.Locale
+import androidx.compose.runtime.LaunchedEffect
 
 private enum class Overlay { NONE, TRANSACTION, EDIT_TRANSACTION, ACCOUNTS, CATEGORIES, BUDGETS, DATA, REMINDERS, APPEARANCE, ABOUT, ADD_LOAN, ADD_OWED, CARD_PAYMENT, LOAN_OWED_CHOOSER, FIXED_DEPOSITS, RECURRING_TRANSACTIONS, IMPORT_STATEMENT }
 private enum class ReminderType { CARD, LOAN }
 
 @Composable
-fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
+fun SpendTrackApp(
+    viewModel: FinanceViewModel = viewModel(),
+    isAppLocked: Boolean = false,
+    onUnlockRequest: () -> Unit = {},
+    biometricEnabled: Boolean = false,
+    onBiometricPreferenceChange: (Boolean) -> Unit = {}
+) {
     val context = LocalContext.current
     var themeMode by rememberSaveable { mutableStateOf(ThemePreferences.mode(context)) }
     var trueBlack by rememberSaveable { mutableStateOf(ThemePreferences.isTrueBlackEnabled(context)) }
@@ -99,6 +108,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         AppThemeMode.LIGHT -> false
         AppThemeMode.DARK -> true
     }
+    LaunchedEffect(isAppLocked) { if (isAppLocked) onUnlockRequest() }
     var route by rememberSaveable { mutableStateOf("home") }
     var overlay by rememberSaveable { mutableStateOf(Overlay.NONE) }
     var editingTransactionId by rememberSaveable { mutableLongStateOf(0L) }
@@ -106,6 +116,10 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     val spendingListState = rememberLazyListState()
     var spendingQuery by rememberSaveable { mutableStateOf("") }
     var spendingCategoryFilter by rememberSaveable { mutableStateOf<Long?>(null) }
+    var spendingAccountFilter by rememberSaveable { mutableStateOf<Long?>(null) }
+    var spendingKindFilter by rememberSaveable { mutableStateOf(TransactionKindFilter.ALL.name) }
+    var spendingMinimumPaise by rememberSaveable { mutableStateOf<Long?>(null) }
+    var spendingMaximumPaise by rememberSaveable { mutableStateOf<Long?>(null) }
     var spendingDateFilterType by rememberSaveable { mutableStateOf(DateFilterType.THIS_MONTH.name) }
     var spendingCustomStartDay by rememberSaveable { mutableStateOf<Long?>(null) }
     var spendingCustomEndDay by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -124,6 +138,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     val budgets by viewModel.budgets.collectAsState()
     val fixedDeposits by viewModel.fixedDeposits.collectAsState()
     val recurringTransactions by viewModel.recurringTransactions.collectAsState()
+    val people by viewModel.people.collectAsState()
+    val activePeople by viewModel.activePeople.collectAsState()
     BackHandler(enabled = overlay != Overlay.NONE || route != "home") {
         when {
             overlay != Overlay.NONE -> overlay = Overlay.NONE
@@ -132,15 +148,10 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     }
     SpendTrackTheme(darkTheme = darkTheme, trueBlack = trueBlack) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            val activeOwedParticipants = remember(owed) {
-                owed.filter { it.amountPaise > 0 }
-                    .map { it.personName.trim() }
-                    .filter { it.isNotBlank() }
-                    .distinct()
-                    .ifEmpty {
-                        owed.map { it.personName.trim() }.filter { it.isNotBlank() }.distinct()
-                    }
-            }
+            if (isAppLocked) {
+                BiometricLockScreen(onUnlockRequest)
+            } else {
+            val activeOwedParticipants = remember(activePeople) { activePeople.map { it.name } }
             val effectiveOverlay = if (overlay == Overlay.LOAN_OWED_CHOOSER) Overlay.NONE else overlay
             AnimatedContent(
                 targetState = effectiveOverlay,
@@ -154,7 +165,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                         onSaved = { viewModel.addTransaction(it); overlay = Overlay.NONE },
                         onCancel = { overlay = Overlay.NONE },
                         onSaveRecurring = { viewModel.addRecurringTransaction(it); overlay = Overlay.NONE },
-                        owedParticipants = activeOwedParticipants
+                        owedParticipants = activeOwedParticipants,
+                        onCreatePerson = viewModel::createPerson
                     )
                     Overlay.EDIT_TRANSACTION -> transactions.find { it.id == editingTransactionId }?.let { transaction ->
                         AddTransactionScreen(
@@ -164,7 +176,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                             onCancel = { overlay = Overlay.NONE },
                             initial = transaction,
                             onSaveRecurring = { viewModel.addRecurringTransaction(it); overlay = Overlay.NONE },
-                            owedParticipants = activeOwedParticipants
+                            owedParticipants = activeOwedParticipants,
+                            onCreatePerson = viewModel::createPerson
                         )
                     }
                     Overlay.ACCOUNTS -> AccountsScreen(accounts, onBack = { overlay = Overlay.NONE }, onAdd = { name, card, opening, lastFour, limit, cycle, due, minBal -> viewModel.addAccount(name, card, opening, lastFour, limit, cycle, due, minBal) }, onUpdate = viewModel::updateAccount, onDelete = viewModel::deleteAccount, onPayCard = { overlay = Overlay.CARD_PAYMENT })
@@ -181,7 +194,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                     )
                     Overlay.ABOUT -> AboutScreen(onBack = { overlay = Overlay.NONE })
                     Overlay.ADD_LOAN -> AddLoanScreen(onBack = { overlay = Overlay.NONE }, onSave = { viewModel.addLoan(it); overlay = Overlay.NONE })
-                    Overlay.ADD_OWED -> AddOwedScreen(onBack = { overlay = Overlay.NONE }, onSave = { viewModel.addOwed(it); overlay = Overlay.NONE })
+                    Overlay.ADD_OWED -> AddOwedScreen(people = activePeople, onBack = { overlay = Overlay.NONE }, onSave = { viewModel.addOwed(it); overlay = Overlay.NONE })
                     Overlay.CARD_PAYMENT -> CardPaymentScreen(accounts, onBack = { overlay = Overlay.NONE }, onPay = { cardId, sourceId, amount -> viewModel.payCard(cardId, sourceId, amount, LocalDate.now().toEpochDay()); overlay = Overlay.NONE })
                     Overlay.FIXED_DEPOSITS -> FixedDepositsScreen(
                         fixedDeposits = fixedDeposits,
@@ -268,6 +281,8 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                                         customStartDateEpochDay = spendingCustomStartDay,
                                         customEndDateEpochDay = spendingCustomEndDay
                                     )
+                                    val currentKindFilter = runCatching { TransactionKindFilter.valueOf(spendingKindFilter) }
+                                        .getOrDefault(TransactionKindFilter.ALL)
                                     Spending(
                                         transactions = transactions,
                                         categories = categories,
@@ -279,6 +294,12 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                                         onQueryChange = { spendingQuery = it },
                                         categoryFilter = spendingCategoryFilter,
                                         onCategoryFilterChange = { spendingCategoryFilter = it },
+                                        accountFilter = spendingAccountFilter,
+                                        onAccountFilterChange = { spendingAccountFilter = it },
+                                        kindFilter = currentKindFilter,
+                                        onKindFilterChange = { spendingKindFilter = it.name },
+                                        amountRange = TransactionAmountRange(spendingMinimumPaise, spendingMaximumPaise),
+                                        onAmountRangeChange = { spendingMinimumPaise = it.minimumPaise; spendingMaximumPaise = it.maximumPaise },
                                         dateFilter = currentDateFilter,
                                         onDateFilterChange = { newFilter ->
                                             spendingDateFilterType = newFilter.type.name
@@ -314,6 +335,17 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                                     onSettleOwed = { owedId, amount, accId -> viewModel.settleOwed(owedId, amount, accId) },
                                     onSettings = { route = "settings" }
                                 )
+                                "shared_expenses" -> SharedExpensesPeopleScreen(
+                                    people = people,
+                                    transactions = transactions,
+                                    owed = owed,
+                                    bottomContentPadding = bottomContentPadding,
+                                    onBack = { route = "settings" },
+                                    onCreate = viewModel::createPerson,
+                                    onRename = viewModel::renamePerson,
+                                    onSetActive = viewModel::setPersonActive,
+                                    onDelete = viewModel::deletePerson
+                                )
                                 else -> {
                                     val activeFdCount = remember(fixedDeposits) { fixedDeposits.count { it.status == FixedDepositStatus.ACTIVE } }
                                     val activeRecurringCount = remember(recurringTransactions) { recurringTransactions.count { it.isEnabled } }
@@ -332,7 +364,10 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                                     onData = { overlay = Overlay.DATA },
                                     onReminders = { overlay = Overlay.REMINDERS },
                                     onAppearance = { overlay = Overlay.APPEARANCE },
-                                    onAbout = { overlay = Overlay.ABOUT }
+                                    onAbout = { overlay = Overlay.ABOUT },
+                                    onSharedExpenses = { route = "shared_expenses" },
+                                    biometricEnabled = biometricEnabled,
+                                    onBiometricPreferenceChange = onBiometricPreferenceChange
                                 )
                             }
                             }
@@ -346,7 +381,20 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                     }
                 }
             }
+            }
         }
+    }
+}
+
+@Composable private fun BiometricLockScreen(onUnlock: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().statusBarsPadding().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("SpendTrack is locked", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onUnlock) { Text("Unlock with biometrics") }
     }
 }
 
@@ -508,7 +556,7 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
         SavingsCalculator.calculateAvailableSavingsPaise(accounts)
     }
     val cards = remember(accounts) {
-        accounts.filter { it.isCreditCard }.sumOf { it.balancePaise }
+        accounts.filter { it.isCreditCard }.sumOf { it.balancePaise.coerceAtLeast(0L) }
     }
     val topBudgets = remember(budgets, categories, transactions, selectedMonth) {
         TopBudgetsCalculator.calculateTopBudgetCategories(budgets, categories, transactions, selectedMonth.toString())
@@ -618,6 +666,12 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     onQueryChange: (String) -> Unit,
     categoryFilter: Long?,
     onCategoryFilterChange: (Long?) -> Unit,
+    accountFilter: Long?,
+    onAccountFilterChange: (Long?) -> Unit,
+    kindFilter: TransactionKindFilter,
+    onKindFilterChange: (TransactionKindFilter) -> Unit,
+    amountRange: TransactionAmountRange,
+    onAmountRangeChange: (TransactionAmountRange) -> Unit,
     dateFilter: TransactionDateFilter,
     onDateFilterChange: (TransactionDateFilter) -> Unit,
     onEdit: (TransactionEntity) -> Unit,
@@ -628,26 +682,35 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
     var categoryExpanded by remember { mutableStateOf(false) }
     var dateExpanded by remember { mutableStateOf(false) }
     var showCustomDateRangeDialog by remember { mutableStateOf(false) }
+    var showAmountRangeDialog by remember { mutableStateOf(false) }
+    var minimumAmountText by rememberSaveable(amountRange.minimumPaise) { mutableStateOf(amountRange.minimumPaise?.let(::formatPaiseInput).orEmpty()) }
+    var maximumAmountText by rememberSaveable(amountRange.maximumPaise) { mutableStateOf(amountRange.maximumPaise?.let(::formatPaiseInput).orEmpty()) }
     val accountMap = remember(accounts) { accounts.associateBy { it.id } }
     val categoryMap = remember(categories) { categories.associateBy { it.id } }
 
-    val visible = remember(transactions, query, categoryFilter, dateFilter, categories, accounts) {
+    val visible = remember(transactions, query, categoryFilter, accountFilter, kindFilter, amountRange, dateFilter, categories, accounts) {
         TransactionDateFilter.filterTransactions(
             transactions = transactions,
             categoryFilter = categoryFilter,
             dateFilter = dateFilter,
             query = query,
             categories = categories,
-            accounts = accounts
+            accounts = accounts,
+            accountFilter = accountFilter,
+            kindFilter = kindFilter,
+            amountRange = amountRange
         )
     }
     var displayCount by remember(visible) { mutableIntStateOf(50) }
     val displayedItems = remember(visible, displayCount) { visible.take(displayCount) }
-    val classification = remember(transactions, categoryFilter, dateFilter) {
+    val classification = remember(transactions, categoryFilter, accountFilter, kindFilter, amountRange, dateFilter) {
         TransactionDateFilter.filterForChart(
             transactions = transactions,
             categoryFilter = categoryFilter,
-            dateFilter = dateFilter
+            dateFilter = dateFilter,
+            accountFilter = accountFilter,
+            kindFilter = kindFilter,
+            amountRange = amountRange
         )
     }
 
@@ -666,6 +729,67 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                 )
                 showCustomDateRangeDialog = false
             }
+        )
+    }
+    if (showAmountRangeDialog) {
+        val minimum = minimumAmountText.trim().takeIf { it.isNotEmpty() }?.toBigDecimalOrNull()
+        val maximum = maximumAmountText.trim().takeIf { it.isNotEmpty() }?.toBigDecimalOrNull()
+        val minPaise = minimum?.let { parsePaise(minimumAmountText) }
+        val maxPaise = maximum?.let { parsePaise(maximumAmountText) }
+        val validMinimum = minimumAmountText.isBlank() || (minimum != null && minimum.signum() >= 0)
+        val validMaximum = maximumAmountText.isBlank() || (maximum != null && maximum.signum() >= 0)
+        val validRange = validMinimum && validMaximum && (minPaise == null || maxPaise == null || minPaise <= maxPaise)
+        AlertDialog(
+            onDismissRequest = { showAmountRangeDialog = false },
+            title = { Text("Amount Range") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = minimumAmountText,
+                        onValueChange = { minimumAmountText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Minimum amount (₹)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        isError = !validMinimum
+                    )
+                    OutlinedTextField(
+                        value = maximumAmountText,
+                        onValueChange = { maximumAmountText = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Maximum amount (₹)") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        singleLine = true,
+                        isError = !validMaximum
+                    )
+                    if (validMinimum && validMaximum && !validRange) {
+                        Text("Minimum must not exceed maximum.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = {
+                        minimumAmountText = ""
+                        maximumAmountText = ""
+                        onAmountRangeChange(TransactionAmountRange())
+                        showAmountRangeDialog = false
+                    }) { Text("Clear") }
+                    TextButton(onClick = { showAmountRangeDialog = false }) { Text("Cancel") }
+                    TextButton(
+                        onClick = {
+                            onAmountRangeChange(TransactionAmountRange(minPaise, maxPaise))
+                            showAmountRangeDialog = false
+                        },
+                        enabled = validRange
+                    ) { Text("Apply") }
+                }
+            },
+            dismissButton = {}
         )
     }
 
@@ -810,6 +934,66 @@ fun SpendTrackApp(viewModel: FinanceViewModel = viewModel()) {
                             }
                         )
                     }
+                }
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                var accountExpanded by remember { mutableStateOf(false) }
+                Box(Modifier.weight(1f)) {
+                    FilterChip(
+                        selected = accountFilter != null,
+                        onClick = { haptics.selection(); accountExpanded = true },
+                        label = {
+                            Text(
+                                accountFilter?.let { id -> accounts.find { it.id == id }?.name }?.let { "Payment: $it" } ?: "Payment Method",
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        },
+                        trailingIcon = { Icon(Icons.Default.ArrowDropDown, contentDescription = null) },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    DropdownMenu(expanded = accountExpanded, onDismissRequest = { accountExpanded = false }) {
+                        DropdownMenuItem(
+                        text = { Text("All Payment Methods") },
+                            onClick = { haptics.selection(); onAccountFilterChange(null); accountExpanded = false }
+                        )
+                        accounts.forEach { account ->
+                            DropdownMenuItem(
+                                text = { Text(account.name) },
+                                onClick = { haptics.selection(); onAccountFilterChange(account.id); accountExpanded = false }
+                            )
+                        }
+                    }
+                }
+                FilterChip(
+                    selected = amountRange.isActive,
+                    onClick = { haptics.selection(); showAmountRangeDialog = true },
+                    label = {
+                        Text(
+                            amountRange.toLabel(),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TransactionKindFilter.entries.forEach { filter ->
+                    FilterChip(
+                        selected = kindFilter == filter,
+                        onClick = { haptics.selection(); onKindFilterChange(filter) },
+                        label = {
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Text(filter.name.lowercase().replaceFirstChar { it.uppercase() })
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
@@ -1131,6 +1315,110 @@ fun TransactionCard(
     }
 }
 
+@Composable private fun SharedExpensesPeopleScreen(
+    people: List<PersonEntity>,
+    transactions: List<TransactionEntity>,
+    owed: List<OwedEntity>,
+    bottomContentPadding: Dp,
+    onBack: () -> Unit,
+    onCreate: (String) -> Unit,
+    onRename: (Long, String) -> Unit,
+    onSetActive: (Long, Boolean) -> Unit,
+    onDelete: (Long) -> Unit
+) {
+    val haptics = rememberSpendTrackHaptics()
+    var name by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<PersonEntity?>(null) }
+    var deleting by remember { mutableStateOf<PersonEntity?>(null) }
+    val dialogPerson = editing ?: deleting
+    LazyColumn(
+        Modifier.fillMaxSize().padding(20.dp),
+        contentPadding = PaddingValues(bottom = bottomContentPadding),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
+                Text("Shared Expenses", style = MaterialTheme.typography.titleLarge)
+            }
+        }
+        item {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("New person") },
+                singleLine = true,
+                trailingIcon = {
+                    IconButton(onClick = { if (name.isNotBlank()) { haptics.confirm(); onCreate(name.trim()); name = "" } }, enabled = name.isNotBlank()) {
+                        Icon(Icons.Default.Add, contentDescription = "Add person")
+                    }
+                }
+            )
+        }
+        if (people.isEmpty()) item { Text("People you add here will be available in shared expense participants.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        items(people, key = { it.id }) { person ->
+            val personOwed = owed.filter { it.personName.equals(person.name, ignoreCase = true) }
+            val relatedTransactions = transactions.filter { tx ->
+                val split = SharedExpenseHelper.deserialize(tx.splitDetails)
+                split?.participants.orEmpty().any { it.equals(person.name, true) } ||
+                    tx.sharedWith.split(",").any { it.trim().equals(person.name, true) }
+            }
+            val historyCount = relatedTransactions.size + personOwed.size
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                shape = MaterialTheme.shapes.large
+            ) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(person.name, style = MaterialTheme.typography.titleMedium)
+                            Text("${relatedTransactions.size} shared expenses${if (!person.isActive) " · Inactive" else ""}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                        }
+                        IconButton(onClick = { name = person.name; editing = person }) { Icon(Icons.Default.Edit, contentDescription = "Rename ${person.name}") }
+                    }
+                    val balance = personOwed.sumOf { if (it.direction == OwedDirection.OWED_TO_ME) it.amountPaise else -it.amountPaise }
+                    if (balance != 0L) Text(
+                        "${if (balance > 0) "Owed to you" else "You owe"}: ${money(kotlin.math.abs(balance))}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = { haptics.selection(); onSetActive(person.id, !person.isActive) }) {
+                            Text(if (person.isActive) "Deactivate" else "Reactivate")
+                        }
+                        if (historyCount == 0) TextButton(onClick = { deleting = person }) { Text("Delete") }
+                    }
+                }
+            }
+        }
+    }
+    if (dialogPerson != null) {
+        val isRename = editing != null
+        AlertDialog(
+            onDismissRequest = { editing = null; deleting = null; name = "" },
+            title = { Text(if (isRename) "Rename person" else "Delete person?") },
+            text = {
+                if (isRename) {
+                    val duplicate = people.any { it.id != dialogPerson.id && it.name.trim().equals(name.trim(), ignoreCase = true) }
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") }, singleLine = true)
+                        if (duplicate) Text("A person with this name already exists.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+                else Text("This person has no historical shared expenses or Loans & Owed records and will be removed.")
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (isRename && name.isNotBlank()) onRename(dialogPerson.id, name.trim())
+                    else if (!isRename) onDelete(dialogPerson.id)
+                    editing = null; deleting = null; name = ""
+                }, enabled = !isRename || (name.isNotBlank() && people.none { it.id != dialogPerson.id && it.name.trim().equals(name.trim(), ignoreCase = true) })) { Text(if (isRename) "Save" else "Delete") }
+            },
+            dismissButton = { TextButton(onClick = { editing = null; deleting = null; name = "" }) { Text("Cancel") } }
+        )
+    }
+}
+
 @Composable private fun Settings(
     accounts: Int,
     categories: Int,
@@ -1146,7 +1434,10 @@ fun TransactionCard(
     onData: () -> Unit,
     onReminders: () -> Unit,
     onAppearance: () -> Unit,
-    onAbout: () -> Unit
+    onAbout: () -> Unit,
+    onSharedExpenses: () -> Unit,
+    biometricEnabled: Boolean,
+    onBiometricPreferenceChange: (Boolean) -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
     LazyColumn(Modifier.fillMaxSize().padding(20.dp), contentPadding = PaddingValues(bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1162,13 +1453,34 @@ fun TransactionCard(
         }
         item { SettingsCard("Accounts", "$accounts accounts and cards") { haptics.click(); onAccounts() } }
         item { SettingsCard("Categories", "$categories categories") { haptics.click(); onCategories() } }
+        item { SettingsCard("Shared Expenses", "Manage people for group expenses") { haptics.click(); onSharedExpenses() } }
         item { SettingsCard("Fixed deposits", "$activeFdCount active deposits") { haptics.click(); onFixedDeposits() } }
         item { SettingsCard("Recurring transactions", "$activeRecurringCount active schedules") { haptics.click(); onRecurring() } }
         item { SettingsCard("Budget", "Category budgets") { haptics.click(); onBudgets() } }
         item { SettingsCard("Data", "Backup and restore") { haptics.click(); onData() } }
         item { SettingsCard("Appearance", "Theme and display options") { haptics.click(); onAppearance() } }
-        item { SettingsCard("About", "App information and links") { haptics.click(); onAbout() } }
+        item {
+            Card(
+                shape = MaterialTheme.shapes.extraLarge,
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Biometric authentication", style = MaterialTheme.typography.titleLarge)
+                        Text("Require biometrics to open SpendTrack", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(
+                        checked = biometricEnabled,
+                        onCheckedChange = { haptics.selection(); onBiometricPreferenceChange(it) }
+                    )
+                }
+            }
+        }
         item { SettingsCard("Alerts & reminders", "Card and loan notifications") { haptics.click(); onReminders() } }
+        item { SettingsCard("About", "App information and links") { haptics.click(); onAbout() } }
     }
 }
 @Composable private fun SettingsCard(title: String, sub: String, onClick: () -> Unit = {}) { Card(Modifier.fillMaxWidth().clickable(onClick = onClick), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) { Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.titleLarge); Text(sub, color = MaterialTheme.colorScheme.onSurfaceVariant) }; Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) } } }
@@ -2137,17 +2449,34 @@ fun TransactionCard(
     }
 }
 
-@Composable private fun AddOwedScreen(onBack: () -> Unit, onSave: (OwedEntity) -> Unit) {
+@Composable private fun AddOwedScreen(people: List<PersonEntity>, onBack: () -> Unit, onSave: (OwedEntity) -> Unit) {
     val haptics = rememberSpendTrackHaptics()
     var person by remember { mutableStateOf("") }; var amount by remember { mutableStateOf("") }; var note by remember { mutableStateOf("") }; var owesMe by remember { mutableStateOf(true) }
+    var personMenu by remember { mutableStateOf(false) }
     val paise = parsePaise(amount)
     Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Add owed entry", style = MaterialTheme.typography.titleLarge)
-        OutlinedTextField(person, { person = it }, Modifier.fillMaxWidth(), label = { Text("Person") }, singleLine = true)
+        ExposedDropdownMenuBox(expanded = personMenu, onExpandedChange = { personMenu = it }) {
+            OutlinedTextField(
+                value = person,
+                onValueChange = {},
+                modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable),
+                label = { Text("Person") },
+                readOnly = true,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = personMenu) },
+                singleLine = true
+            )
+            ExposedDropdownMenu(expanded = personMenu, onDismissRequest = { personMenu = false }) {
+                people.forEach { entry ->
+                    DropdownMenuItem(text = { Text(entry.name) }, onClick = { person = entry.name; personMenu = false })
+                }
+            }
+        }
         OutlinedTextField(amount, { amount = it }, Modifier.fillMaxWidth(), label = { Text("Amount (₹)") }, singleLine = true)
         OutlinedTextField(note, { note = it }, Modifier.fillMaxWidth(), label = { Text("Note") }, singleLine = true)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { FilterChip(owesMe, { haptics.selection(); owesMe = true }, { Text("Owes you") }); FilterChip(!owesMe, { haptics.selection(); owesMe = false }, { Text("You owe") }) }
-        Spacer(Modifier.weight(1f)); Button(onClick = { haptics.confirm(); onSave(OwedEntity(personName = person.trim(), amountPaise = paise, direction = if (owesMe) OwedDirection.OWED_TO_ME else OwedDirection.I_OWE, note = note.trim())) }, enabled = person.isNotBlank() && paise > 0, modifier = Modifier.fillMaxWidth()) { Text("Save Entry") }
+        if (people.isEmpty()) Text("Add a person in Settings → Shared Expenses first.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.weight(1f)); Button(onClick = { haptics.confirm(); onSave(OwedEntity(personName = person, amountPaise = paise, direction = if (owesMe) OwedDirection.OWED_TO_ME else OwedDirection.I_OWE, note = note.trim())) }, enabled = people.any { it.name == person } && paise > 0, modifier = Modifier.fillMaxWidth()) { Text("Save Entry") }
     }
 }
 
@@ -2204,6 +2533,16 @@ fun formatIndianMoney(paise: Long): String {
 }
 
 fun money(paise: Long): String = formatIndianMoney(paise)
+
+private fun formatPaiseInput(paise: Long): String = "${paise / 100}.${(paise % 100).toString().padStart(2, '0')}"
+
+private fun TransactionAmountRange.toLabel(): String = when {
+    minimumPaise != null && maximumPaise != null -> "${money(minimumPaise)} – ${money(maximumPaise)}"
+    minimumPaise != null -> "From ${money(minimumPaise)}"
+    maximumPaise != null -> "Up to ${money(maximumPaise)}"
+    else -> "Amount Range"
+}
+
 private fun displayMonth(ym: YearMonth): String = "${ym.month.getDisplayName(java.time.format.TextStyle.FULL, Locale.getDefault())} ${ym.year}"
 private fun displayMonth(ymString: String): String = runCatching { displayMonth(YearMonth.parse(ymString)) }.getOrDefault(ymString)
 private fun formatDate(epochDay: Long): String = formatEpochDate(epochDay)

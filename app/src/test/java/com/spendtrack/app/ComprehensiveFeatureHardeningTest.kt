@@ -20,6 +20,73 @@ import java.time.LocalDate
 
 class ComprehensiveFeatureHardeningTest {
 
+    @Test
+    fun testSharedExpensePeopleAreUniqueRenamePreservesHistoryAndDeactivateBlocksSelection() = runBlocking {
+        val env = createTestEnvironment()
+        val repo = env.repository
+        val personId = repo.createPerson("Shubhankar")
+        assertEquals(personId, repo.createPerson(" shubhankar "))
+        assertEquals(1, env.database.people().observeAll().first().size)
+        val accountId = env.accountsDao.insert(AccountEntity(id = 1L, name = "Cash", balancePaise = 10_000L))
+        val categoryId = env.categoriesDao.insert(CategoryEntity(id = 1L, name = "Food"))
+        val split = SharedExpenseHelper.serialize(
+            SplitDetails(
+                participants = listOf("You", "Shubhankar"),
+                shares = mapOf("You" to 500L, "Shubhankar" to 500L)
+            )
+        )
+        val txId = repo.addTransaction(
+            TransactionEntity(
+                dateEpochDay = LocalDate.of(2026, 10, 31).toEpochDay(), description = "Dinner", amountPaise = 1_000L,
+                categoryId = categoryId, accountId = accountId, isShared = true, splitDetails = split
+            )
+        )
+        val balanceBeforeRename = env.accountsDao.getById(accountId)!!.balancePaise
+
+        repo.renamePerson(personId, "Shubh")
+
+        val updatedTransaction = env.transactionsDao.getById(txId)!!
+        assertEquals(listOf("You", "Shubh"), SharedExpenseHelper.deserialize(updatedTransaction.splitDetails)!!.participants)
+        assertEquals("Shubh", env.owedDao.observeAll().first().single().personName)
+        assertEquals(1_000L, updatedTransaction.amountPaise)
+        assertEquals(balanceBeforeRename, env.accountsDao.getById(accountId)!!.balancePaise)
+        assertTrue(runCatching { repo.deletePerson(personId) }.isFailure)
+
+        repo.setPersonActive(personId, false)
+        repo.syncPeopleFromHistory()
+        assertTrue(env.database.people().observeActive().first().isEmpty())
+        assertEquals("Shubh", env.owedDao.observeAll().first().single().personName)
+        assertTrue(runCatching {
+            repo.addOwed(OwedEntity(personName = "Unknown", amountPaise = 100L, direction = OwedDirection.OWED_TO_ME))
+        }.isFailure)
+    }
+
+    @Test
+    fun testSavingsInterestPeriodFormattingAcrossMonthAndLeapYearBoundaries() {
+        assertEquals(
+            "Interest for 31-Oct-2026",
+            SavingsInterestPeriods.description(
+                InterestCreditFrequency.DAILY,
+                SavingsInterestPeriods.containing(LocalDate.of(2026, 10, 31), InterestCreditFrequency.DAILY)
+            )
+        )
+        assertEquals(
+            "Interest for 01-Feb-2024 - 29-Feb-2024",
+            SavingsInterestPeriods.description(
+                InterestCreditFrequency.MONTHLY,
+                SavingsInterestPeriods.containing(LocalDate.of(2024, 2, 12), InterestCreditFrequency.MONTHLY)
+            )
+        )
+        assertEquals(
+            SavingsInterestPeriod(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 12, 31)),
+            SavingsInterestPeriods.containing(LocalDate.of(2026, 12, 31), InterestCreditFrequency.QUARTERLY)
+        )
+        assertEquals(
+            LocalDate.of(2026, 9, 30),
+            SavingsInterestPeriods.lastCompletedThrough(LocalDate.of(2026, 10, 1), InterestCreditFrequency.QUARTERLY)
+        )
+    }
+
     // =========================================================================
     // 1. SHARED EXPENSE HELPER TESTS
     // =========================================================================
@@ -574,7 +641,7 @@ class ComprehensiveFeatureHardeningTest {
         val env = createTestEnvironment()
         val repo = env.repository
 
-        val accountId = env.accountsDao.insert(AccountEntity(id = 1L, name = "Kotak 811", balancePaise = 10000L, interestRateBps = 350))
+        val accountId = env.accountsDao.insert(AccountEntity(id = 1L, name = "Kotak 811", balancePaise = 10000L, interestRateBps = 350, interestCreditFrequency = InterestCreditFrequency.DAILY.name))
         val date = LocalDate.of(2026, 10, 31).toEpochDay()
 
         val txId = repo.postSavingsInterest(accountId, 350L, date)
@@ -589,7 +656,111 @@ class ComprehensiveFeatureHardeningTest {
         val tx = env.transactionsDao.getById(txId)!!
         assertEquals(TransactionType.INCOME, tx.type)
         assertEquals(350L, tx.amountPaise)
-        assertEquals("Interest for 2026-10-31", tx.description)
+        assertEquals("Interest for 31-Oct-2026", tx.description)
+        assertEquals(accountId, tx.accountId)
+        assertEquals("Interest", env.categoriesDao.getById(tx.categoryId)!!.name)
+    }
+
+    @Test
+    fun testAutomaticDailyInterestUsesAccrualDateAndActualPostingDate() = runBlocking {
+        val env = createTestEnvironment()
+        val accountId = env.accountsDao.insert(
+            AccountEntity(
+                id = 1L,
+                name = "Daily account",
+                balancePaise = 1_000_000L,
+                interestRateBps = 365,
+                interestCreditFrequency = InterestCreditFrequency.DAILY.name,
+                lastInterestPostingEpochDay = LocalDate.of(2026, 10, 30).toEpochDay()
+            )
+        )
+        val postingDate = LocalDate.of(2026, 11, 1)
+
+        assertEquals(1, env.repository.processDueSavingsInterest(postingDate))
+
+        val tx = env.transactionsDao.observeAll().first().single()
+        assertEquals("Interest for 31-Oct-2026", tx.description)
+        assertEquals(postingDate.toEpochDay(), tx.dateEpochDay)
+        assertEquals(accountId, tx.accountId)
+        assertEquals(TransactionType.INCOME, tx.type)
+        assertEquals("Interest", env.categoriesDao.getById(tx.categoryId)!!.name)
+        assertEquals(1_000_100L, env.accountsDao.getById(accountId)!!.balancePaise)
+    }
+
+    @Test
+    fun testAutomaticMonthlyInterestUsesFullPeriodAcrossAccountsAndPreventsRetryDuplicates() = runBlocking {
+        val env = createTestEnvironment()
+        val postingDate = LocalDate.of(2026, 11, 1)
+        val periodEnd = LocalDate.of(2026, 10, 31).toEpochDay()
+        val firstAccountId = env.accountsDao.insert(
+            AccountEntity(
+                id = 1L,
+                name = "First account",
+                balancePaise = 1_000_000L,
+                interestRateBps = 365,
+                interestCreditFrequency = InterestCreditFrequency.MONTHLY.name,
+                lastInterestPostingEpochDay = LocalDate.of(2026, 9, 30).toEpochDay()
+            )
+        )
+        val secondAccountId = env.accountsDao.insert(
+            AccountEntity(
+                id = 2L,
+                name = "Second account",
+                balancePaise = 2_000_000L,
+                interestRateBps = 365,
+                interestCreditFrequency = InterestCreditFrequency.MONTHLY.name,
+                lastInterestPostingEpochDay = LocalDate.of(2026, 9, 30).toEpochDay()
+            )
+        )
+
+        assertEquals(2, env.repository.processDueSavingsInterest(postingDate))
+
+        val firstTx = env.transactionsDao.observeAll().first().single { it.accountId == firstAccountId }
+        val secondTx = env.transactionsDao.observeAll().first().single { it.accountId == secondAccountId }
+        assertEquals("Interest for 01-Oct-2026 - 31-Oct-2026", firstTx.description)
+        assertEquals(firstTx.description, secondTx.description)
+        assertEquals(postingDate.toEpochDay(), firstTx.dateEpochDay)
+        assertEquals(postingDate.toEpochDay(), secondTx.dateEpochDay)
+        assertEquals(TransactionType.INCOME, firstTx.type)
+        assertEquals(TransactionType.INCOME, secondTx.type)
+        assertEquals("Interest", env.categoriesDao.getById(firstTx.categoryId)!!.name)
+        assertEquals(firstTx.categoryId, secondTx.categoryId)
+        assertEquals(1_000_000L + firstTx.amountPaise, env.accountsDao.getById(firstAccountId)!!.balancePaise)
+        assertEquals(2_000_000L + secondTx.amountPaise, env.accountsDao.getById(secondAccountId)!!.balancePaise)
+
+        // Simulate a retry with a stale cursor and a fresh repository after application restart.
+        env.accountsDao.update(env.accountsDao.getById(firstAccountId)!!.copy(lastInterestPostingEpochDay = LocalDate.of(2026, 9, 30).toEpochDay()))
+        val restartedRepository = FinanceRepository(env.database)
+        assertEquals(0, restartedRepository.processDueSavingsInterest(postingDate))
+        assertEquals(1, env.transactionsDao.observeAll().first().count { it.accountId == firstAccountId })
+        assertEquals(periodEnd, env.accountsDao.getById(firstAccountId)!!.lastInterestPostingEpochDay)
+        assertEquals(1_000_000L + firstTx.amountPaise, env.accountsDao.getById(firstAccountId)!!.balancePaise)
+    }
+
+    @Test
+    fun testAutomaticQuarterlyInterestUsesCalendarQuarterAndPostingDate() = runBlocking {
+        val env = createTestEnvironment()
+        val accountId = env.accountsDao.insert(
+            AccountEntity(
+                id = 1L,
+                name = "Quarterly account",
+                balancePaise = 1_000_000L,
+                interestRateBps = 365,
+                interestCreditFrequency = InterestCreditFrequency.QUARTERLY.name,
+                lastInterestPostingEpochDay = LocalDate.of(2026, 9, 30).toEpochDay()
+            )
+        )
+        val postingDate = LocalDate.of(2027, 1, 1)
+
+        assertEquals(1, env.repository.processDueSavingsInterest(postingDate))
+
+        val tx = env.transactionsDao.observeAll().first().single()
+        assertEquals("Interest for 01-Oct-2026 - 31-Dec-2026", tx.description)
+        assertEquals(postingDate.toEpochDay(), tx.dateEpochDay)
+        assertEquals(accountId, tx.accountId)
+        assertEquals(TransactionType.INCOME, tx.type)
+        assertEquals("Interest", env.categoriesDao.getById(tx.categoryId)!!.name)
+        assertEquals(1_000_000L + tx.amountPaise, env.accountsDao.getById(accountId)!!.balancePaise)
     }
 
     @Test
@@ -773,6 +944,7 @@ class ComprehensiveFeatureHardeningTest {
         val recurringDao = InMemoryRecurringTransactionDao(recurringTransactionsList)
         val recurringOccurrencesDao = InMemoryRecurringOccurrenceDao(recurringOccurrencesList)
         val cardPaymentsDao = InMemoryCardPaymentDao(cardPaymentsList)
+        val peopleDao = InMemoryPersonDao()
 
         val dummyDb = java.lang.reflect.Proxy.newProxyInstance(
             androidx.sqlite.db.SupportSQLiteDatabase::class.java.classLoader,
@@ -826,6 +998,7 @@ class ComprehensiveFeatureHardeningTest {
             override fun recurringTransactions(): RecurringTransactionDao = recurringDao
             override fun recurringOccurrences(): RecurringOccurrenceDao = recurringOccurrencesDao
             override fun importHistory(): ImportHistoryDao = error("Not needed")
+            override fun people(): PersonDao = peopleDao
 
             override fun inTransaction(): Boolean = true
             override val isOpen: Boolean = true

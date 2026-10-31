@@ -9,6 +9,15 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.Locale
 
+enum class TransactionKindFilter { ALL, INCOME, EXPENSE }
+
+data class TransactionAmountRange(val minimumPaise: Long? = null, val maximumPaise: Long? = null) {
+    val isActive: Boolean get() = minimumPaise != null || maximumPaise != null
+    fun matches(amountPaise: Long): Boolean =
+        (minimumPaise == null || amountPaise >= minimumPaise) &&
+            (maximumPaise == null || amountPaise <= maximumPaise)
+}
+
 enum class DateFilterType {
     ALL_DATES,
     THIS_MONTH,
@@ -96,7 +105,10 @@ data class TransactionDateFilter(
             query: String = "",
             categories: List<CategoryEntity> = emptyList(),
             accounts: List<AccountEntity> = emptyList(),
-            today: LocalDate = LocalDate.now()
+            today: LocalDate = LocalDate.now(),
+            accountFilter: Long? = null,
+            kindFilter: TransactionKindFilter = TransactionKindFilter.ALL,
+            amountRange: TransactionAmountRange = TransactionAmountRange()
         ): List<TransactionEntity> {
             val range = dateFilter.dateRangeEpochDays(today)
             val isCustomRange = dateFilter.type == DateFilterType.CUSTOM_RANGE
@@ -108,6 +120,15 @@ data class TransactionDateFilter(
             return transactions.filter { t ->
                 val matchesCategory = categoryFilter == null || (t.type != TransactionType.TRANSFER && t.categoryId == categoryFilter)
                 if (!matchesCategory) return@filter false
+                val matchesKind = when (kindFilter) {
+                    TransactionKindFilter.ALL -> true
+                    TransactionKindFilter.INCOME -> t.type == TransactionType.INCOME
+                    TransactionKindFilter.EXPENSE -> t.type == TransactionType.EXPENSE
+                }
+                if (!matchesKind) return@filter false
+                if (!amountRange.matches(t.amountPaise)) return@filter false
+                val matchesAccount = accountFilter == null || t.accountId == accountFilter || t.destinationAccountId == accountFilter
+                if (!matchesAccount) return@filter false
 
                 val matchesDate = when {
                     range != null -> t.dateEpochDay in range
@@ -132,7 +153,10 @@ data class TransactionDateFilter(
             transactions: List<TransactionEntity>,
             categoryFilter: Long?,
             dateFilter: TransactionDateFilter,
-            today: LocalDate = LocalDate.now()
+            today: LocalDate = LocalDate.now(),
+            accountFilter: Long? = null,
+            kindFilter: TransactionKindFilter = TransactionKindFilter.ALL,
+            amountRange: TransactionAmountRange = TransactionAmountRange()
         ): List<TransactionEntity> {
             val range = dateFilter.dateRangeEpochDays(today)
             val isCustomRange = dateFilter.type == DateFilterType.CUSTOM_RANGE
@@ -140,6 +164,14 @@ data class TransactionDateFilter(
                 if (t.isExcludedFromCalculations) return@filter false
                 val matchesCategory = categoryFilter == null || t.categoryId == categoryFilter
                 if (!matchesCategory) return@filter false
+                val matchesKind = when (kindFilter) {
+                    TransactionKindFilter.ALL -> true
+                    TransactionKindFilter.INCOME -> t.type == TransactionType.INCOME
+                    TransactionKindFilter.EXPENSE -> t.type == TransactionType.EXPENSE
+                }
+                if (!matchesKind) return@filter false
+                if (!amountRange.matches(t.amountPaise)) return@filter false
+                if (accountFilter != null && t.accountId != accountFilter && t.destinationAccountId != accountFilter) return@filter false
                 when {
                     range != null -> t.dateEpochDay in range
                     isCustomRange -> dateFilter.matches(t.dateEpochDay, today)

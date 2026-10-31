@@ -53,6 +53,7 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.4")
 
     implementation("androidx.work:work-runtime-ktx:2.11.0")
+    implementation("androidx.biometric:biometric:1.1.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.apache.pdfbox:pdfbox:2.0.27")

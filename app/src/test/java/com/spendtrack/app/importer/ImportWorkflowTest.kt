@@ -753,6 +753,7 @@ class ImportWorkflowTest {
     // Concrete In-Memory Test Database implementation for Unit Tests
     // -------------------------------------------------------------------------
     class TestSpendTrackDatabase : SpendTrackDatabase() {
+        private val _peopleDao = com.spendtrack.app.InMemoryPersonDao()
         val accountsList = mutableListOf<AccountEntity>()
         val categoriesList = mutableListOf<CategoryEntity>()
         val transactionsList = mutableListOf<TransactionEntity>()
@@ -886,6 +887,7 @@ class ImportWorkflowTest {
         override fun transactions(): TransactionDao = _transactionsDao
         override fun cardPayments(): CardPaymentDao = _cardPaymentsDao
         override fun importHistory(): ImportHistoryDao = _importHistoryDao
+        override fun people(): PersonDao = _peopleDao
         override fun categories(): CategoryDao = _categoriesDao
 
         override fun budgets(): BudgetDao = throw NotImplementedError()

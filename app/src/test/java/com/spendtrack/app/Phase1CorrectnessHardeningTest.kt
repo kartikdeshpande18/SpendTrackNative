@@ -263,6 +263,7 @@ class Phase1CorrectnessHardeningTest {
         assertTrue(json.has("budgets"))
         assertTrue(json.has("loans"))
         assertTrue(json.has("owed"))
+        assertTrue(json.has("people"))
         assertTrue(json.has("cardPayments"))
         assertTrue(json.has("fixedDeposits"))
         assertTrue(json.has("recurringTransactions"))
@@ -283,6 +284,7 @@ class Phase1CorrectnessHardeningTest {
         sourceDb.transactionsList.add(transaction)
         sourceDb.fixedDepositsList.add(fd)
         sourceDb.owedList.add(owed)
+        sourceDb.people().insert(PersonEntity(id = 60L, name = "Archived friend", normalizedName = "archived friend", isActive = false))
 
         val sourceRepo = BackupRepository(sourceDb)
         val exportedJson = sourceRepo.export()
@@ -317,6 +319,7 @@ class Phase1CorrectnessHardeningTest {
         assertEquals(owed.id, destDb.owedList[0].id)
         assertEquals(owed.amountPaise, destDb.owedList[0].amountPaise)
         assertEquals(OwedDirection.OWED_TO_ME, destDb.owedList[0].direction)
+        assertEquals(PersonEntity(60L, "Archived friend", "archived friend", false), destDb.people().getById(60L))
     }
 
     /**
@@ -324,6 +327,7 @@ class Phase1CorrectnessHardeningTest {
      * without needing physical SQLite Android drivers during JVM unit tests.
      */
     private class TestSpendTrackDatabase : SpendTrackDatabase() {
+        private val _peopleDao = InMemoryPersonDao()
         val accountsList = mutableListOf<AccountEntity>()
         val categoriesList = mutableListOf<CategoryEntity>()
         val transactionsList = mutableListOf<TransactionEntity>()
@@ -421,6 +425,7 @@ class Phase1CorrectnessHardeningTest {
         override fun recurringTransactions(): RecurringTransactionDao = _recurringTransactionsDao
         override fun recurringOccurrences(): RecurringOccurrenceDao = _recurringOccurrencesDao
         override fun importHistory(): ImportHistoryDao = _importHistoryDao
+        override fun people(): PersonDao = _peopleDao
 
         override fun inTransaction(): Boolean = true
         override val isOpen: Boolean = true
