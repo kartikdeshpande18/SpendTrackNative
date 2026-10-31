@@ -2,8 +2,6 @@ package com.spendtrack.app.importer.ui
 
 import android.content.Context
 import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -59,6 +57,9 @@ fun ImportScreen(
     accounts: List<AccountEntity>,
     categories: List<CategoryEntity>,
     existingTransactions: List<TransactionEntity>,
+    selectedUris: List<Uri>,
+    onSelectedUrisConsumed: () -> Unit,
+    onPickFiles: () -> Unit,
     onBack: () -> Unit
 ) {
     val state by viewModel.state.collectAsState()
@@ -78,12 +79,9 @@ fun ImportScreen(
         android.util.Log.d("SpendTrackImport", "COMPOSE_OBSERVED_STATE=$stateName")
     }
 
-    val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenMultipleDocuments()
-    ) { uris ->
-        if (uris.isNotEmpty()) {
-            viewModel.selectFiles(context, uris, accounts)
-        }
+    LaunchedEffect(selectedUris) {
+        if (selectedUris.isNotEmpty()) viewModel.selectFiles(context, selectedUris, accounts)
+        if (selectedUris.isNotEmpty()) onSelectedUrisConsumed()
     }
 
     var transactionToEdit by remember { mutableStateOf<NormalizedTransaction?>(null) }
@@ -124,7 +122,7 @@ fun ImportScreen(
             when (val s = state) {
                 is ImportState.Idle -> {
                     IdleStage(
-                        onSelectFiles = { launcher.launch(arrayOf("application/pdf")) }
+                        onSelectFiles = onPickFiles
                     )
                 }
 

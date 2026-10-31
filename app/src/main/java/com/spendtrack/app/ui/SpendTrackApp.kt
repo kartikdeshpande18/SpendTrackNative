@@ -46,6 +46,8 @@ import com.spendtrack.app.ui.spending.MonthSelectorDialog
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -65,9 +67,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.platform.LocalContext
+import android.net.Uri
 import com.spendtrack.app.data.local.*
 import com.spendtrack.app.reminders.ReminderLeadTimes
 import com.spendtrack.app.reminders.ReminderPreferences
@@ -98,7 +99,14 @@ fun SpendTrackApp(
     isAppLocked: Boolean = false,
     onUnlockRequest: () -> Unit = {},
     biometricEnabled: Boolean = false,
-    onBiometricPreferenceChange: (Boolean) -> Unit = {}
+    onBiometricPreferenceChange: (Boolean) -> Unit = {},
+    restoreBackupUri: Uri? = null,
+    onRestoreBackupUriConsumed: () -> Unit = {},
+    onPickRestoreBackup: () -> Unit = {},
+    onCreateBackup: (String) -> Unit = {},
+    selectedStatementUris: List<Uri> = emptyList(),
+    onStatementUrisConsumed: () -> Unit = {},
+    onPickStatementFiles: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var themeMode by rememberSaveable { mutableStateOf(ThemePreferences.mode(context)) }
@@ -108,7 +116,6 @@ fun SpendTrackApp(
         AppThemeMode.LIGHT -> false
         AppThemeMode.DARK -> true
     }
-    LaunchedEffect(isAppLocked) { if (isAppLocked) onUnlockRequest() }
     var route by rememberSaveable { mutableStateOf("home") }
     var overlay by rememberSaveable { mutableStateOf(Overlay.NONE) }
     var editingTransactionId by rememberSaveable { mutableLongStateOf(0L) }
@@ -148,9 +155,7 @@ fun SpendTrackApp(
     }
     SpendTrackTheme(darkTheme = darkTheme, trueBlack = trueBlack) {
         Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-            if (isAppLocked) {
-                BiometricLockScreen(onUnlockRequest)
-            } else {
+            Box(Modifier.fillMaxSize()) {
             val activeOwedParticipants = remember(activePeople) { activePeople.map { it.name } }
             val effectiveOverlay = if (overlay == Overlay.LOAN_OWED_CHOOSER) Overlay.NONE else overlay
             AnimatedContent(
@@ -183,7 +188,7 @@ fun SpendTrackApp(
                     Overlay.ACCOUNTS -> AccountsScreen(accounts, onBack = { overlay = Overlay.NONE }, onAdd = { name, card, opening, lastFour, limit, cycle, due, minBal -> viewModel.addAccount(name, card, opening, lastFour, limit, cycle, due, minBal) }, onUpdate = viewModel::updateAccount, onDelete = viewModel::deleteAccount, onPayCard = { overlay = Overlay.CARD_PAYMENT })
                     Overlay.CATEGORIES -> CategoriesScreen(categories, onBack = { overlay = Overlay.NONE }, onAdd = { name, inc -> viewModel.addCategory(name, inc) }, onUpdate = viewModel::updateCategory, onDelete = viewModel::deleteCategory)
                     Overlay.BUDGETS -> BudgetsScreen(budgets, categories, transactions, onBack = { overlay = Overlay.NONE }, onSave = viewModel::saveBudget, onDelete = viewModel::deleteBudget, ensureMonth = viewModel::ensureBudgetMonth)
-                    Overlay.DATA -> DataScreen(viewModel, onBack = { overlay = Overlay.NONE }, onImportStatement = { overlay = Overlay.IMPORT_STATEMENT })
+                    Overlay.DATA -> DataScreen(viewModel, restoreBackupUri, onRestoreBackupUriConsumed, onPickRestoreBackup, onCreateBackup, onBack = { overlay = Overlay.NONE }, onImportStatement = { overlay = Overlay.IMPORT_STATEMENT })
                     Overlay.REMINDERS -> RemindersScreen(onBack = { overlay = Overlay.NONE })
                     Overlay.APPEARANCE -> AppearanceScreen(
                         themeMode = themeMode,
@@ -245,6 +250,9 @@ fun SpendTrackApp(
                             accounts = accounts,
                             categories = categories,
                             existingTransactions = transactions,
+                            selectedUris = selectedStatementUris,
+                            onSelectedUrisConsumed = onStatementUrisConsumed,
+                            onPickFiles = onPickStatementFiles,
                             onBack = { overlay = Overlay.NONE }
                         )
                     }
@@ -338,6 +346,7 @@ fun SpendTrackApp(
                                 "shared_expenses" -> SharedExpensesPeopleScreen(
                                     people = people,
                                     transactions = transactions,
+                                    recurringTransactions = recurringTransactions,
                                     owed = owed,
                                     bottomContentPadding = bottomContentPadding,
                                     onBack = { route = "settings" },
@@ -380,15 +389,16 @@ fun SpendTrackApp(
                         ) { overlay = if (route == "loans_owed") Overlay.LOAN_OWED_CHOOSER else Overlay.TRANSACTION }
                     }
                 }
-            }
+                if (isAppLocked) BiometricLockScreen(onUnlockRequest)
             }
         }
     }
 }
+}
 
 @Composable private fun BiometricLockScreen(onUnlock: () -> Unit) {
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().padding(24.dp),
+        Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).clickable(onClick = {}).statusBarsPadding().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -1318,6 +1328,7 @@ fun TransactionCard(
 @Composable private fun SharedExpensesPeopleScreen(
     people: List<PersonEntity>,
     transactions: List<TransactionEntity>,
+    recurringTransactions: List<RecurringTransactionEntity>,
     owed: List<OwedEntity>,
     bottomContentPadding: Dp,
     onBack: () -> Unit,
@@ -1328,6 +1339,7 @@ fun TransactionCard(
 ) {
     val haptics = rememberSpendTrackHaptics()
     var name by remember { mutableStateOf("") }
+    var managing by remember { mutableStateOf<PersonEntity?>(null) }
     var editing by remember { mutableStateOf<PersonEntity?>(null) }
     var deleting by remember { mutableStateOf<PersonEntity?>(null) }
     val dialogPerson = editing ?: deleting
@@ -1364,7 +1376,6 @@ fun TransactionCard(
                 split?.participants.orEmpty().any { it.equals(person.name, true) } ||
                     tx.sharedWith.split(",").any { it.trim().equals(person.name, true) }
             }
-            val historyCount = relatedTransactions.size + personOwed.size
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                 shape = MaterialTheme.shapes.large
@@ -1375,22 +1386,41 @@ fun TransactionCard(
                             Text(person.name, style = MaterialTheme.typography.titleMedium)
                             Text("${relatedTransactions.size} shared expenses${if (!person.isActive) " · Inactive" else ""}", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
                         }
-                        IconButton(onClick = { name = person.name; editing = person }) { Icon(Icons.Default.Edit, contentDescription = "Rename ${person.name}") }
+                        TextButton(onClick = { managing = person }) { Text("Edit") }
                     }
                     val balance = personOwed.sumOf { if (it.direction == OwedDirection.OWED_TO_ME) it.amountPaise else -it.amountPaise }
                     if (balance != 0L) Text(
                         "${if (balance > 0) "Owed to you" else "You owe"}: ${money(kotlin.math.abs(balance))}",
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = { haptics.selection(); onSetActive(person.id, !person.isActive) }) {
-                            Text(if (person.isActive) "Deactivate" else "Reactivate")
-                        }
-                        if (historyCount == 0) TextButton(onClick = { deleting = person }) { Text("Delete") }
-                    }
                 }
             }
         }
+    }
+    managing?.let { person ->
+        val hasHistory = transactions.any { tx ->
+            val split = SharedExpenseHelper.deserialize(tx.splitDetails)
+            split?.participants.orEmpty().any { it.equals(person.name, true) } ||
+                split?.shares?.keys.orEmpty().any { it.equals(person.name, true) } ||
+                tx.sharedWith.split(",").any { it.trim().equals(person.name, true) }
+        } || owed.any { it.personName.equals(person.name, true) } || recurringTransactions.any {
+            it.sharedWith.split(",").any { name -> name.trim().equals(person.name, true) }
+        }
+        AlertDialog(
+            onDismissRequest = { managing = null },
+            title = { Text(person.name) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = { name = person.name; editing = person; managing = null }) { Text("Rename") }
+                    TextButton(onClick = { haptics.selection(); onSetActive(person.id, !person.isActive); managing = null }) {
+                        Text(if (person.isActive) "Disable" else "Enable")
+                    }
+                    if (hasHistory) Text("Delete unavailable because this person has financial history.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    else TextButton(onClick = { deleting = person; managing = null }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                }
+            },
+            confirmButton = { TextButton(onClick = { managing = null }) { Text("Cancel") } }
+        )
     }
     if (dialogPerson != null) {
         val isRename = editing != null
@@ -1654,23 +1684,42 @@ fun TransactionCard(
         dismissButton = { TextButton(onDismiss) { Text("Cancel") } },
     )
 }
-@Composable private fun DataScreen(viewModel: FinanceViewModel, onBack: () -> Unit, onImportStatement: (() -> Unit)? = null) {
+@Composable private fun DataScreen(
+    viewModel: FinanceViewModel,
+    restoreBackupUri: Uri?,
+    onRestoreBackupUriConsumed: () -> Unit,
+    onPickRestoreBackup: () -> Unit,
+    onCreateBackup: (String) -> Unit,
+    onBack: () -> Unit,
+    onImportStatement: (() -> Unit)? = null
+) {
     val context = LocalContext.current
-    var backupText by remember { mutableStateOf<String?>(null) }
     var pendingRestore by remember { mutableStateOf<String?>(null) }
     var status by remember { mutableStateOf("") }
-    val createDocument = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri -> backupText?.let { text -> if (uri != null) { runCatching { context.contentResolver.openOutputStream(uri)?.bufferedWriter()?.use { it.write(text) } }.onSuccess { status = "Backup saved" }.onFailure { status = "Backup failed" } }; backupText = null } }
-    val openDocument = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) pendingRestore = runCatching { context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: error("Unable to read file") }.getOrElse { status = "Restore failed"; null } }
+    var isRestoring by remember { mutableStateOf(false) }
+    LaunchedEffect(restoreBackupUri) {
+        val uri = restoreBackupUri ?: return@LaunchedEffect
+        val result = withContext(Dispatchers.IO) {
+            runCatching { context.contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: error("Unable to read file") }
+        }
+        result.fold({ pendingRestore = it }, { status = "Restore failed: ${it.localizedMessage ?: "Unable to read file"}" })
+        onRestoreBackupUriConsumed()
+    }
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Row(verticalAlignment = Alignment.CenterVertically) { ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Data", style = MaterialTheme.typography.titleLarge) } }
         if (onImportStatement != null) {
             item { Button({ onImportStatement() }, Modifier.fillMaxWidth()) { Text("Import statement (PDF)") } }
         }
-        item { OutlinedButton({ viewModel.exportBackup { result -> result.onSuccess { backupText = it; createDocument.launch("spendtrack-backup.json") }.onFailure { status = "Backup failed" } } }, Modifier.fillMaxWidth()) { Text("Create backup") } }
-        item { OutlinedButton({ openDocument.launch(arrayOf("application/json", "text/plain")) }, Modifier.fillMaxWidth()) { Text("Restore backup") } }
+        item { OutlinedButton({ viewModel.exportBackup { result -> result.onSuccess(onCreateBackup).onFailure { status = "Backup failed: ${it.localizedMessage ?: "Unable to create backup"}" } } }, Modifier.fillMaxWidth()) { Text("Create backup") } }
+        item {
+            OutlinedButton({
+                runCatching { onPickRestoreBackup() }
+                    .onFailure { status = "Unable to open file picker: ${it.localizedMessage ?: "Try again"}" }
+            }, Modifier.fillMaxWidth()) { Text("Restore backup") }
+        }
         if (status.isNotBlank()) item { Text(status, color = MaterialTheme.colorScheme.onSurfaceVariant) }
     }
-    pendingRestore?.let { text -> AlertDialog(onDismissRequest = { pendingRestore = null }, title = { Text("Restore backup?") }, text = { Text("This replaces the current local data.") }, confirmButton = { TextButton({ viewModel.restoreBackup(text) { result -> status = if (result.isSuccess) "Backup restored" else "Restore failed"; pendingRestore = null } }) { Text("Restore") } }, dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("Cancel") } }) }
+    pendingRestore?.let { text -> AlertDialog(onDismissRequest = { if (!isRestoring) pendingRestore = null }, title = { Text("Restore backup?") }, text = { Text("This replaces the current local data.") }, confirmButton = { TextButton({ isRestoring = true; viewModel.restoreBackup(text) { result -> isRestoring = false; status = result.fold({ "Backup restored" }, { "Restore failed: ${it.localizedMessage ?: "Invalid backup"}" }); pendingRestore = null } }, enabled = !isRestoring) { Text(if (isRestoring) "Restoring…" else "Restore") } }, dismissButton = { TextButton(onClick = { if (!isRestoring) pendingRestore = null }, enabled = !isRestoring) { Text("Cancel") } }) }
 }
 @Composable private fun SummaryCard(title: String, value: String, sub: String) {
     Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraExtraLarge, colors = CardDefaults.cardColors(containerColor = if (title == "Net Worth") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer)) {

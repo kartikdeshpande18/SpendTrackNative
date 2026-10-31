@@ -17,7 +17,9 @@ import com.spendtrack.app.data.repository.FinanceRepository
 import com.spendtrack.app.data.repository.BackupRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class FinanceViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = FinanceRepository(DatabaseProvider.get(application))
@@ -106,5 +108,5 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun toggleRecurringTransaction(id: Long, isEnabled: Boolean) = viewModelScope.launch { repository.toggleRecurringTransaction(id, isEnabled) }
     fun processDueRecurringTransactions() = viewModelScope.launch { repository.processDueRecurringTransactions() }
     fun exportBackup(onResult: (Result<String>) -> Unit) = viewModelScope.launch { runCatching { backupRepository.export() }.also(onResult) }
-    fun restoreBackup(text: String, onResult: (Result<Unit>) -> Unit) = viewModelScope.launch { runCatching { backupRepository.restore(text) }.also(onResult) }
+    fun restoreBackup(text: String, onResult: (Result<Unit>) -> Unit) = viewModelScope.launch { runCatching { withContext(Dispatchers.IO) { backupRepository.restore(text) } }.also(onResult) }
 }
