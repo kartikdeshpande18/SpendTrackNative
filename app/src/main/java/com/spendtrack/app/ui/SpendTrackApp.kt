@@ -93,6 +93,7 @@ import com.spendtrack.app.ui.theme.SpendTrackTheme
 import com.spendtrack.app.ui.theme.AppThemeMode
 import com.spendtrack.app.ui.theme.ThemePreferences
 import com.spendtrack.app.ui.animation.SpendTrackMotion
+import com.spendtrack.app.ui.animation.pressScale
 import com.spendtrack.app.ui.haptics.rememberSpendTrackHaptics
 import androidx.compose.material.icons.outlined.Settings
 import com.spendtrack.app.ui.dashboard.SavingsCalculator
@@ -558,6 +559,7 @@ fun SpendTrackApp(
                             animationSpec = tween(SpendTrackMotion.DurationFast),
                             label = "TabIconScale",
                         )
+                        val tabInteractionSource = remember { MutableInteractionSource() }
                         FilledIconButton(
                             onClick = {
                                 if (route != destination.route) {
@@ -565,7 +567,10 @@ fun SpendTrackApp(
                                     changeRoute(destination.route)
                                 }
                             },
-                            modifier = Modifier.size(44.dp),
+                            interactionSource = tabInteractionSource,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .pressScale(tabInteractionSource, targetScale = 0.94f),
                             shape = CircleShape,
                             colors = IconButtonDefaults.filledTonalIconButtonColors(
                                 containerColor = containerColor,
@@ -584,12 +589,6 @@ fun SpendTrackApp(
 
             // Measurable 1: Independent Large FAB positioned immediately to the right of the centered pill
             val fabInteractionSource = remember { MutableInteractionSource() }
-            val isFabPressed by fabInteractionSource.collectIsPressedAsState()
-            val fabScale by animateFloatAsState(
-                targetValue = if (isFabPressed) 0.92f else 1.0f,
-                animationSpec = tween(SpendTrackMotion.DurationFast),
-                label = "FabScale",
-            )
             FloatingActionButton(
                 onClick = {
                     haptics.click()
@@ -598,7 +597,7 @@ fun SpendTrackApp(
                 interactionSource = fabInteractionSource,
                 modifier = Modifier
                     .size(72.dp)
-                    .scale(fabScale),
+                    .pressScale(fabInteractionSource, targetScale = 0.96f),
                 shape = RoundedCornerShape(24.dp),
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -1410,8 +1409,25 @@ fun TransactionCard(
     val isIncome = transaction.type == TransactionType.INCOME
     val dateText = formatDate(transaction.dateEpochDay)
 
+    val cardInteractionSource = remember { MutableInteractionSource() }
+    val cardModifier = if (onEdit != null) {
+        modifier
+            .fillMaxWidth()
+            .pressScale(cardInteractionSource, targetScale = 0.98f)
+            .clickable(
+                interactionSource = cardInteractionSource,
+                indication = null,
+                onClick = {
+                    haptics.selection()
+                    onEdit(transaction)
+                }
+            )
+    } else {
+        modifier.fillMaxWidth()
+    }
+
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = cardModifier,
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
@@ -1539,9 +1555,13 @@ fun TransactionCard(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     if (onEdit != null) {
+                        val editInteractionSource = remember { MutableInteractionSource() }
                         IconButton(
                             onClick = { haptics.click(); onEdit(transaction) },
-                            modifier = Modifier.size(44.dp)
+                            interactionSource = editInteractionSource,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .pressScale(editInteractionSource, targetScale = 0.90f)
                         ) {
                             Icon(
                                 Icons.Default.Edit,
@@ -1552,9 +1572,13 @@ fun TransactionCard(
                         }
                     }
                     if (onDelete != null) {
+                        val deleteInteractionSource = remember { MutableInteractionSource() }
                         IconButton(
                             onClick = { haptics.reject(); onDelete(transaction.id) },
-                            modifier = Modifier.size(44.dp)
+                            interactionSource = deleteInteractionSource,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .pressScale(deleteInteractionSource, targetScale = 0.90f)
                         ) {
                             Icon(
                                 Icons.Default.Delete,
