@@ -37,6 +37,28 @@ object ReminderPreferences {
             .apply()
     }
 
+    fun pruneOldNotifications(context: Context, olderThanDays: Long = 60L) {
+        val prefs = context.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
+        val cutoff = java.time.LocalDate.now().minusDays(olderThanDays)
+        val editor = prefs.edit()
+        var hasChanges = false
+        prefs.all.keys.filter { it.startsWith("notif_") }.forEach { key ->
+            val parts = key.split("_")
+            if (parts.size >= 4) {
+                runCatching {
+                    val date = java.time.LocalDate.parse(parts[parts.size - 2])
+                    if (date.isBefore(cutoff)) {
+                        editor.remove(key)
+                        hasChanges = true
+                    }
+                }
+            }
+        }
+        if (hasChanges) {
+            editor.apply()
+        }
+    }
+
     fun cardLeadTimes(context: Context): ReminderLeadTimes = read(context, CARD_FIRST, CARD_SECOND)
 
     fun loanLeadTimes(context: Context): ReminderLeadTimes = read(context, LOAN_FIRST, LOAN_SECOND)

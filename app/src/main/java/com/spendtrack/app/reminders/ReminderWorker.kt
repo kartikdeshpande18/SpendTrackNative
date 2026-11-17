@@ -30,6 +30,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         if (!ReminderPreferences.isNotificationsEnabled(applicationContext)) {
             return Result.success()
         }
+        ReminderPreferences.pruneOldNotifications(applicationContext)
 
         val cardLeadTimes = ReminderPreferences.cardLeadTimes(applicationContext)
         val loanLeadTimes = ReminderPreferences.loanLeadTimes(applicationContext)

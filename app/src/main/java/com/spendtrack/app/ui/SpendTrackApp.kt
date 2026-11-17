@@ -2323,7 +2323,6 @@ private fun SettingsCard(title: String, sub: String, onClick: () -> Unit = {}) {
         }
     }
 }
-@Composable private fun ActionDialog(close: () -> Unit) { AlertDialog(onDismissRequest = close, title = { Text("Add a loan or personal ledger entry") }, text = { Text("Loan and owed-entry forms are still to be completed.") }, confirmButton = { TextButton(close) { Text("OK") } }) }
 
 @Composable private fun AccountsScreen(
     accounts: List<AccountEntity>,
@@ -3241,31 +3240,6 @@ private fun SettingsCard(title: String, sub: String, onClick: () -> Unit = {}) {
         Button(onClick = { haptics.confirm(); onPay(card!!.id, source!!.id, amountPaise) }, enabled = card != null && source != null && amountPaise in 1..(card?.balancePaise ?: 0), modifier = Modifier.fillMaxWidth()) { Text("Pay Bill") }
     }
 }
-
-fun formatIndianMoney(paise: Long): String {
-    val absPaise = Math.abs(paise)
-    val rupees = absPaise / 100
-    val remPaise = (absPaise % 100).toInt()
-    val paiseStr = if (remPaise < 10) "0$remPaise" else "$remPaise"
-    val rupeeStr = rupees.toString()
-    val formattedRupees = if (rupeeStr.length <= 3) {
-        rupeeStr
-    } else {
-        val lastThree = rupeeStr.takeLast(3)
-        val rest = rupeeStr.dropLast(3)
-        val sb = java.lang.StringBuilder(rupeeStr.length + (rest.length / 2) + 1)
-        for (i in rest.indices) {
-            if (i > 0 && (rest.length - i) % 2 == 0) {
-                sb.append(',')
-            }
-            sb.append(rest[i])
-        }
-        sb.append(',').append(lastThree).toString()
-    }
-    return (if (paise < 0) "−" else "") + "₹" + formattedRupees + "." + paiseStr
-}
-
-fun money(paise: Long): String = formatIndianMoney(paise)
 
 private fun formatPaiseInput(paise: Long): String = "${paise / 100}.${(paise % 100).toString().padStart(2, '0')}"
 
