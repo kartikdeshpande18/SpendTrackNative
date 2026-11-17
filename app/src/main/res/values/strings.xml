@@ -1,1 +1,7 @@
-<resources><string name="app_name">SpendTrack</string></resources>
+<resources>
+    <string name="app_name">SpendTrack</string>
+    <string name="widget_spendtrack_name">SpendTrack Overview</string>
+    <string name="widget_spendtrack_description">Glanceable spending, net worth, and quick transaction capture in Material 3 Expressive style.</string>
+    <string name="widget_quick_actions_name">SpendTrack Quick Actions</string>
+    <string name="widget_quick_actions_description">One-tap quick access to record expenses, income, and transfers.</string>
+</resources>

@@ -442,10 +442,15 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
         val baselineInterestDay = if (!account.isCreditCard && account.interestRateBps > 0 && account.lastInterestPostingEpochDay == null) {
             LocalDate.now().minusDays(1).toEpochDay()
         } else account.lastInterestPostingEpochDay
+        // Slice bank credits interest daily; force DAILY frequency for Slice accounts
+        val effectiveFrequency = if (account.name.contains("slice", ignoreCase = true))
+            InterestCreditFrequency.DAILY.name
+        else account.interestCreditFrequency
         database.accounts().update(
             account.copy(
                 minimumBalancePaise = sanitizedMinBalance,
                 interestCalculationMethod = InterestCalculationMethod.DAILY.name,
+                interestCreditFrequency = effectiveFrequency,
                 lastInterestPostingEpochDay = baselineInterestDay,
             )
         )
@@ -631,8 +636,10 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
         require(!account.isCreditCard) { "Interest cannot be posted to a credit card" }
         require(amountPaise > 0) { "Interest amount must be positive" }
 
-        val frequency = runCatching { InterestCreditFrequency.valueOf(account.interestCreditFrequency) }
-            .getOrDefault(InterestCreditFrequency.QUARTERLY)
+        val isSliceAccount = account.name.contains("slice", ignoreCase = true)
+        val frequency = if (isSliceAccount) InterestCreditFrequency.DAILY
+            else runCatching { InterestCreditFrequency.valueOf(account.interestCreditFrequency) }
+                .getOrDefault(InterestCreditFrequency.QUARTERLY)
         val period = SavingsInterestPeriod(
             LocalDate.ofEpochDay(calculationPeriodStartEpochDay),
             LocalDate.ofEpochDay(calculationPeriodEndEpochDay)
@@ -640,9 +647,17 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
         require(!period.end.isBefore(period.start)) { "Invalid interest calculation period" }
         val desc = SavingsInterestPeriods.description(frequency, period)
 
-        // Prevent duplicate interest posting on retry
+        // Prevent duplicate interest posting on retry (matches internal and statement formats)
         val existing = database.transactions().observeAll().first()
-            .firstOrNull { it.accountId == accountId && it.type == TransactionType.INCOME && it.description == desc }
+            .firstOrNull { tx ->
+                SavingsInterestCalculator.isDuplicateInterest(
+                    tx = tx,
+                    accountId = accountId,
+                    date = period.end,
+                    frequency = frequency,
+                    periodDescription = desc
+                )
+            }
         if (existing != null) {
             return@withTransaction existing.id
         }
@@ -683,8 +698,11 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
 
         database.accounts().observeAll().first().forEach { account ->
             if (account.isCreditCard || account.interestRateBps <= 0) return@forEach
-            val frequency = runCatching { InterestCreditFrequency.valueOf(account.interestCreditFrequency) }
-                .getOrDefault(InterestCreditFrequency.QUARTERLY)
+            val isSliceAccount = account.name.contains("slice", ignoreCase = true)
+            // Slice bank credits interest daily regardless of what's stored
+            val frequency = if (isSliceAccount) InterestCreditFrequency.DAILY
+                else runCatching { InterestCreditFrequency.valueOf(account.interestCreditFrequency) }
+                    .getOrDefault(InterestCreditFrequency.QUARTERLY)
             val through = SavingsInterestPeriods.lastCompletedThrough(today, frequency)
             var nextDay = account.lastInterestPostingEpochDay?.let { LocalDate.ofEpochDay(it).plusDays(1) }
                 ?: SavingsInterestPeriods.containing(through, frequency).start
@@ -694,8 +712,14 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
                 val period = SavingsInterestPeriods.containing(nextDay, frequency)
                 if (period.end.isAfter(through)) break
                 val description = SavingsInterestPeriods.description(frequency, period)
-                val duplicate = allTransactions.any {
-                    it.accountId == account.id && it.type == TransactionType.INCOME && it.description == description
+                val duplicate = allTransactions.any { tx ->
+                    SavingsInterestCalculator.isDuplicateInterest(
+                        tx = tx,
+                        accountId = account.id,
+                        date = period.end,
+                        frequency = frequency,
+                        periodDescription = description
+                    )
                 }
                 if (!duplicate) {
                     val accountTransactions = allTransactions.asSequence()
@@ -706,21 +730,57 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
                             } else transaction
                         }
                         .toList()
-                    val balances = SavingsInterestCalculator.reconstructDailyBalances(
-                        currentBalancePaise = currentBalance,
-                        todayEpochDay = today.toEpochDay(),
-                        accountTransactions = accountTransactions,
-                        startEpochDay = period.start.toEpochDay(),
-                        endEpochDay = period.end.toEpochDay(),
-                    )
-                    val interest = SavingsInterestCalculator.calculateInterestPaise(
-                        dailyBalances = balances,
-                        fallbackBalancePaise = currentBalance,
-                        interestRateBps = account.interestRateBps,
-                        method = InterestCalculationMethod.DAILY,
-                        startEpochDay = period.start.toEpochDay(),
-                        endEpochDay = period.end.toEpochDay(),
-                    )
+
+                    val interest = if (isSliceAccount && frequency == InterestCreditFrequency.DAILY) {
+                        val monthStart = period.end.withDayOfMonth(1)
+                        val balances = SavingsInterestCalculator.reconstructDailyBalances(
+                            currentBalancePaise = currentBalance,
+                            todayEpochDay = today.toEpochDay(),
+                            accountTransactions = accountTransactions,
+                            startEpochDay = monthStart.toEpochDay(),
+                            endEpochDay = period.end.toEpochDay(),
+                        )
+                        val catId = categoryId
+                        val alreadyPaidInMonth = allTransactions.asSequence()
+                            .filter { it.accountId == account.id && it.type == TransactionType.INCOME && !it.isExcludedFromCalculations }
+                            .filter { (catId != null && it.categoryId == catId) || it.description.contains("interest", ignoreCase = true) }
+                            .filter { tx ->
+                                val parsed = SavingsInterestCalculator.parseInterestDate(tx.description)
+                                if (parsed != null) {
+                                    parsed.year == period.end.year && parsed.month == period.end.month && parsed.isBefore(period.end)
+                                } else {
+                                    val txDate = LocalDate.ofEpochDay(tx.dateEpochDay)
+                                    txDate.year == period.end.year && txDate.month == period.end.month && txDate.isBefore(period.end)
+                                }
+                            }
+                            .sumOf { it.amountPaise }
+
+                        SavingsInterestCalculator.calculateCumulativeDailyInterestPaise(
+                            dailyBalances = balances,
+                            fallbackBalancePaise = currentBalance,
+                            interestRateBps = account.interestRateBps,
+                            targetEpochDay = period.end.toEpochDay(),
+                            alreadyPaidInMonthPaise = alreadyPaidInMonth,
+                        )
+                    } else {
+                        val balances = SavingsInterestCalculator.reconstructDailyBalances(
+                            currentBalancePaise = currentBalance,
+                            todayEpochDay = today.toEpochDay(),
+                            accountTransactions = accountTransactions,
+                            startEpochDay = period.start.toEpochDay(),
+                            endEpochDay = period.end.toEpochDay(),
+                        )
+                        SavingsInterestCalculator.calculateInterestPaise(
+                            dailyBalances = balances,
+                            fallbackBalancePaise = currentBalance,
+                            interestRateBps = account.interestRateBps,
+                            method = runCatching { InterestCalculationMethod.valueOf(account.interestCalculationMethod) }
+                                .getOrDefault(InterestCalculationMethod.DAILY),
+                            startEpochDay = period.start.toEpochDay(),
+                            endEpochDay = period.end.toEpochDay(),
+                        )
+                    }
+
                     if (interest > 0L) {
                         if (categoryId == null) categoryId = database.categories().insert(CategoryEntity(name = "Interest", isIncomeCategory = true))
                         currentBalance += interest

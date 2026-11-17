@@ -30,10 +30,12 @@ class MainActivity : FragmentActivity() {
     private var restoreBackupUri by mutableStateOf<Uri?>(null)
     private var selectedStatementUris by mutableStateOf<List<Uri>>(emptyList())
     private var pendingBackupText: String? = null
+    private var widgetAction by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        widgetAction = intent?.getStringExtra("extra_action")
         biometricEnabled = BiometricPreferences.isEnabled(this)
         isUnlocked = !biometricEnabled
         lifecycleScope.launch(Dispatchers.Default) {
@@ -54,9 +56,17 @@ class MainActivity : FragmentActivity() {
                 onCreateBackup = ::saveBackup,
                 selectedStatementUris = selectedStatementUris,
                 onStatementUrisConsumed = { selectedStatementUris = emptyList() },
-                onPickStatementFiles = ::pickStatementFiles
+                onPickStatementFiles = ::pickStatementFiles,
+                widgetAction = widgetAction,
+                onWidgetActionConsumed = { widgetAction = null }
             )
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        widgetAction = intent.getStringExtra("extra_action")
     }
 
     @Deprecated("Deprecated in Java")

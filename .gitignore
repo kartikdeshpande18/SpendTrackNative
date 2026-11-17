@@ -24,3 +24,9 @@ Thumbs.db
 
 # Generated reports
 **/build/reports/
+
+# Test artifacts and local data
+*.pdf
+spendtrack-backup.json
+screenshots/
+

@@ -18,17 +18,31 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.outlined.AccountBalance
+import androidx.compose.material.icons.outlined.Category
+import androidx.compose.material.icons.outlined.People
+import androidx.compose.material.icons.outlined.Savings
+import androidx.compose.material.icons.outlined.PieChart
+import androidx.compose.material.icons.outlined.Repeat
+import androidx.compose.material.icons.outlined.Palette
+import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Storage
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.filled.ArrowDropDown
@@ -87,10 +101,13 @@ import com.spendtrack.app.ui.dashboard.TopBudgetCategoryCard
 import com.spendtrack.app.ui.dashboard.TopBudgetCategoriesEmptyCard
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.runtime.LaunchedEffect
 
-private enum class Overlay { NONE, TRANSACTION, EDIT_TRANSACTION, ACCOUNTS, CATEGORIES, BUDGETS, DATA, REMINDERS, APPEARANCE, ABOUT, ADD_LOAN, ADD_OWED, CARD_PAYMENT, LOAN_OWED_CHOOSER, FIXED_DEPOSITS, RECURRING_TRANSACTIONS, IMPORT_STATEMENT }
+private enum class Overlay { NONE, TRANSACTION, EDIT_TRANSACTION, ACCOUNTS, CATEGORIES, BUDGETS, DATA, REMINDERS, APPEARANCE, ABOUT, ADD_LOAN, ADD_OWED, CARD_PAYMENT, LOAN_OWED_CHOOSER, FIXED_DEPOSITS, RECURRING_TRANSACTIONS, IMPORT_STATEMENT, SHARED_EXPENSES }
 private enum class ReminderType { CARD, LOAN }
 
 @Composable
@@ -106,7 +123,9 @@ fun SpendTrackApp(
     onCreateBackup: (String) -> Unit = {},
     selectedStatementUris: List<Uri> = emptyList(),
     onStatementUrisConsumed: () -> Unit = {},
-    onPickStatementFiles: () -> Unit = {}
+    onPickStatementFiles: () -> Unit = {},
+    widgetAction: String? = null,
+    onWidgetActionConsumed: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var themeMode by rememberSaveable { mutableStateOf(ThemePreferences.mode(context)) }
@@ -117,7 +136,48 @@ fun SpendTrackApp(
         AppThemeMode.DARK -> true
     }
     var route by rememberSaveable { mutableStateOf("home") }
-    var overlay by rememberSaveable { mutableStateOf(Overlay.NONE) }
+    var previousRoute by rememberSaveable { mutableStateOf("home") }
+    var overlay by rememberSaveable(stateSaver = run {
+        androidx.compose.runtime.saveable.Saver(
+            save = { it.name },
+            restore = { name -> runCatching { Overlay.valueOf(name) }.getOrDefault(Overlay.NONE) }
+        )
+    }) { mutableStateOf(Overlay.NONE) }
+    var transactionInitialType by rememberSaveable { mutableStateOf(TransactionType.EXPENSE) }
+    var selectedCardPaymentCardId by rememberSaveable { mutableStateOf<Long?>(null) }
+
+    LaunchedEffect(widgetAction) {
+        when (widgetAction) {
+            "add_expense" -> {
+                transactionInitialType = TransactionType.EXPENSE
+                overlay = Overlay.TRANSACTION
+                onWidgetActionConsumed()
+            }
+            "add_income" -> {
+                transactionInitialType = TransactionType.INCOME
+                overlay = Overlay.TRANSACTION
+                onWidgetActionConsumed()
+            }
+            "add_transfer" -> {
+                transactionInitialType = TransactionType.TRANSFER
+                overlay = Overlay.TRANSACTION
+                onWidgetActionConsumed()
+            }
+            "add_transaction" -> {
+                transactionInitialType = TransactionType.EXPENSE
+                overlay = Overlay.TRANSACTION
+                onWidgetActionConsumed()
+            }
+            "budgets" -> {
+                overlay = Overlay.BUDGETS
+                onWidgetActionConsumed()
+            }
+            "spending" -> {
+                route = "spending"
+                onWidgetActionConsumed()
+            }
+        }
+    }
     var editingTransactionId by rememberSaveable { mutableLongStateOf(0L) }
     var dashboardMonthStr by rememberSaveable { mutableStateOf(YearMonth.now().toString()) }
     val spendingListState = rememberLazyListState()
@@ -150,6 +210,7 @@ fun SpendTrackApp(
     BackHandler(enabled = overlay != Overlay.NONE || route != "home") {
         when {
             overlay != Overlay.NONE -> overlay = Overlay.NONE
+            route == "settings" -> route = if (previousRoute == "settings" || previousRoute.isBlank()) "home" else previousRoute
             route != "home" -> route = "home"
         }
     }
@@ -167,9 +228,21 @@ fun SpendTrackApp(
                     Overlay.TRANSACTION -> AddTransactionScreen(
                         accounts = accounts,
                         categories = categories,
-                        onSaved = { viewModel.addTransaction(it); overlay = Overlay.NONE },
-                        onCancel = { overlay = Overlay.NONE },
-                        onSaveRecurring = { viewModel.addRecurringTransaction(it); overlay = Overlay.NONE },
+                        initialType = transactionInitialType,
+                        onSaved = {
+                            viewModel.addTransaction(it)
+                            transactionInitialType = TransactionType.EXPENSE
+                            overlay = Overlay.NONE
+                        },
+                        onCancel = {
+                            transactionInitialType = TransactionType.EXPENSE
+                            overlay = Overlay.NONE
+                        },
+                        onSaveRecurring = {
+                            viewModel.addRecurringTransaction(it)
+                            transactionInitialType = TransactionType.EXPENSE
+                            overlay = Overlay.NONE
+                        },
                         owedParticipants = activeOwedParticipants,
                         onCreatePerson = viewModel::createPerson
                     )
@@ -200,7 +273,7 @@ fun SpendTrackApp(
                     Overlay.ABOUT -> AboutScreen(onBack = { overlay = Overlay.NONE })
                     Overlay.ADD_LOAN -> AddLoanScreen(onBack = { overlay = Overlay.NONE }, onSave = { viewModel.addLoan(it); overlay = Overlay.NONE })
                     Overlay.ADD_OWED -> AddOwedScreen(people = activePeople, onBack = { overlay = Overlay.NONE }, onSave = { viewModel.addOwed(it); overlay = Overlay.NONE })
-                    Overlay.CARD_PAYMENT -> CardPaymentScreen(accounts, onBack = { overlay = Overlay.NONE }, onPay = { cardId, sourceId, amount -> viewModel.payCard(cardId, sourceId, amount, LocalDate.now().toEpochDay()); overlay = Overlay.NONE })
+                    Overlay.CARD_PAYMENT -> CardPaymentScreen(accounts, initialCardId = selectedCardPaymentCardId, onBack = { selectedCardPaymentCardId = null; overlay = Overlay.NONE }, onPay = { cardId, sourceId, amount -> viewModel.payCard(cardId, sourceId, amount, LocalDate.now().toEpochDay()); selectedCardPaymentCardId = null; overlay = Overlay.NONE })
                     Overlay.FIXED_DEPOSITS -> FixedDepositsScreen(
                         fixedDeposits = fixedDeposits,
                         accounts = accounts,
@@ -217,7 +290,7 @@ fun SpendTrackApp(
                         accounts = accounts,
                         categories = categories,
                         onBack = { overlay = Overlay.NONE },
-                        onAddNew = { overlay = Overlay.TRANSACTION },
+                        onAddNew = { transactionInitialType = TransactionType.EXPENSE; overlay = Overlay.TRANSACTION },
                         onToggleEnable = viewModel::toggleRecurringTransaction,
                         onUpdate = viewModel::updateRecurringTransaction,
                         onDelete = viewModel::deleteRecurringTransaction
@@ -256,6 +329,18 @@ fun SpendTrackApp(
                             onBack = { overlay = Overlay.NONE }
                         )
                     }
+                    Overlay.SHARED_EXPENSES -> SharedExpensesPeopleScreen(
+                        people = people,
+                        transactions = transactions,
+                        recurringTransactions = recurringTransactions,
+                        owed = owed,
+                        bottomContentPadding = 0.dp,
+                        onBack = { overlay = Overlay.NONE },
+                        onCreate = viewModel::createPerson,
+                        onRename = viewModel::renamePerson,
+                        onSetActive = viewModel::setPersonActive,
+                        onDelete = viewModel::deletePerson
+                    )
                     else -> Box(Modifier.fillMaxSize().statusBarsPadding()) {
                         AnimatedContent(
                             targetState = route,
@@ -279,7 +364,15 @@ fun SpendTrackApp(
                                         bottomContentPadding = bottomContentPadding,
                                         selectedMonth = currentDashboardMonth,
                                         onMonthSelected = { dashboardMonthStr = it.toString() },
-                                        onSettings = { route = "settings" }
+                                        onPayCard = { card ->
+                                            selectedCardPaymentCardId = card.id
+                                            overlay = Overlay.CARD_PAYMENT
+                                        },
+                                        onSettings = {
+                                            previousRoute = route
+                                            overlay = Overlay.NONE
+                                            route = "settings"
+                                        }
                                     )
                                 }
                                 "spending" -> {
@@ -315,7 +408,11 @@ fun SpendTrackApp(
                                             spendingCustomEndDay = newFilter.customEndDateEpochDay
                                         },
                                         onEdit = { editingTransactionId = it.id; overlay = Overlay.EDIT_TRANSACTION },
-                                        onSettings = { route = "settings" }
+                                        onSettings = {
+                                            previousRoute = route
+                                            overlay = Overlay.NONE
+                                            route = "settings"
+                                        }
                                     )
                                 }
                                 "accounts" -> AccountsScreen(
@@ -328,7 +425,11 @@ fun SpendTrackApp(
                                     onUpdate = viewModel::updateAccount,
                                     onDelete = viewModel::deleteAccount,
                                     onPayCard = { overlay = Overlay.CARD_PAYMENT },
-                                    onSettings = { route = "settings" }
+                                    onSettings = {
+                                        previousRoute = route
+                                        overlay = Overlay.NONE
+                                        route = "settings"
+                                    }
                                 )
                                 "loans_owed" -> LoansOwed(
                                     loans = loans,
@@ -341,19 +442,11 @@ fun SpendTrackApp(
                                     onUpdateOwed = viewModel::updateOwed,
                                     onDeleteOwed = viewModel::deleteOwed,
                                     onSettleOwed = { owedId, amount, accId -> viewModel.settleOwed(owedId, amount, accId) },
-                                    onSettings = { route = "settings" }
-                                )
-                                "shared_expenses" -> SharedExpensesPeopleScreen(
-                                    people = people,
-                                    transactions = transactions,
-                                    recurringTransactions = recurringTransactions,
-                                    owed = owed,
-                                    bottomContentPadding = bottomContentPadding,
-                                    onBack = { route = "settings" },
-                                    onCreate = viewModel::createPerson,
-                                    onRename = viewModel::renamePerson,
-                                    onSetActive = viewModel::setPersonActive,
-                                    onDelete = viewModel::deletePerson
+                                    onSettings = {
+                                        previousRoute = route
+                                        overlay = Overlay.NONE
+                                        route = "settings"
+                                    }
                                 )
                                 else -> {
                                     val activeFdCount = remember(fixedDeposits) { fixedDeposits.count { it.status == FixedDepositStatus.ACTIVE } }
@@ -364,29 +457,38 @@ fun SpendTrackApp(
                                         activeFdCount,
                                         activeRecurringCount,
                                         bottomContentPadding,
-                                    onBack = { route = "home" },
-                                    onAccounts = { overlay = Overlay.ACCOUNTS },
-                                    onCategories = { overlay = Overlay.CATEGORIES },
-                                    onFixedDeposits = { overlay = Overlay.FIXED_DEPOSITS },
-                                    onRecurring = { overlay = Overlay.RECURRING_TRANSACTIONS },
-                                    onBudgets = { overlay = Overlay.BUDGETS },
-                                    onData = { overlay = Overlay.DATA },
-                                    onReminders = { overlay = Overlay.REMINDERS },
-                                    onAppearance = { overlay = Overlay.APPEARANCE },
-                                    onAbout = { overlay = Overlay.ABOUT },
-                                    onSharedExpenses = { route = "shared_expenses" },
-                                    biometricEnabled = biometricEnabled,
-                                    onBiometricPreferenceChange = onBiometricPreferenceChange
-                                )
-                            }
+                                        onBack = {
+                                            val target = if (previousRoute == "settings" || previousRoute.isBlank()) "home" else previousRoute
+                                            overlay = Overlay.NONE
+                                            route = target
+                                        },
+                                        onAccounts = { overlay = Overlay.ACCOUNTS },
+                                        onCategories = { overlay = Overlay.CATEGORIES },
+                                        onFixedDeposits = { overlay = Overlay.FIXED_DEPOSITS },
+                                        onRecurring = { overlay = Overlay.RECURRING_TRANSACTIONS },
+                                        onBudgets = { overlay = Overlay.BUDGETS },
+                                        onData = { overlay = Overlay.DATA },
+                                        onReminders = { overlay = Overlay.REMINDERS },
+                                        onAppearance = { overlay = Overlay.APPEARANCE },
+                                        onAbout = { overlay = Overlay.ABOUT },
+                                        onSharedExpenses = { overlay = Overlay.SHARED_EXPENSES },
+                                        biometricEnabled = biometricEnabled,
+                                        onBiometricPreferenceChange = onBiometricPreferenceChange
+                                    )
+                                }
                             }
                         }
                         if (overlay == Overlay.LOAN_OWED_CHOOSER) LoanOwedActionDialog(onLoan = { overlay = Overlay.ADD_LOAN }, onOwed = { overlay = Overlay.ADD_OWED }, onDismiss = { overlay = Overlay.NONE })
-                        FloatingControls(
-                            route = route,
-                            modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter).onSizeChanged { floatingControlsHeightPx = it.height },
-                            changeRoute = { route = it },
-                        ) { overlay = if (route == "loans_owed") Overlay.LOAN_OWED_CHOOSER else Overlay.TRANSACTION }
+                        if (route in listOf("home", "spending", "loans_owed") && overlay == Overlay.NONE) {
+                            FloatingControls(
+                                route = route,
+                                modifier = Modifier.align(androidx.compose.ui.Alignment.BottomCenter).onSizeChanged { floatingControlsHeightPx = it.height },
+                                changeRoute = { route = it },
+                            ) {
+                                transactionInitialType = TransactionType.EXPENSE
+                                overlay = if (route == "loans_owed") Overlay.LOAN_OWED_CHOOSER else Overlay.TRANSACTION
+                            }
+                        }
                     }
                 }
                 if (isAppLocked) BiometricLockScreen(onUnlockRequest)
@@ -412,7 +514,7 @@ fun SpendTrackApp(
     val haptics = rememberSpendTrackHaptics()
     Layout(
         content = {
-            // Measurable 0: Navigation Pill (contains ONLY Home, Spending, Loans & Owed)
+            // Measurable 0: Navigation Pill (contains ONLY Home, Spending, Ledger)
             Surface(
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -492,7 +594,7 @@ fun SpendTrackApp(
             ) {
                 Icon(
                     Icons.Default.Add,
-                    contentDescription = "Add transaction",
+                    contentDescription = "Add Transaction",
                     modifier = Modifier.size(32.dp),
                 )
             }
@@ -530,6 +632,167 @@ fun SpendTrackApp(
     }
 }
 
+@Composable
+private fun CreditCardBillAlertSection(
+    pendingBills: List<AccountEntity>,
+    onPayCard: (AccountEntity) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val haptics = rememberSpendTrackHaptics()
+    val pagerState = rememberPagerState(pageCount = { pendingBills.size })
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth(),
+            pageSpacing = 12.dp
+        ) { page ->
+            val card = pendingBills[page]
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.45f)
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Payments,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = card.name,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                val masked = card.maskedNumber?.takeIf { it.isNotBlank() }?.let { "•••• $it" }
+                                val cycleInfo = card.statementCycleDay?.let { "Statement generated on ${it}th" } ?: "Bill pending"
+                                Text(
+                                    text = listOfNotNull(masked, cycleInfo).joinToString(" · "),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (pendingBills.size > 1) {
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.85f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Text(
+                                        text = "${page + 1}/${pendingBills.size}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                        contentDescription = "Next bill",
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Column {
+                            Text(
+                                text = "Pending Bill Amount",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = money(card.balancePaise),
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                        Button(
+                            onClick = {
+                                haptics.click()
+                                onPayCard(card)
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ),
+                            shape = RoundedCornerShape(16.dp),
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp)
+                        ) {
+                            Text(
+                                text = "Pay Now",
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        if (pendingBills.size > 1) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                repeat(pendingBills.size) { index ->
+                    val isCurrent = pagerState.currentPage == index
+                    Box(
+                        modifier = Modifier
+                            .padding(horizontal = 3.dp)
+                            .height(6.dp)
+                            .width(if (isCurrent) 18.dp else 6.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isCurrent) MaterialTheme.colorScheme.error
+                                else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            )
+                    )
+                }
+            }
+        }
+    }
+}
+
 @Composable private fun Dashboard(
     transactions: List<TransactionEntity>,
     accounts: List<AccountEntity>,
@@ -541,6 +804,7 @@ fun SpendTrackApp(
     bottomContentPadding: Dp,
     selectedMonth: YearMonth,
     onMonthSelected: (YearMonth) -> Unit,
+    onPayCard: (AccountEntity) -> Unit,
     onSettings: () -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
@@ -567,6 +831,22 @@ fun SpendTrackApp(
     }
     val cards = remember(accounts) {
         accounts.filter { it.isCreditCard }.sumOf { it.balancePaise.coerceAtLeast(0L) }
+    }
+    val todayDate = remember { LocalDate.now() }
+    val pendingBills = remember(accounts, todayDate) {
+        accounts.filter { account ->
+            if (!account.isCreditCard || account.balancePaise <= 0L) {
+                false
+            } else {
+                val cycleDay = account.statementCycleDay ?: 1
+                val dueDay = account.dueDay
+                if (dueDay != null && dueDay < cycleDay) {
+                    todayDate.dayOfMonth >= cycleDay || todayDate.dayOfMonth <= dueDay
+                } else {
+                    todayDate.dayOfMonth >= cycleDay
+                }
+            }
+        }
     }
     val topBudgets = remember(budgets, categories, transactions, selectedMonth) {
         TopBudgetsCalculator.calculateTopBudgetCategories(budgets, categories, transactions, selectedMonth.toString())
@@ -602,29 +882,51 @@ fun SpendTrackApp(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text("SpendTrack", style = MaterialTheme.typography.displaySmall)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "Dashboard",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                    val today = remember { LocalDate.now() }
+                    val isCurrentMonth = selectedMonth == YearMonth.from(today)
                     Surface(
                         onClick = {
                             haptics.selection()
                             showMonthPicker = true
                         },
-                        shape = MaterialTheme.shapes.small,
-                        color = Color.Transparent
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                        modifier = Modifier.padding(top = 2.dp)
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.padding(vertical = 2.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            val dayOfWeek = today.dayOfWeek.getDisplayName(java.time.format.TextStyle.FULL, Locale.ENGLISH)
+                            val dateText = if (isCurrentMonth) {
+                                "$dayOfWeek, ${today.format(DateTimeFormatter.ofPattern("d MMM yyyy", Locale.ENGLISH))}"
+                            } else {
+                                val shortDay = today.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.ENGLISH)
+                                "${displayMonth(selectedMonth)} ($shortDay, ${today.format(DateTimeFormatter.ofPattern("d MMM", Locale.ENGLISH))})"
+                            }
                             Text(
-                                text = displayMonth(selectedMonth),
-                                style = MaterialTheme.typography.titleMedium,
+                                text = dateText,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.primary
                             )
                             Icon(
                                 imageVector = Icons.Default.ArrowDropDown,
                                 contentDescription = "Select Month",
+                                modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.primary
                             )
                         }
@@ -638,9 +940,16 @@ fun SpendTrackApp(
         item { SummaryCard("Net Worth", money(cash + activeFdPrincipal + owed - cards - loans), "") }
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric(if (isCurrentMonth) "This Month" else "Spending", money(spending), Modifier.weight(1f)); SmallMetric("Income", money(income), Modifier.weight(1f)) } }
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric("Savings", money(availableSavings), Modifier.weight(1f)); SmallMetric("Card Dues", money(cards), Modifier.weight(1f)) } }
-        item { CategorySpendingDonut(inMonth, categories) }
+        if (pendingBills.isNotEmpty()) {
+            item {
+                CreditCardBillAlertSection(
+                    pendingBills = pendingBills,
+                    onPayCard = onPayCard
+                )
+            }
+        }
         item { DailyTransactionBarChart(transactions, selectedMonth = selectedMonth) }
-        item { Text("Top 3 budget categories", style = MaterialTheme.typography.titleLarge) }
+        item { Text("Top Budgets", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary) }
         if (topBudgets.isEmpty()) {
             item { TopBudgetCategoriesEmptyCard() }
         } else {
@@ -648,7 +957,7 @@ fun SpendTrackApp(
                 TopBudgetCategoryCard(item)
             }
         }
-        item { Text("Recent transactions", style = MaterialTheme.typography.titleLarge) }
+        item { Text("Recent Activity", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary) }
         if (transactions.isEmpty()) {
             item { SummaryCard("No Transactions Yet", "", "Tap + to record your first transaction") }
         } else {
@@ -711,8 +1020,20 @@ fun SpendTrackApp(
             amountRange = amountRange
         )
     }
-    var displayCount by remember(visible) { mutableIntStateOf(50) }
-    val displayedItems = remember(visible, displayCount) { visible.take(displayCount) }
+    val today = remember { LocalDate.now() }
+    val currentWeekMondayEpoch = remember(today) {
+        today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)).toEpochDay()
+    }
+    var weeksBack by rememberSaveable { mutableIntStateOf(0) }
+    val minEpochToShow = remember(currentWeekMondayEpoch, weeksBack) {
+        LocalDate.ofEpochDay(currentWeekMondayEpoch).minusWeeks(weeksBack.toLong()).toEpochDay()
+    }
+    val displayedItems = remember(visible, minEpochToShow) {
+        visible.filter { it.dateEpochDay >= minEpochToShow }
+    }
+    val hasOlderTransactions = remember(visible, minEpochToShow) {
+        visible.any { it.dateEpochDay < minEpochToShow }
+    }
     val classification = remember(transactions, categoryFilter, accountFilter, kindFilter, amountRange, dateFilter) {
         TransactionDateFilter.filterForChart(
             transactions = transactions,
@@ -820,7 +1141,13 @@ fun SpendTrackApp(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Spending", style = MaterialTheme.typography.displaySmall)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "Spending",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 IconButton(onClick = { haptics.selection(); onSettings() }) {
                     Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -836,7 +1163,7 @@ fun SpendTrackApp(
                 shape = MaterialTheme.shapes.large
             )
         }
-        item { IncomeVsExpenseChart(classification) }
+        item { SpendingTrendChart(transactions = transactions) }
         item {
             Row(
                 Modifier.fillMaxWidth(),
@@ -1015,6 +1342,14 @@ fun SpendTrackApp(
                     if (transactions.isEmpty()) "Tap + to record your first transaction" else "Try adjusting your search or filters"
                 )
             }
+        } else if (displayedItems.isEmpty()) {
+            item {
+                SummaryCard(
+                    "No Transactions This Week",
+                    "",
+                    "Tap View More below to load previous weeks"
+                )
+            }
         }
         items(displayedItems, key = { it.id }) { t ->
             TransactionCard(
@@ -1027,13 +1362,16 @@ fun SpendTrackApp(
                 onDelete = remove
             )
         }
-        if (visible.size > displayCount) {
+        if (hasOlderTransactions) {
             item {
                 OutlinedButton(
-                    onClick = { displayCount += 50 },
+                    onClick = {
+                        haptics.selection()
+                        weeksBack++
+                    },
                     modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
                 ) {
-                    Text("Load more (${visible.size - displayCount} remaining)")
+                    Text("View More")
                 }
             }
         }
@@ -1058,16 +1396,16 @@ fun TransactionCard(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(
-                    start = 18.dp,
+                    start = 16.dp,
                     top = 16.dp,
-                    end = if (onEdit != null || onDelete != null) 10.dp else 18.dp,
+                    end = if (onEdit != null || onDelete != null) 8.dp else 16.dp,
                     bottom = 16.dp
                 ),
             verticalAlignment = Alignment.CenterVertically
@@ -1191,7 +1529,7 @@ fun TransactionCard(
                         ) {
                             Icon(
                                 Icons.Default.Edit,
-                                contentDescription = "Edit transaction",
+                                contentDescription = "Edit Transaction",
                                 tint = LocalContentColor.current,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -1204,7 +1542,7 @@ fun TransactionCard(
                         ) {
                             Icon(
                                 Icons.Default.Delete,
-                                contentDescription = "Delete transaction",
+                                contentDescription = "Delete Transaction",
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -1239,8 +1577,8 @@ fun TransactionCard(
     var settlingOwed by remember { mutableStateOf<OwedEntity?>(null) }
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize().padding(20.dp),
-        contentPadding = PaddingValues(bottom = bottomContentPadding),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = bottomContentPadding),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
@@ -1254,17 +1592,24 @@ fun TransactionCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Loans & balances", style = MaterialTheme.typography.headlineSmall)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        "Ledger",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
                 IconButton(onClick = { haptics.selection(); onSettings() }) {
                     Icon(Icons.Outlined.Settings, contentDescription = "Settings", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
         item { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) { SmallMetric("Owed to you", money(owedToMe), Modifier.weight(1f)); SmallMetric("You owe", money(iOwe), Modifier.weight(1f)) } }
-        item { Text("Loans", style = MaterialTheme.typography.titleLarge) }
+        item { Text("Loans", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary) }
         if (loans.isEmpty()) item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
             ) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1274,8 +1619,8 @@ fun TransactionCard(
             }
         }
         items(loans, key = { "loan_${it.id}" }) { loan -> LoanCard(loan) { haptics.click(); managingLoan = loan } }
-        item { Text("Personal balances", style = MaterialTheme.typography.titleLarge) }
-        if (owed.isEmpty()) item { SummaryCard("No personal balances", "", "") }
+        item { Text("Personal Ledger", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary) }
+        if (owed.isEmpty()) item { SummaryCard("No Personal Ledger Entries", "", "") }
         items(owed, key = { "owed_${it.id}" }) { entry ->
             ManageableCard(
                 entry.personName,
@@ -1344,14 +1689,14 @@ fun TransactionCard(
     var deleting by remember { mutableStateOf<PersonEntity?>(null) }
     val dialogPerson = editing ?: deleting
     LazyColumn(
-        Modifier.fillMaxSize().padding(20.dp),
-        contentPadding = PaddingValues(bottom = bottomContentPadding),
+        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = bottomContentPadding + 16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
-                Text("Shared Expenses", style = MaterialTheme.typography.titleLarge)
+                Text("Shared Expenses", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
             }
         }
         item {
@@ -1378,7 +1723,7 @@ fun TransactionCard(
             }
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                shape = MaterialTheme.shapes.large
+                shape = RoundedCornerShape(20.dp)
             ) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1435,7 +1780,7 @@ fun TransactionCard(
                         if (duplicate) Text("A person with this name already exists.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                     }
                 }
-                else Text("This person has no historical shared expenses or Loans & Owed records and will be removed.")
+                else Text("This person has no historical shared expenses or Ledger records and will be removed.")
             },
             confirmButton = {
                 TextButton(onClick = {
@@ -1447,6 +1792,91 @@ fun TransactionCard(
             dismissButton = { TextButton(onClick = { editing = null; deleting = null; name = "" }) { Text("Cancel") } }
         )
     }
+}
+
+@Composable
+private fun SettingsSectionHeader(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.SemiBold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 4.dp, top = 16.dp, bottom = 4.dp)
+    )
+}
+
+@Composable
+private fun SettingsRow(
+    title: String,
+    sub: String = "",
+    icon: ImageVector? = null,
+    trailing: @Composable (() -> Unit)? = {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+            modifier = Modifier.size(20.dp)
+        )
+    },
+    onClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        if (icon != null) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            if (sub.isNotBlank()) {
+                Text(
+                    text = sub,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        trailing?.invoke()
+    }
+}
+
+@Composable
+private fun SettingsDivider() {
+    HorizontalDivider(
+        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+        modifier = Modifier.padding(start = 56.dp)
+    )
+}
+
+@Composable
+private fun SettingsCard(title: String, sub: String, onClick: () -> Unit = {}) {
+    SettingsRow(title = title, sub = sub, onClick = onClick)
 }
 
 @Composable private fun Settings(
@@ -1470,50 +1900,66 @@ fun TransactionCard(
     onBiometricPreferenceChange: (Boolean) -> Unit
 ) {
     val haptics = rememberSpendTrackHaptics()
-    LazyColumn(Modifier.fillMaxSize().padding(20.dp), contentPadding = PaddingValues(bottom = bottomContentPadding), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        Modifier.fillMaxSize().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = bottomContentPadding + 16.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
         item {
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = { haptics.click(); onBack() })
-                Text("Settings", style = MaterialTheme.typography.titleLarge)
+                Text("Settings", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             }
         }
-        item { SettingsCard("Accounts", "$accounts accounts and cards") { haptics.click(); onAccounts() } }
-        item { SettingsCard("Categories", "$categories categories") { haptics.click(); onCategories() } }
-        item { SettingsCard("Shared Expenses", "Manage people for group expenses") { haptics.click(); onSharedExpenses() } }
-        item { SettingsCard("Fixed deposits", "$activeFdCount active deposits") { haptics.click(); onFixedDeposits() } }
-        item { SettingsCard("Recurring transactions", "$activeRecurringCount active schedules") { haptics.click(); onRecurring() } }
-        item { SettingsCard("Budget", "Category budgets") { haptics.click(); onBudgets() } }
-        item { SettingsCard("Data", "Backup and restore") { haptics.click(); onData() } }
-        item { SettingsCard("Appearance", "Theme and display options") { haptics.click(); onAppearance() } }
+
+        // Section 1: Accounts & Balances
+        item { SettingsSectionHeader("Accounts & finances") }
+        item { SettingsRow("Accounts", "$accounts accounts and cards", Icons.Outlined.AccountBalance, onClick = { haptics.click(); onAccounts() }) }
+        item { SettingsDivider() }
+        item { SettingsRow("Categories", "$categories categories", Icons.Outlined.Category, onClick = { haptics.click(); onCategories() }) }
+        item { SettingsDivider() }
+        item { SettingsRow("Shared expenses", "Manage people for group expenses", Icons.Outlined.People, onClick = { haptics.click(); onSharedExpenses() }) }
+        item { SettingsDivider() }
+        item { SettingsRow("Fixed deposits", "$activeFdCount active deposits", Icons.Outlined.Savings, onClick = { haptics.click(); onFixedDeposits() }) }
+
+        // Section 2: Budgets & Automation
+        item { SettingsSectionHeader("Budgets & automation") }
+        item { SettingsRow("Budget", "Category budgets", Icons.Outlined.PieChart, onClick = { haptics.click(); onBudgets() }) }
+        item { SettingsDivider() }
+        item { SettingsRow("Recurring transactions", "$activeRecurringCount active schedules", Icons.Outlined.Repeat, onClick = { haptics.click(); onRecurring() }) }
+
+        // Section 3: Preferences
+        item { SettingsSectionHeader("Preferences") }
+        item { SettingsRow("Appearance", "Theme and display options", Icons.Outlined.Palette, onClick = { haptics.click(); onAppearance() }) }
+        item { SettingsDivider() }
+        item { SettingsRow("Alerts & reminders", "Card and loan notifications", Icons.Outlined.Notifications, onClick = { haptics.click(); onReminders() }) }
+        item { SettingsDivider() }
         item {
-            Card(
-                shape = MaterialTheme.shapes.extraLarge,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Biometric authentication", style = MaterialTheme.typography.titleLarge)
-                        Text("Require biometrics to open SpendTrack", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+            SettingsRow(
+                title = "Biometric authentication",
+                sub = "Require biometrics to open SpendTrack",
+                icon = Icons.Outlined.Fingerprint,
+                onClick = { haptics.selection(); onBiometricPreferenceChange(!biometricEnabled) },
+                trailing = {
                     Switch(
                         checked = biometricEnabled,
                         onCheckedChange = { haptics.selection(); onBiometricPreferenceChange(it) }
                     )
                 }
-            }
+            )
         }
-        item { SettingsCard("Alerts & reminders", "Card and loan notifications") { haptics.click(); onReminders() } }
-        item { SettingsCard("About", "App information and links") { haptics.click(); onAbout() } }
+
+        // Section 4: Data & App
+        item { SettingsSectionHeader("Data & app") }
+        item { SettingsRow("Data", "Backup and restore", Icons.Outlined.Storage, onClick = { haptics.click(); onData() }) }
+        item { SettingsDivider() }
+        item { SettingsRow("About", "App information and links", Icons.Outlined.Info, onClick = { haptics.click(); onAbout() }) }
     }
 }
-@Composable private fun SettingsCard(title: String, sub: String, onClick: () -> Unit = {}) { Card(Modifier.fillMaxWidth().clickable(onClick = onClick), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) { Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.titleLarge); Text(sub, color = MaterialTheme.colorScheme.onSurfaceVariant) }; Icon(Icons.Default.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) } } }
 
 @Composable private fun AppearanceScreen(
     themeMode: AppThemeMode,
@@ -1524,47 +1970,60 @@ fun TransactionCard(
 ) {
     val haptics = rememberSpendTrackHaptics()
     LazyColumn(
-        Modifier.fillMaxSize().statusBarsPadding().padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(bottom = 8.dp)
+            ) {
                 ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
-                Text("Appearance", style = MaterialTheme.typography.titleLarge)
+                Text("Appearance", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             }
         }
-        item { Text("Theme", style = MaterialTheme.typography.titleLarge) }
+        item { SettingsSectionHeader("Theme") }
         items(AppThemeMode.entries) { mode ->
-            Card(
-                modifier = Modifier.fillMaxWidth().clickable { haptics.selection(); onThemeModeChange(mode) },
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { haptics.selection(); onThemeModeChange(mode) }
+                    .padding(horizontal = 4.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(mode.label, style = MaterialTheme.typography.titleMedium)
-                        Text(mode.description, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    RadioButton(selected = themeMode == mode, onClick = { haptics.selection(); onThemeModeChange(mode) })
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(mode.label, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                    Text(mode.description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                RadioButton(
+                    selected = themeMode == mode,
+                    onClick = { haptics.selection(); onThemeModeChange(mode) }
+                )
             }
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                modifier = Modifier.padding(start = 4.dp)
+            )
         }
-        item { Text("Additional options", style = MaterialTheme.typography.titleLarge) }
+        item { SettingsSectionHeader("Additional options") }
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .padding(horizontal = 4.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("True black", style = MaterialTheme.typography.titleMedium)
-                        Text("Use pure black surfaces when dark theme is active.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(checked = trueBlack, onCheckedChange = { haptics.selection(); onTrueBlackChange(it) })
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("True black", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                    Text("Use pure black surfaces when dark theme is active.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+                Switch(checked = trueBlack, onCheckedChange = { haptics.selection(); onTrueBlackChange(it) })
             }
         }
     }
@@ -1581,34 +2040,47 @@ fun TransactionCard(
     }
     fun open(uri: String) { runCatching { uriHandler.openUri(uri) } }
     LazyColumn(
-        Modifier.fillMaxSize().statusBarsPadding().padding(20.dp),
+        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
-                Text("About", style = MaterialTheme.typography.titleLarge)
+                Text("About", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
             }
         }
-        item { Text("SpendTrack", style = MaterialTheme.typography.headlineSmall) }
-        item { SettingsCard("Read the README", "Project guide and feature details") { open("https://github.com/kartikdeshpande18/SpendTrackNative#readme") } }
-        item { SettingsCard("Latest release", "View the newest app release") { open("https://github.com/kartikdeshpande18/SpendTrackNative/releases/latest") } }
-        item { SettingsCard("Report an issue", "Open a GitHub issue") { open("https://github.com/kartikdeshpande18/SpendTrackNative/issues/new") } }
+        item { Text("SpendTrack", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold) }
+        item { SettingsRow("Read the README", "Project guide and feature details", Icons.Outlined.Info, onClick = { open("https://github.com/kartikdeshpande18/SpendTrackNative#readme") }) }
+        item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), modifier = Modifier.padding(start = 56.dp)) }
+        item { SettingsRow("Latest release", "View the newest app release", Icons.Outlined.Info, onClick = { open("https://github.com/kartikdeshpande18/SpendTrackNative/releases/latest") }) }
+        item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), modifier = Modifier.padding(start = 56.dp)) }
+        item { SettingsRow("Report an issue", "Open a GitHub issue", Icons.Outlined.Info, onClick = { open("https://github.com/kartikdeshpande18/SpendTrackNative/issues/new") }) }
+        item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), modifier = Modifier.padding(start = 56.dp)) }
         item {
-            Card(Modifier.fillMaxWidth().clickable { open("upi://pay?pa=kartik.deshpande%40slc&pn=Kartik%20Deshpande&cu=INR") }, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Sponsor", style = MaterialTheme.typography.titleMedium)
-                        Text("UPI · kartik.deshpande@slc", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
+            SettingsRow(
+                title = "Sponsor",
+                sub = "UPI · kartik.deshpande@slc",
+                icon = Icons.Outlined.Savings,
+                onClick = { open("upi://pay?pa=kartik.deshpande%40slc&pn=Kartik%20Deshpande&cu=INR") },
+                trailing = {
                     TextButton(onClick = { copy("UPI ID", "kartik.deshpande@slc") }) { Text("Copy") }
                 }
-            }
+            )
         }
+        item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), modifier = Modifier.padding(start = 56.dp)) }
         item {
-            Row(Modifier.fillMaxWidth().clickable { copy("Version", version) }.padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Version", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(version)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable { copy("Version", version) }
+                    .padding(horizontal = 4.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Version", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(version, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -1621,33 +2093,55 @@ fun TransactionCard(
     var cardTimes by remember { mutableStateOf(ReminderPreferences.cardLeadTimes(context)) }
     var loanTimes by remember { mutableStateOf(ReminderPreferences.loanLeadTimes(context)) }
     var editing by remember { mutableStateOf<ReminderType?>(null) }
-    LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Row(verticalAlignment = Alignment.CenterVertically) { ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Alerts & reminders", style = MaterialTheme.typography.titleLarge) } }
+    LazyColumn(
+        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraExtraLarge,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(20.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                        Text("Bill reminders", style = MaterialTheme.typography.titleLarge)
-                        Text(if (isEnabled) "Notifications enabled" else "Notifications disabled", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    Switch(checked = isEnabled, onCheckedChange = {
-                        haptics.selection()
-                        isEnabled = it
-                        ReminderPreferences.setNotificationsEnabled(context, it)
-                    })
-                }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
+                Text("Alerts & reminders", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
             }
         }
-        item { ReminderSettingsCard("Card reminders", cardTimes.summary()) { haptics.click(); editing = ReminderType.CARD } }
-        item { ReminderSettingsCard("Loan reminders", loanTimes.summary()) { haptics.click(); editing = ReminderType.LOAN } }
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .padding(horizontal = 4.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text("Bill reminders", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                    Text(if (isEnabled) "Notifications enabled" else "Notifications disabled", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Switch(checked = isEnabled, onCheckedChange = {
+                    haptics.selection()
+                    isEnabled = it
+                    ReminderPreferences.setNotificationsEnabled(context, it)
+                })
+            }
+        }
+        item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), modifier = Modifier.padding(start = 4.dp)) }
+        item {
+            SettingsRow(
+                title = "Card reminders",
+                sub = cardTimes.summary(),
+                icon = Icons.Outlined.Notifications,
+                onClick = { haptics.click(); editing = ReminderType.CARD }
+            )
+        }
+        item { HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), modifier = Modifier.padding(start = 56.dp)) }
+        item {
+            SettingsRow(
+                title = "Loan reminders",
+                sub = loanTimes.summary(),
+                icon = Icons.Outlined.Notifications,
+                onClick = { haptics.click(); editing = ReminderType.LOAN }
+            )
+        }
     }
     when (editing) {
         ReminderType.CARD -> ReminderConfigDialog("Card reminders", cardTimes, onDismiss = { editing = null }) { value -> haptics.confirm(); ReminderPreferences.saveCardLeadTimes(context, value); cardTimes = value; editing = null }
@@ -1657,12 +2151,7 @@ fun TransactionCard(
 }
 
 @Composable private fun ReminderSettingsCard(title: String, summary: String, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(onClick = onClick), shape = MaterialTheme.shapes.extraExtraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
-        Row(Modifier.fillMaxWidth().padding(20.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.titleLarge); Text(summary, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            Icon(Icons.Default.Edit, contentDescription = "Configure $title", tint = MaterialTheme.colorScheme.primary)
-        }
-    }
+    SettingsRow(title = title, sub = summary, icon = Icons.Outlined.Notifications, onClick = onClick)
 }
 
 @Composable private fun ReminderConfigDialog(title: String, initial: ReminderLeadTimes, onDismiss: () -> Unit, onSave: (ReminderLeadTimes) -> Unit) {
@@ -1705,8 +2194,17 @@ fun TransactionCard(
         result.fold({ pendingRestore = it }, { status = "Restore failed: ${it.localizedMessage ?: "Unable to read file"}" })
         onRestoreBackupUriConsumed()
     }
-    LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Row(verticalAlignment = Alignment.CenterVertically) { ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Data", style = MaterialTheme.typography.titleLarge) } }
+    LazyColumn(
+        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
+                Text("Data", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
+            }
+        }
         if (onImportStatement != null) {
             item { Button({ onImportStatement() }, Modifier.fillMaxWidth()) { Text("Import statement (PDF)") } }
         }
@@ -1722,35 +2220,94 @@ fun TransactionCard(
     pendingRestore?.let { text -> AlertDialog(onDismissRequest = { if (!isRestoring) pendingRestore = null }, title = { Text("Restore backup?") }, text = { Text("This replaces the current local data.") }, confirmButton = { TextButton({ isRestoring = true; viewModel.restoreBackup(text) { result -> isRestoring = false; status = result.fold({ "Backup restored" }, { "Restore failed: ${it.localizedMessage ?: "Invalid backup"}" }); pendingRestore = null } }, enabled = !isRestoring) { Text(if (isRestoring) "Restoring…" else "Restore") } }, dismissButton = { TextButton(onClick = { if (!isRestoring) pendingRestore = null }, enabled = !isRestoring) { Text("Cancel") } }) }
 }
 @Composable private fun SummaryCard(title: String, value: String, sub: String) {
-    Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraExtraLarge, colors = CardDefaults.cardColors(containerColor = if (title == "Net Worth") MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer)) {
-        Column(Modifier.padding(22.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+    val isNetWorth = title == "Net Worth"
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = if (isNetWorth) RoundedCornerShape(32.dp) else RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isNetWorth) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
+        )
+    ) {
+        Column(
+            Modifier.padding(
+                horizontal = if (isNetWorth) 24.dp else 16.dp,
+                vertical = if (isNetWorth) 20.dp else 16.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Medium,
+                color = if (isNetWorth) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+            )
             AnimatedContent(
                 targetState = value,
                 transitionSpec = { SpendTrackMotion.numberTransition() },
                 label = "SummaryCardValue",
             ) { targetVal ->
-                Text(targetVal, style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    targetVal,
+                    style = if (isNetWorth) MaterialTheme.typography.headlineLarge else MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isNetWorth) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-            if (sub.isNotBlank()) Text(sub, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (sub.isNotBlank()) {
+                Text(
+                    sub,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isNetWorth) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
+
 @Composable private fun SmallMetric(title: String, value: String, modifier: Modifier) {
-    Card(modifier, shape = MaterialTheme.shapes.largeIncreased, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-        Column(Modifier.padding(18.dp)) {
-            Text(title, color = MaterialTheme.colorScheme.onSecondaryContainer)
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+            )
             AnimatedContent(
                 targetState = value,
                 transitionSpec = { SpendTrackMotion.numberTransition() },
                 label = "SmallMetricValue",
             ) { targetVal ->
-                Text(targetVal, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                Text(
+                    targetVal,
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
 }
-@Composable private fun ActionDialog(close: () -> Unit) { AlertDialog(onDismissRequest = close, title = { Text("Add a loan or personal balance") }, text = { Text("Loan and owed-entry forms are still to be completed.") }, confirmButton = { TextButton(close) { Text("OK") } }) }
+@Composable private fun ActionDialog(close: () -> Unit) { AlertDialog(onDismissRequest = close, title = { Text("Add a loan or personal ledger entry") }, text = { Text("Loan and owed-entry forms are still to be completed.") }, confirmButton = { TextButton(close) { Text("OK") } }) }
 
 @Composable private fun AccountsScreen(
     accounts: List<AccountEntity>,
@@ -1786,7 +2343,7 @@ fun TransactionCard(
                         ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
                         Spacer(Modifier.width(8.dp))
                     }
-                    Text("Accounts", style = MaterialTheme.typography.titleLarge)
+                    Text("Accounts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
                 }
                 if (onSettings != null) {
                     IconButton(onClick = { haptics.selection(); onSettings() }) {
@@ -1796,8 +2353,13 @@ fun TransactionCard(
             }
         }
         if (adding) item {
-            Card(Modifier.fillMaxWidth().animateContentSize()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("Add account", style = MaterialTheme.typography.titleLarge)
+            Card(
+                modifier = Modifier.fillMaxWidth().animateContentSize(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Add account", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text(if (card) "Card name" else "Account name") }, singleLine = true)
                 OutlinedTextField(opening, { opening = it }, Modifier.fillMaxWidth(), label = { Text(if (card) "Current outstanding (₹)" else "Opening balance (₹)") }, singleLine = true)
                 if (!card) {
@@ -1847,27 +2409,38 @@ fun TransactionCard(
     var managing by remember { mutableStateOf<CategoryEntity?>(null) }
     val incomeCategories = categories.filter { it.isIncomeCategory }
     val expenseCategories = categories.filterNot { it.isIncomeCategory }
-    LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
-                Text("Categories", style = MaterialTheme.typography.titleLarge)
+                Text("Categories", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
             }
         }
         if (adding) item {
-            Card(Modifier.fillMaxWidth().animateContentSize()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Category name") }, singleLine = true)
-                Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Checkbox(income, { haptics.selection(); income = it }); Text("Income category") }
-                Button(onClick = { haptics.confirm(); onAdd(name.trim(), income); name = ""; income = false; adding = false }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Save category") }
-            } }
+            Card(
+                modifier = Modifier.fillMaxWidth().animateContentSize(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Add category", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Category name") }, singleLine = true)
+                    Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Checkbox(income, { haptics.selection(); income = it }); Text("Income category") }
+                    Button(onClick = { haptics.confirm(); onAdd(name.trim(), income); name = ""; income = false; adding = false }, enabled = name.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Save category") }
+                }
+            }
         } else item { Button({ haptics.click(); adding = true }, Modifier.fillMaxWidth()) { Text("Add category") } }
-        item { Text("Income categories", style = MaterialTheme.typography.titleLarge) }
+        item { Text("Income categories", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary) }
         if (incomeCategories.isEmpty()) item { Text("No income categories", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(incomeCategories, key = { it.id }) { category ->
             val subtitle = if (category.isDisabled) "Income · Disabled" else "Income"
             ManageableCard(category.name, subtitle, "") { haptics.click(); managing = category }
         }
-        item { Text("Expense categories", style = MaterialTheme.typography.titleLarge) }
+        item { Text("Expense categories", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.primary) }
         if (expenseCategories.isEmpty()) item { Text("No expense categories", color = MaterialTheme.colorScheme.onSurfaceVariant) }
         items(expenseCategories, key = { it.id }) { category ->
             val subtitle = if (category.isDisabled) "Expense · Disabled" else "Expense"
@@ -1878,18 +2451,55 @@ fun TransactionCard(
 }
 
 @Composable private fun ManageableCard(title: String, value: String, subtitle: String, onManage: () -> Unit) {
-    Card(Modifier.fillMaxWidth()) { Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) { Text(title, style = MaterialTheme.typography.titleMedium); Text(value, style = MaterialTheme.typography.titleLarge); if (subtitle.isNotBlank()) Text(subtitle, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        ActionIcon(Icons.Default.Edit, "Manage", onClick = onManage)
-    } }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            ActionIcon(Icons.Default.Edit, "Manage", onClick = onManage)
+        }
+    }
 }
 
 @Composable private fun ActionIcon(icon: ImageVector, description: String, tint: Color? = null, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) { Icon(icon, contentDescription = description, tint = tint ?: LocalContentColor.current, modifier = Modifier.size(20.dp)) }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1.0f,
+        animationSpec = tween(durationMillis = SpendTrackMotion.DurationFast, easing = SpendTrackMotion.DecelEasing),
+        label = "ActionIconScale"
+    )
+    IconButton(
+        onClick = onClick,
+        interactionSource = interactionSource,
+        modifier = Modifier.size(40.dp).scale(scale)
+    ) {
+        Icon(icon, contentDescription = description, tint = tint ?: LocalContentColor.current, modifier = Modifier.size(20.dp))
+    }
 }
 
 @Composable fun SpendTrackBackButton(onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.size(40.dp)) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1.0f,
+        animationSpec = tween(durationMillis = SpendTrackMotion.DurationFast, easing = SpendTrackMotion.DecelEasing),
+        label = "BackButtonScale"
+    )
+    IconButton(
+        onClick = onClick,
+        interactionSource = interactionSource,
+        modifier = Modifier.size(40.dp).scale(scale)
+    ) {
         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
     }
 }
@@ -2065,10 +2675,31 @@ fun TransactionCard(
         }
         map
     }
-    LazyColumn(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Row(verticalAlignment = Alignment.CenterVertically) { ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Budget", style = MaterialTheme.typography.titleLarge) }; Text(displayMonth(month), color = MaterialTheme.colorScheme.onSurfaceVariant) }
+    LazyColumn(
+        Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp),
+        contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack)
+                    Text("Budget", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
+                }
+                Text(displayMonth(month), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
         if (adding) item {
-            Card(Modifier.fillMaxWidth().animateContentSize()) { Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Card(
+                modifier = Modifier.fillMaxWidth().animateContentSize(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.fillMaxWidth()) {
                     OutlinedButton({ categoryMenu = true }, Modifier.fillMaxWidth(), enabled = expenseCategories.isNotEmpty()) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Category"); Text(expenseCategories.getOrNull(categoryIndex)?.name ?: "Choose") } }
                     DropdownMenu(categoryMenu, { categoryMenu = false }) { expenseCategories.forEachIndexed { index, category -> DropdownMenuItem({ Text(category.name) }, { haptics.selection(); categoryIndex = index; categoryMenu = false }) } }
@@ -2082,22 +2713,52 @@ fun TransactionCard(
             val category = categoryMap[budget.categoryId]?.name ?: "Category"
             val used = monthlyCategorySpending[budget.categoryId] ?: 0L
             val progress = if (budget.limitPaise > 0) (used.toFloat() / budget.limitPaise.toFloat()).coerceIn(0f, 1f) else 0f
-            Card(Modifier.fillMaxWidth()) { Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Column(Modifier.weight(1f)) { Text(category, style = MaterialTheme.typography.titleMedium); Text("${money(used)} / ${money(budget.limitPaise)}", style = MaterialTheme.typography.titleLarge) }; ActionIcon(Icons.Default.Delete, "Delete budget", MaterialTheme.colorScheme.error) { haptics.reject(); onDelete(budget) } }
-                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
-            } }
+            Card(
+                Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(category, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                            Text("${money(used)} / ${money(budget.limitPaise)}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        }
+                        ActionIcon(Icons.Default.Delete, "Delete budget", MaterialTheme.colorScheme.error) { haptics.reject(); onDelete(budget) }
+                    }
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp))
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable private fun LoanCard(loan: LoanEntity, onManage: () -> Unit) {
     val repaid = if (loan.originalPrincipalPaise > 0) ((loan.originalPrincipalPaise - loan.currentOutstandingPaise).toFloat() / loan.originalPrincipalPaise).coerceIn(0f, 1f) else 0f
-    Card(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.extraLarge, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)) { Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(loan.name, style = MaterialTheme.typography.titleMedium); Text("${(repaid * 100).toInt()}%") }
-        LinearProgressIndicator(progress = { repaid }, modifier = Modifier.fillMaxWidth())
-        Text(money(loan.currentOutstandingPaise), style = MaterialTheme.typography.titleLarge)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { Text("EMI ${money(loan.emiPaise)} · Due ${LocalDate.ofEpochDay(loan.nextDueEpochDay)}", color = MaterialTheme.colorScheme.onSurfaceVariant); ActionIcon(Icons.Default.Edit, "Manage Loan", onClick = onManage) }
-    } }
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+    ) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(loan.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+                Text("${(repaid * 100).toInt()}%", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            }
+            LinearProgressIndicator(
+                progress = { repaid },
+                modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp))
+            )
+            Text(money(loan.currentOutstandingPaise), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text("EMI ${money(loan.emiPaise)} · Due ${LocalDate.ofEpochDay(loan.nextDueEpochDay)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ActionIcon(Icons.Default.Edit, "Manage Loan", onClick = onManage)
+            }
+        }
+    }
 }
 
 @Composable private fun LoanManageDialog(
@@ -2442,14 +3103,14 @@ fun TransactionCard(
 @Composable private fun LoanOwedActionDialog(onLoan: () -> Unit, onOwed: () -> Unit, onDismiss: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Surface(
-            shape = MaterialTheme.shapes.extraExtraLarge,
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             tonalElevation = 8.dp,
             shadowElevation = 16.dp,
         ) {
             Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-                    Text("Add", style = MaterialTheme.typography.headlineSmall)
+                    Text("Add", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                     ActionIcon(Icons.Default.Close, "Close", onClick = onDismiss)
                 }
                 ExpressiveActionCard("Loan", "Track a loan balance", onLoan)
@@ -2462,12 +3123,12 @@ fun TransactionCard(
 @Composable private fun ExpressiveActionCard(title: String, detail: String, onClick: () -> Unit) {
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = MaterialTheme.shapes.extraLarge,
+        shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.secondaryContainer,
         tonalElevation = 2.dp,
     ) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 18.dp)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSecondaryContainer)
+        Column(Modifier.padding(16.dp)) {
+            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSecondaryContainer)
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSecondaryContainer)
         }
     }
@@ -2480,8 +3141,9 @@ fun TransactionCard(
     var dueEpochDay by remember { mutableLongStateOf(LocalDate.now().plusMonths(1).toEpochDay()) }
     var showDatePicker by remember { mutableStateOf(false) }
     val toPaise = { value: String -> parsePaise(value) }
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Add loan", style = MaterialTheme.typography.titleLarge)
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Add loan", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium) }
         OutlinedTextField(name, { name = it }, Modifier.fillMaxWidth(), label = { Text("Loan name") }, singleLine = true)
         OutlinedTextField(principal, { principal = it }, Modifier.fillMaxWidth(), label = { Text("Original principal (₹)") }, singleLine = true)
         OutlinedTextField(outstanding, { outstanding = it }, Modifier.fillMaxWidth(), label = { Text("Current outstanding (₹)") }, singleLine = true)
@@ -2503,8 +3165,9 @@ fun TransactionCard(
     var person by remember { mutableStateOf("") }; var amount by remember { mutableStateOf("") }; var note by remember { mutableStateOf("") }; var owesMe by remember { mutableStateOf(true) }
     var personMenu by remember { mutableStateOf(false) }
     val paise = parsePaise(amount)
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Add owed entry", style = MaterialTheme.typography.titleLarge)
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Add owed entry", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium) }
         ExposedDropdownMenuBox(expanded = personMenu, onExpandedChange = { personMenu = it }) {
             OutlinedTextField(
                 value = person,
@@ -2529,17 +3192,22 @@ fun TransactionCard(
     }
 }
 
-@Composable private fun CardPaymentScreen(accounts: List<AccountEntity>, onBack: () -> Unit, onPay: (Long, Long, Long) -> Unit) {
+@Composable private fun CardPaymentScreen(accounts: List<AccountEntity>, initialCardId: Long? = null, onBack: () -> Unit, onPay: (Long, Long, Long) -> Unit) {
     val haptics = rememberSpendTrackHaptics()
     val cards = accounts.filter { it.isCreditCard && it.balancePaise > 0 }
     val sources = accounts.filterNot { it.isCreditCard }
-    var cardIndex by remember { mutableIntStateOf(0) }; var sourceIndex by remember { mutableIntStateOf(0) }
+    val initialCardIndex = remember(cards, initialCardId) {
+        val found = cards.indexOfFirst { it.id == initialCardId }
+        if (found >= 0) found else 0
+    }
+    var cardIndex by remember(initialCardIndex) { mutableIntStateOf(initialCardIndex) }; var sourceIndex by remember { mutableIntStateOf(0) }
     var cardMenu by remember { mutableStateOf(false) }; var sourceMenu by remember { mutableStateOf(false) }
     var fullPayment by remember { mutableStateOf(true) }; var amount by remember { mutableStateOf("") }
     val card = cards.getOrNull(cardIndex); val source = sources.getOrNull(sourceIndex)
     val amountPaise = if (fullPayment) card?.balancePaise ?: 0 else parsePaise(amount)
-    Column(Modifier.fillMaxSize().statusBarsPadding().padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Pay Card Bill", style = MaterialTheme.typography.titleLarge)
+    Column(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) { ActionIcon(Icons.AutoMirrored.Filled.ArrowBack, "Back", onClick = onBack); Text("Pay Card Bill", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium) }
         Box(Modifier.fillMaxWidth()) {
             OutlinedButton({ cardMenu = true }, Modifier.fillMaxWidth(), enabled = cards.isNotEmpty()) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Credit card"); Text(card?.name ?: "No card due") } }
             DropdownMenu(cardMenu, { cardMenu = false }) { cards.forEachIndexed { index, item -> DropdownMenuItem({ Text("${item.name} · ${money(item.balancePaise)}") }, { haptics.selection(); cardIndex = index; cardMenu = false }) } }

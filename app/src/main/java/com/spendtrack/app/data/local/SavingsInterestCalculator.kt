@@ -50,6 +50,89 @@ object SavingsInterestPeriods {
 
 object SavingsInterestCalculator {
 
+    private val interestDateRegex = Regex("""(\d{2}-[A-Za-z]{3}-\d{4})""")
+    private val interestDateFormatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy", Locale.ENGLISH)
+
+    /**
+     * Extracts and parses the date for which interest was earned from transaction descriptions
+     * such as "Interest for 15-Nov-2026", "Interest Cr. for 15-Nov-2026", or
+     * "Daily interest cr. for 15-Sep-2026".
+     */
+    fun parseInterestDate(description: String): LocalDate? {
+        val match = interestDateRegex.find(description) ?: return null
+        return runCatching { LocalDate.parse(match.value, interestDateFormatter) }.getOrNull()
+    }
+
+    /**
+     * Checks if a transaction represents an interest credit for a specific date and account,
+     * matching both SpendTrack automated entries and bank statement imports (e.g. Slice).
+     */
+    fun isDuplicateInterest(
+        tx: TransactionEntity,
+        accountId: Long,
+        date: LocalDate,
+        frequency: InterestCreditFrequency,
+        periodDescription: String
+    ): Boolean {
+        if (tx.accountId != accountId || tx.type != TransactionType.INCOME) return false
+        if (tx.description == periodDescription) return true
+        if (frequency == InterestCreditFrequency.DAILY) {
+            val dateStr = date.format(interestDateFormatter)
+            val descLower = tx.description.lowercase(Locale.ENGLISH)
+            if (descLower.contains("interest") && descLower.contains(dateStr.lowercase(Locale.ENGLISH))) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /**
+     * Calculates daily interest using month-to-date cumulative sub-paisa carryover:
+     * Payout_t = round(sum_{k=1}^t Accrued_k) - sum_{k=1}^{t-1} Payout_k
+     *
+     * Mirrors the Core Banking System (CBS) ledger used by Slice Small Finance Bank.
+     * Prevents sub-paisa truncation loss (e.g. 0.60 vs 0.61 on Atom, 147p vs 148p on SFB).
+     *
+     * @param dailyBalances map of epochDay to balancePaise on that day
+     * @param fallbackBalancePaise fallback balance if a day is absent from dailyBalances
+     * @param interestRateBps annual interest rate in basis points (e.g. 550 = 5.50%)
+     * @param targetEpochDay epoch day for which daily interest payout is being calculated
+     * @param alreadyPaidInMonthPaise total interest already paid for prior days in this calendar month
+     */
+    fun calculateCumulativeDailyInterestPaise(
+        dailyBalances: Map<Long, Long>,
+        fallbackBalancePaise: Long,
+        interestRateBps: Int,
+        targetEpochDay: Long,
+        alreadyPaidInMonthPaise: Long
+    ): Long {
+        if (interestRateBps <= 0) return 0L
+
+        val targetDate = LocalDate.ofEpochDay(targetEpochDay)
+        val monthStartDate = targetDate.withDayOfMonth(1)
+        val startEpochDay = monthStartDate.toEpochDay()
+
+        if (targetEpochDay < startEpochDay) return 0L
+
+        val rate = BigDecimal(interestRateBps).divide(BigDecimal(10000), 12, RoundingMode.HALF_UP)
+        var totalAccruedPaise = BigDecimal.ZERO
+
+        for (epochDay in startEpochDay..targetEpochDay) {
+            val balance = dailyBalances[epochDay] ?: fallbackBalancePaise
+            if (balance > 0L) {
+                val date = LocalDate.ofEpochDay(epochDay)
+                val daysInYear = if (date.isLeapYear) 366 else 365
+                val dayAccrual = BigDecimal(balance)
+                    .multiply(rate)
+                    .divide(BigDecimal(daysInYear), 12, RoundingMode.HALF_UP)
+                totalAccruedPaise = totalAccruedPaise.add(dayAccrual)
+            }
+        }
+
+        val targetCumulativePaise = totalAccruedPaise.setScale(0, RoundingMode.HALF_UP).toLong()
+        return (targetCumulativePaise - alreadyPaidInMonthPaise).coerceAtLeast(0L)
+    }
+
     /**
      * Calculates interest for an account over a specific date range.
      * @param dailyBalances map of dateEpochDay to balancePaise on that day

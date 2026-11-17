@@ -277,6 +277,128 @@ class ComprehensiveFeatureHardeningTest {
         assertEquals(1200L, balances[15L])
     }
 
+    @Test
+    fun testSliceCumulativeDailyInterestCalculationOnAtom() {
+        // ₹4,002.14 at 550 bps (5.50% p.a.) in 2026 (non-leap year, 365 days)
+        // Daily accrual = 400214 * 0.055 / 365 = 60.3062 paise
+        // Without cumulative carryover: 60p every single day (drops 0.3062p forever)
+        // With month-to-date cumulative carryover:
+        // Day 1: round(60.3062) - 0 = 60p
+        // Day 2: round(120.6124) - 60 = 61p
+        // Day 3: round(180.9186) - 121 = 60p
+        // Day 4: round(241.2248) - 181 = 60p
+        // Day 5: round(301.5310) - 241 = 61p
+        val startEpochDay = LocalDate.of(2026, 11, 1).toEpochDay()
+        val dailyBalances = (0L..9L).associate { offset ->
+            (startEpochDay + offset) to 400_214L
+        }
+
+        var cumulativePaid = 0L
+        val expectedPayouts = listOf(60L, 61L, 60L, 60L, 61L, 60L, 60L, 60L, 61L, 60L)
+
+        for (offset in 0L..9L) {
+            val targetDay = startEpochDay + offset
+            val payout = SavingsInterestCalculator.calculateCumulativeDailyInterestPaise(
+                dailyBalances = dailyBalances,
+                fallbackBalancePaise = 400_214L,
+                interestRateBps = 550,
+                targetEpochDay = targetDay,
+                alreadyPaidInMonthPaise = cumulativePaid
+            )
+            assertEquals("Day ${offset + 1} payout mismatch", expectedPayouts[offset.toInt()], payout)
+            cumulativePaid += payout
+        }
+        assertEquals(603L, cumulativePaid) // Exactly 603 paise across 10 days
+    }
+
+    @Test
+    fun testSliceSfbSubPaisaCarryoverBumpsTo148Paise() {
+        // Steady ₹9,782.54 at 550 bps (5.50% p.a.)
+        // Daily accrual = 978254 * 0.055 / 365 = 147.4081 paise
+        // Day 1: round(147.4081) - 0 = 147 paise
+        // Day 2: round(294.8163) - 147 = 148 paise (bumps to 148 paise from cumulative sub-paisa carryover)
+        val nov1Epoch = LocalDate.of(2026, 11, 1).toEpochDay()
+        val nov2Epoch = LocalDate.of(2026, 11, 2).toEpochDay()
+
+        val balances = mapOf(
+            nov1Epoch to 978_254L,
+            nov2Epoch to 978_254L
+        )
+
+        val payoutDay1 = SavingsInterestCalculator.calculateCumulativeDailyInterestPaise(
+            dailyBalances = balances,
+            fallbackBalancePaise = 978_254L,
+            interestRateBps = 550,
+            targetEpochDay = nov1Epoch,
+            alreadyPaidInMonthPaise = 0L
+        )
+        assertEquals(147L, payoutDay1)
+
+        val payoutDay2 = SavingsInterestCalculator.calculateCumulativeDailyInterestPaise(
+            dailyBalances = balances,
+            fallbackBalancePaise = 978_254L,
+            interestRateBps = 550,
+            targetEpochDay = nov2Epoch,
+            alreadyPaidInMonthPaise = payoutDay1
+        )
+        assertEquals(148L, payoutDay2)
+    }
+
+    @Test
+    fun testParseInterestDateAndDuplicateMatching() {
+        val date1 = SavingsInterestCalculator.parseInterestDate("Interest for 15-Nov-2026")
+        assertEquals(LocalDate.of(2026, 11, 15), date1)
+
+        val date2 = SavingsInterestCalculator.parseInterestDate("Interest Cr. for 15-Nov-2026")
+        assertEquals(LocalDate.of(2026, 11, 15), date2)
+
+        val date3 = SavingsInterestCalculator.parseInterestDate("Daily interest cr. for 31-Aug-2026")
+        assertEquals(LocalDate.of(2026, 8, 31), date3)
+
+        assertNull(SavingsInterestCalculator.parseInterestDate("UPI Transfer to Friend"))
+
+        val txInternal = TransactionEntity(
+            id = 1L, dateEpochDay = LocalDate.of(2026, 11, 16).toEpochDay(),
+            description = "Interest for 15-Nov-2026", amountPaise = 148L, categoryId = 1L,
+            accountId = 2L, type = TransactionType.INCOME
+        )
+        val txStatement = TransactionEntity(
+            id = 2L, dateEpochDay = LocalDate.of(2026, 11, 16).toEpochDay(),
+            description = "Interest Cr. for 15-Nov-2026", amountPaise = 148L, categoryId = 1L,
+            accountId = 2L, type = TransactionType.INCOME
+        )
+
+        assertTrue(
+            SavingsInterestCalculator.isDuplicateInterest(
+                tx = txInternal,
+                accountId = 2L,
+                date = LocalDate.of(2026, 11, 15),
+                frequency = InterestCreditFrequency.DAILY,
+                periodDescription = "Interest for 15-Nov-2026"
+            )
+        )
+
+        assertTrue(
+            SavingsInterestCalculator.isDuplicateInterest(
+                tx = txStatement,
+                accountId = 2L,
+                date = LocalDate.of(2026, 11, 15),
+                frequency = InterestCreditFrequency.DAILY,
+                periodDescription = "Interest for 15-Nov-2026"
+            )
+        )
+
+        assertFalse(
+            SavingsInterestCalculator.isDuplicateInterest(
+                tx = txStatement,
+                accountId = 2L,
+                date = LocalDate.of(2026, 11, 14),
+                frequency = InterestCreditFrequency.DAILY,
+                periodDescription = "Interest for 14-Nov-2026"
+            )
+        )
+    }
+
     // =========================================================================
     // 3. TRANSACTION REPORTING EXCLUSION TESTS
     // =========================================================================

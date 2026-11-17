@@ -1,41 +1,44 @@
 package com.spendtrack.app.ui.recurring
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.spendtrack.app.data.local.RecurrenceFrequency
 import com.spendtrack.app.ui.haptics.rememberSpendTrackHaptics
 
 @Composable
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 fun RecurrenceFrequencySelector(
     selectedFrequency: RecurrenceFrequency,
     onFrequencySelected: (RecurrenceFrequency) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val haptics = rememberSpendTrackHaptics()
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp, androidx.compose.ui.Alignment.CenterHorizontally),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    val entries = RecurrenceFrequency.entries
+    SingleChoiceSegmentedButtonRow(
         modifier = modifier.fillMaxWidth()
     ) {
-        RecurrenceFrequency.entries.forEach { freq ->
-            FilterChip(
+        entries.forEachIndexed { index, freq ->
+            SegmentedButton(
                 selected = selectedFrequency == freq,
                 onClick = {
                     haptics.selection()
                     onFrequencySelected(freq)
                 },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = entries.size),
+                icon = {},
                 label = {
                     Text(
                         text = freq.displayName,
                         maxLines = 1,
-                        softWrap = false
+                        softWrap = false,
+                        style = MaterialTheme.typography.labelMedium
                     )
                 }
             )

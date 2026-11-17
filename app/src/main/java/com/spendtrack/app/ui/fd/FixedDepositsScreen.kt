@@ -20,6 +20,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import com.spendtrack.app.ui.SpendTrackBackButton
 import com.spendtrack.app.data.local.AccountEntity
 import com.spendtrack.app.data.local.CompoundingFrequency
 import com.spendtrack.app.data.local.FixedDepositCalculator
@@ -126,21 +129,19 @@ fun FixedDepositsScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { haptics.click(); onBack() }, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
-                    }
-                    Text("Fixed deposits", style = MaterialTheme.typography.titleLarge)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SpendTrackBackButton(onClick = onBack)
+                    Text("Fixed deposits", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
                 }
             }
 
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth().animateContentSize(),
-                    shape = MaterialTheme.shapes.extraExtraLarge,
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                 ) {
-                    Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("Active principal", style = MaterialTheme.typography.titleMedium)
                         Text(money(activePrincipalPaise), style = MaterialTheme.typography.headlineMedium)
                         Text(
@@ -183,10 +184,10 @@ fun FixedDepositsScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.extraExtraLarge,
+                        shape = RoundedCornerShape(20.dp),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                     ) {
-                        Column(Modifier.padding(22.dp)) {
+                        Column(Modifier.padding(16.dp)) {
                             Text(
                                 if (selectedTab == 0) "No active fixed deposits" else "No matured fixed deposits",
                                 style = MaterialTheme.typography.titleMedium
@@ -203,10 +204,10 @@ fun FixedDepositsScreen(
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraLarge,
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                 ) {
-                    Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -391,17 +392,17 @@ fun FixedDepositFormScreen(
         modifier = Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .padding(20.dp)
+            .padding(horizontal = 20.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { haptics.click(); onBack() }, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
-            }
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            SpendTrackBackButton(onClick = onBack)
             Text(
                 if (initial == null) "Add Fixed Deposit" else if (isMatured) "Edit Matured Deposit" else "Edit Fixed Deposit",
-                style = MaterialTheme.typography.titleLarge
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Medium
             )
         }
 

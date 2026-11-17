@@ -22,6 +22,30 @@
 
         </activity>
 
+        <receiver
+            android:name=".widget.SpendTrackWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_spendtrack_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/spendtrack_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".widget.SpendTrackQuickActionWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_quick_actions_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/spendtrack_quick_action_widget_info" />
+        </receiver>
+
     </application>
 
 </manifest>

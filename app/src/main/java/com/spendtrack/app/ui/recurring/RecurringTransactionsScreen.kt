@@ -19,6 +19,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import com.spendtrack.app.ui.SpendTrackBackButton
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -69,21 +72,19 @@ fun RecurringTransactionsScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = { haptics.click(); onBack() }, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp))
-                }
-                Text("Recurring transactions", style = MaterialTheme.typography.titleLarge)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                SpendTrackBackButton(onClick = onBack)
+                Text("Recurring transactions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
             }
         }
 
         item {
             Card(
                 modifier = Modifier.fillMaxWidth().animateContentSize(),
-                shape = MaterialTheme.shapes.extraExtraLarge,
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
             ) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("Scheduled commitments", style = MaterialTheme.typography.titleMedium)
                     Text(
                         "${activeSchedules.size} Active · ${pausedSchedules.size} Paused",
@@ -131,10 +132,10 @@ fun RecurringTransactionsScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = MaterialTheme.shapes.extraExtraLarge,
+                    shape = RoundedCornerShape(20.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                 ) {
-                    Column(Modifier.padding(22.dp)) {
+                    Column(Modifier.padding(16.dp)) {
                         Text(
                             if (selectedTab == 0) "No active recurring schedules" else "No paused recurring schedules",
                             style = MaterialTheme.typography.titleMedium
@@ -155,10 +156,10 @@ fun RecurringTransactionsScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.extraLarge,
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
             ) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -346,7 +347,7 @@ private fun EditRecurringScheduleDialog(
             contentAlignment = Alignment.Center
         ) {
             Surface(
-                shape = MaterialTheme.shapes.extraLarge,
+                shape = RoundedCornerShape(20.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHigh,
                 tonalElevation = 6.dp,
                 modifier = Modifier
@@ -362,7 +363,8 @@ private fun EditRecurringScheduleDialog(
                 ) {
                     Text(
                         text = "Edit Recurring Schedule",
-                        style = MaterialTheme.typography.titleLarge
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = "Changes apply to future occurrences only. Historical transactions already generated will not be modified.",

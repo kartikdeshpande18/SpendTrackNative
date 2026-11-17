@@ -15,6 +15,7 @@ import com.spendtrack.app.data.local.LoanEntity
 import com.spendtrack.app.data.local.OwedEntity
 import com.spendtrack.app.data.repository.FinanceRepository
 import com.spendtrack.app.data.repository.BackupRepository
+import com.spendtrack.app.widget.SpendTrackWidgetUpdater
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.Dispatchers
@@ -63,24 +64,60 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun deleteFixedDeposit(fd: FixedDepositEntity) = viewModelScope.launch { repository.deleteFixedDeposit(fd) }
     fun matureFixedDeposit(fdId: Long) = viewModelScope.launch { repository.matureFixedDeposit(fdId) }
     fun matureDueDeposits() = viewModelScope.launch { repository.matureDueDeposits() }
+    private fun notifyWidgets() {
+        viewModelScope.launch {
+            SpendTrackWidgetUpdater.updateAll(getApplication())
+        }
+    }
+
     fun addTransaction(value: TransactionEntity) = viewModelScope.launch {
         runCatching { repository.addTransaction(value) }.onFailure { it.printStackTrace() }
+        notifyWidgets()
     }
     fun deleteTransaction(id: Long) = viewModelScope.launch {
         runCatching { repository.deleteTransaction(id) }.onFailure { it.printStackTrace() }
+        notifyWidgets()
     }
     fun updateTransaction(value: TransactionEntity) = viewModelScope.launch {
         runCatching { repository.updateTransaction(value) }.onFailure { it.printStackTrace() }
+        notifyWidgets()
     }
-    fun addAccount(name: String, card: Boolean, opening: Long, maskedNumber: String = "", creditLimit: Long? = null, statementCycle: Int? = null, dueDay: Int? = null, minimumBalance: Long = 0) = viewModelScope.launch { repository.addAccount(name, card, opening, maskedNumber, creditLimit, statementCycle, dueDay, minimumBalance) }
-    fun addCategory(name: String, income: Boolean, colorHex: String? = null) = viewModelScope.launch { repository.addCategory(name, income, colorHex) }
-    fun updateAccount(account: AccountEntity) = viewModelScope.launch { repository.updateAccount(account) }
-    fun deleteAccount(account: AccountEntity) = viewModelScope.launch { repository.deleteAccount(account) }
-    fun updateCategory(category: CategoryEntity) = viewModelScope.launch { repository.updateCategory(category) }
-    fun deleteCategory(category: CategoryEntity) = viewModelScope.launch { repository.deleteCategory(category) }
-    fun saveBudget(categoryId: Long, monthKey: String, limitPaise: Long) = viewModelScope.launch { repository.saveBudget(categoryId, monthKey, limitPaise) }
-    fun ensureBudgetMonth(monthKey: String) = viewModelScope.launch { repository.ensureBudgetMonth(monthKey) }
-    fun deleteBudget(budget: BudgetEntity) = viewModelScope.launch { repository.deleteBudget(budget) }
+    fun addAccount(name: String, card: Boolean, opening: Long, maskedNumber: String = "", creditLimit: Long? = null, statementCycle: Int? = null, dueDay: Int? = null, minimumBalance: Long = 0) = viewModelScope.launch {
+        repository.addAccount(name, card, opening, maskedNumber, creditLimit, statementCycle, dueDay, minimumBalance)
+        notifyWidgets()
+    }
+    fun addCategory(name: String, income: Boolean, colorHex: String? = null) = viewModelScope.launch {
+        repository.addCategory(name, income, colorHex)
+        notifyWidgets()
+    }
+    fun updateAccount(account: AccountEntity) = viewModelScope.launch {
+        repository.updateAccount(account)
+        notifyWidgets()
+    }
+    fun deleteAccount(account: AccountEntity) = viewModelScope.launch {
+        repository.deleteAccount(account)
+        notifyWidgets()
+    }
+    fun updateCategory(category: CategoryEntity) = viewModelScope.launch {
+        repository.updateCategory(category)
+        notifyWidgets()
+    }
+    fun deleteCategory(category: CategoryEntity) = viewModelScope.launch {
+        repository.deleteCategory(category)
+        notifyWidgets()
+    }
+    fun saveBudget(categoryId: Long, monthKey: String, limitPaise: Long) = viewModelScope.launch {
+        repository.saveBudget(categoryId, monthKey, limitPaise)
+        notifyWidgets()
+    }
+    fun ensureBudgetMonth(monthKey: String) = viewModelScope.launch {
+        repository.ensureBudgetMonth(monthKey)
+        notifyWidgets()
+    }
+    fun deleteBudget(budget: BudgetEntity) = viewModelScope.launch {
+        repository.deleteBudget(budget)
+        notifyWidgets()
+    }
     fun addLoan(loan: LoanEntity) = viewModelScope.launch { repository.addLoan(loan) }
     fun addOwed(owed: OwedEntity) = viewModelScope.launch { repository.addOwed(owed) }
     fun createPerson(name: String) = viewModelScope.launch { repository.createPerson(name) }

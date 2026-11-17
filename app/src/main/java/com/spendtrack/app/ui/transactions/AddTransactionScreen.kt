@@ -16,6 +16,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.text.font.FontWeight
+import com.spendtrack.app.ui.SpendTrackBackButton
 import com.spendtrack.app.data.local.*
 import com.spendtrack.app.ui.parsePaise
 import com.spendtrack.app.ui.money
@@ -33,13 +36,14 @@ fun AddTransactionScreen(
     onSaved: (TransactionEntity) -> Unit,
     onCancel: () -> Unit,
     initial: TransactionEntity? = null,
+    initialType: TransactionType = initial?.type ?: TransactionType.EXPENSE,
     onSaveRecurring: ((RecurringTransactionEntity) -> Unit)? = null,
     owedParticipants: List<String> = emptyList(),
     onCreatePerson: (String) -> Unit = {}
 ) {
     val haptics = rememberSpendTrackHaptics()
     var description by remember(initial?.id) { mutableStateOf(initial?.description.orEmpty()) }; var amount by remember(initial?.id) { mutableStateOf(initial?.let { "%.2f".format(java.util.Locale.US, it.amountPaise / 100.0) }.orEmpty()) }
-    var transactionType by remember(initial?.id) { mutableStateOf(initial?.type ?: TransactionType.EXPENSE) }
+    var transactionType by remember(initial?.id, initialType) { mutableStateOf(initial?.type ?: initialType) }
     var isExcludedFromCalculations by remember(initial?.id) { mutableStateOf(initial?.isExcludedFromCalculations ?: false) }
     var shared by remember(initial?.id) { mutableStateOf(initial?.isShared == true) }; var share by remember(initial?.id) { mutableStateOf(initial?.mySharePaise?.let { "%.2f".format(java.util.Locale.US, it / 100.0) }.orEmpty()) }; var sharedWith by remember(initial?.id) { mutableStateOf(initial?.sharedWith.orEmpty()) }
 
@@ -160,11 +164,15 @@ fun AddTransactionScreen(
         Modifier
             .fillMaxSize()
             .statusBarsPadding()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .padding(horizontal = 20.dp)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = { haptics.click(); onCancel() }, modifier = Modifier.size(40.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", modifier = Modifier.size(20.dp)) }; Text(if (initial == null) "Add transaction" else "Edit transaction", style = MaterialTheme.typography.titleLarge) }
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            SpendTrackBackButton(onClick = onCancel)
+            Text(if (initial == null) "Add Transaction" else "Edit Transaction", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Medium)
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(transactionType == TransactionType.EXPENSE, { haptics.selection(); transactionType = TransactionType.EXPENSE; categoryIndex = 0 }, { Text("Expense") })
             FilterChip(transactionType == TransactionType.INCOME, { haptics.selection(); transactionType = TransactionType.INCOME; categoryIndex = 0 }, { Text("Income") })
@@ -250,10 +258,11 @@ fun AddTransactionScreen(
 
                             if (splitMethod == SplitMethod.EQUAL) {
                                 Card(
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(20.dp),
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
                                 ) {
-                                    Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                         Text("Calculated Shares (${selectedParticipants.size} people):", style = MaterialTheme.typography.labelMedium)
                                         selectedParticipants.forEach { person ->
                                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -546,17 +555,18 @@ private fun TransactionToggleCard(
     content: @Composable ColumnScope.() -> Unit = {}
 ) {
     Card(
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        modifier = Modifier.fillMaxWidth().animateContentSize()
+        modifier = Modifier.fillMaxWidth().animateContentSize(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f).padding(end = 16.dp)) {
-                    Text(title, style = MaterialTheme.typography.titleMedium)
+                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
                     if (!description.isNullOrBlank()) {
                         Spacer(Modifier.height(2.dp))
                         Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
