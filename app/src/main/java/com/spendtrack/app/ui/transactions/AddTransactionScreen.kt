@@ -83,7 +83,7 @@ fun AddTransactionScreen(
             set.addAll(initial.sharedWith.split(",").map { it.trim() }.filter { it.isNotBlank() })
         } else {
             set.add("You")
-            val firstOther = availableMembers.firstOrNull { !it.equals("You", ignoreCase = true) && !it.equals("Kartik", ignoreCase = true) && !it.equals("Me", ignoreCase = true) }
+            val firstOther = availableMembers.firstOrNull { !it.equals("You", ignoreCase = true) && !it.equals("Me", ignoreCase = true) }
             if (firstOther != null) {
                 set.add(firstOther)
             }
@@ -383,17 +383,16 @@ fun AddTransactionScreen(
             val finalSharedWith = if (shared && !isIncome && !isTransfer) {
                 selectedParticipants.filter {
                     !it.equals("You", ignoreCase = true) &&
-                    !it.equals("Kartik", ignoreCase = true) &&
                     !it.equals("Me", ignoreCase = true)
                 }.joinToString(", ")
             } else ""
 
             val myShareFinal = if (shared && !isIncome && !isTransfer) {
                 if (splitMethod == SplitMethod.EQUAL) {
-                    equalShares["You"] ?: equalShares["Kartik"] ?: equalShares["Me"]
+                    equalShares["You"] ?: equalShares["Me"]
                         ?: if (selectedParticipants.isNotEmpty()) paise / selectedParticipants.size else paise
                 } else {
-                    parsePaise(customShares["You"] ?: customShares["Kartik"] ?: customShares["Me"].orEmpty())
+                    parsePaise(customShares["You"] ?: customShares["Me"].orEmpty())
                 }
             } else null
 

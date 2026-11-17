@@ -192,4 +192,78 @@ class TransferFeatureTest {
         assertEquals(9000_00L, updated.amountPaise)
         assertEquals(3L, updated.destinationAccountId)
     }
+
+    @Test
+    fun testTransferMatcher_doesNotMatchSameAccountDebitsAndCredits() {
+        val date = LocalDate.of(2026, 9, 6).toEpochDay()
+        val debit = com.spendtrack.app.importer.model.NormalizedTransaction(
+            dateEpochDay = date,
+            amountPaise = 500_00L,
+            direction = com.spendtrack.app.importer.model.Direction.DEBIT,
+            rawNarration = "Food purchase",
+            normalizedMerchant = "Swiggy",
+            referenceNumber = null,
+            transactionType = com.spendtrack.app.importer.model.ImporterTransactionType.EXPENSE,
+            sourceAccountId = 10L,
+            sourceFilename = "stmt.pdf",
+            parserIdentifier = "test_parser",
+            duplicateFingerprint = "fp1"
+        )
+        val credit = com.spendtrack.app.importer.model.NormalizedTransaction(
+            dateEpochDay = date + 1,
+            amountPaise = 500_00L,
+            direction = com.spendtrack.app.importer.model.Direction.CREDIT,
+            rawNarration = "Refund",
+            normalizedMerchant = "Swiggy",
+            referenceNumber = null,
+            transactionType = com.spendtrack.app.importer.model.ImporterTransactionType.INCOME,
+            sourceAccountId = 10L, // Same account!
+            sourceFilename = "stmt.pdf",
+            parserIdentifier = "test_parser",
+            duplicateFingerprint = "fp2"
+        )
+
+        val result = com.spendtrack.app.importer.matching.TransferMatcher.matchTransfers(listOf(debit, credit))
+        assertEquals(2, result.size)
+        // Neither should be turned into a transfer or excluded
+        assertNotEquals(com.spendtrack.app.importer.model.ImporterTransactionType.TRANSFER, result[0].transactionType)
+        assertNotEquals(com.spendtrack.app.importer.model.ImportStatus.EXCLUDED, result[1].status)
+    }
+
+    @Test
+    fun testTransferMatcher_matchesCrossAccountOppositeEntries() {
+        val date = LocalDate.of(2026, 9, 6).toEpochDay()
+        val debit = com.spendtrack.app.importer.model.NormalizedTransaction(
+            dateEpochDay = date,
+            amountPaise = 1000_00L,
+            direction = com.spendtrack.app.importer.model.Direction.DEBIT,
+            rawNarration = "Transfer to SBI",
+            normalizedMerchant = "Transfer",
+            referenceNumber = null,
+            transactionType = com.spendtrack.app.importer.model.ImporterTransactionType.EXPENSE,
+            sourceAccountId = 10L, // Account A
+            sourceFilename = "stmtA.pdf",
+            parserIdentifier = "test_parser",
+            duplicateFingerprint = "fp1"
+        )
+        val credit = com.spendtrack.app.importer.model.NormalizedTransaction(
+            dateEpochDay = date + 1,
+            amountPaise = 1000_00L,
+            direction = com.spendtrack.app.importer.model.Direction.CREDIT,
+            rawNarration = "Transfer from HDFC",
+            normalizedMerchant = "Transfer",
+            referenceNumber = null,
+            transactionType = com.spendtrack.app.importer.model.ImporterTransactionType.INCOME,
+            sourceAccountId = 20L, // Account B
+            sourceFilename = "stmtB.pdf",
+            parserIdentifier = "test_parser",
+            duplicateFingerprint = "fp2"
+        )
+
+        val result = com.spendtrack.app.importer.matching.TransferMatcher.matchTransfers(listOf(debit, credit))
+        assertEquals(2, result.size)
+        assertEquals(com.spendtrack.app.importer.model.ImporterTransactionType.TRANSFER, result[0].transactionType)
+        assertEquals(20L, result[0].destinationAccountId)
+        assertEquals(com.spendtrack.app.importer.model.ImportStatus.EXCLUDED, result[1].status)
+    }
 }

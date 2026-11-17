@@ -159,7 +159,7 @@ fun ImportScreen(
                         onAcceptAllHighConfidence = viewModel::acceptAllHighConfidence,
                         onRemoveAllDuplicates = viewModel::removeAllDuplicates,
                         onDiscard = { viewModel.cancelImport() },
-                        onConfirmImport = { viewModel.confirmImport() }
+                        onConfirmImport = { viewModel.confirmImport(context) }
                     )
                 }
 

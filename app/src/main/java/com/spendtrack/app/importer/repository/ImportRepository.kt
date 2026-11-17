@@ -64,6 +64,20 @@ class ImportRepository(private val db: SpendTrackDatabase) {
                                     db.accounts().update(source.copy(balancePaise = source.balancePaise - tx.amountPaise))
                                 }
                             }
+
+                            if (tx.destinationAccountId != null && tx.destinationAccountId != tx.sourceAccountId) {
+                                val cardTx = TransactionEntity(
+                                    dateEpochDay = tx.dateEpochDay,
+                                    description = if (tx.normalizedMerchant.isNotBlank()) tx.normalizedMerchant else "Bill Payment: ${card?.name ?: "Credit Card"}",
+                                    amountPaise = tx.amountPaise,
+                                    categoryId = tx.categoryId ?: 0L,
+                                    accountId = sourceAccountId,
+                                    destinationAccountId = cardAccountId,
+                                    type = TransactionType.TRANSFER,
+                                    isExcludedFromCalculations = tx.isExcludedFromCalculations
+                                )
+                                db.transactions().insert(cardTx)
+                            }
                         }
                         tx.transactionType == ImporterTransactionType.TRANSFER -> {
                             val destAccountId = tx.destinationAccountId

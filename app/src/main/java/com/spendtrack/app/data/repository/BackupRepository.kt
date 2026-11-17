@@ -166,7 +166,7 @@ class BackupRepository(private val database: SpendTrackDatabase) {
                 }
             historicalNames.forEach { rawName ->
                 val name = rawName.trim().replace(Regex("\\s+"), " ")
-                if (name.isBlank() || name.equals("you", true) || name.equals("me", true) || name.equals("kartik", true)) return@forEach
+                if (name.isBlank() || name.equals("you", true) || name.equals("me", true)) return@forEach
                 val normalized = name.lowercase(java.util.Locale.ROOT)
                 if (database.people().getByNormalizedName(normalized) == null) {
                     database.people().insert(PersonEntity(name = name, normalizedName = normalized))

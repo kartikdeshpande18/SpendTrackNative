@@ -38,6 +38,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.spendtrack.app.MainActivity
 import com.spendtrack.app.R
+import com.spendtrack.app.data.local.TransactionType
 
 class SpendTrackWidget : GlanceAppWidget() {
 
@@ -136,7 +137,7 @@ private fun SmallCardWidget(snapshot: WidgetSnapshot, context: Context) {
 
         // Big Metric: Today's Spend
         Text(
-            text = WidgetDataProvider.formatMoney(snapshot.todaySpentPaise),
+            text = WidgetDataProvider.formatMoney(snapshot.todaySpentPaise, snapshot.isLocked),
             style = TextStyle(
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
@@ -148,7 +149,7 @@ private fun SmallCardWidget(snapshot: WidgetSnapshot, context: Context) {
 
         // Month total subtitle
         Text(
-            text = "Month: ${WidgetDataProvider.formatCompactMoney(snapshot.monthSpentPaise)}",
+            text = if (snapshot.isLocked) "SpendTrack Locked" else "Month: ${WidgetDataProvider.formatCompactMoney(snapshot.monthSpentPaise)}",
             style = TextStyle(
                 fontSize = 11.sp,
                 color = GlanceTheme.colors.onSurfaceVariant
@@ -163,7 +164,7 @@ private fun SmallCardWidget(snapshot: WidgetSnapshot, context: Context) {
             verticalAlignment = Alignment.Vertical.CenterVertically
         ) {
             Text(
-                text = "Net: ${WidgetDataProvider.formatCompactMoney(snapshot.netWorthPaise)}",
+                text = "Net: ${WidgetDataProvider.formatCompactMoney(snapshot.netWorthPaise, snapshot.isLocked)}",
                 style = TextStyle(
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
@@ -256,7 +257,7 @@ private fun MediumBannerWidget(snapshot: WidgetSnapshot, context: Context) {
             }
             Spacer(GlanceModifier.height(4.dp))
             Text(
-                text = WidgetDataProvider.formatMoney(snapshot.monthSpentPaise),
+                text = WidgetDataProvider.formatMoney(snapshot.monthSpentPaise, snapshot.isLocked),
                 style = TextStyle(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
@@ -265,7 +266,7 @@ private fun MediumBannerWidget(snapshot: WidgetSnapshot, context: Context) {
             )
             Spacer(GlanceModifier.height(2.dp))
             Text(
-                text = "Today: ${WidgetDataProvider.formatCompactMoney(snapshot.todaySpentPaise)} · Net: ${WidgetDataProvider.formatCompactMoney(snapshot.netWorthPaise)}",
+                text = if (snapshot.isLocked) "SpendTrack Locked" else "Today: ${WidgetDataProvider.formatCompactMoney(snapshot.todaySpentPaise)} · Net: ${WidgetDataProvider.formatCompactMoney(snapshot.netWorthPaise)}",
                 style = TextStyle(
                     fontSize = 10.sp,
                     color = GlanceTheme.colors.onSurfaceVariant
@@ -480,7 +481,7 @@ private fun LargeDashboardWidget(snapshot: WidgetSnapshot, context: Context) {
                 )
                 Spacer(GlanceModifier.height(2.dp))
                 Text(
-                    text = WidgetDataProvider.formatCompactMoney(snapshot.todaySpentPaise),
+                    text = WidgetDataProvider.formatCompactMoney(snapshot.todaySpentPaise, snapshot.isLocked),
                     style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onSurface)
                 )
             }
@@ -501,7 +502,7 @@ private fun LargeDashboardWidget(snapshot: WidgetSnapshot, context: Context) {
                 )
                 Spacer(GlanceModifier.height(2.dp))
                 Text(
-                    text = WidgetDataProvider.formatCompactMoney(snapshot.monthSpentPaise),
+                    text = WidgetDataProvider.formatCompactMoney(snapshot.monthSpentPaise, snapshot.isLocked),
                     style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = GlanceTheme.colors.primary)
                 )
             }
@@ -522,7 +523,7 @@ private fun LargeDashboardWidget(snapshot: WidgetSnapshot, context: Context) {
                 )
                 Spacer(GlanceModifier.height(2.dp))
                 Text(
-                    text = WidgetDataProvider.formatCompactMoney(snapshot.netWorthPaise),
+                    text = WidgetDataProvider.formatCompactMoney(snapshot.netWorthPaise, snapshot.isLocked),
                     style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onSecondaryContainer)
                 )
             }
@@ -577,15 +578,37 @@ private fun LargeDashboardWidget(snapshot: WidgetSnapshot, context: Context) {
                         .padding(vertical = 3.dp),
                     verticalAlignment = Alignment.Vertical.CenterVertically
                 ) {
+                    val isTransfer = tx.transactionType == TransactionType.TRANSFER
+                    val iconRes = when {
+                        isTransfer -> R.drawable.ic_widget_transfer
+                        tx.isExpense -> R.drawable.ic_widget_expense
+                        else -> R.drawable.ic_widget_income
+                    }
+                    val iconBg = when {
+                        isTransfer -> GlanceTheme.colors.secondaryContainer
+                        tx.isExpense -> GlanceTheme.colors.surfaceVariant
+                        else -> GlanceTheme.colors.primaryContainer
+                    }
+                    val prefix = when {
+                        isTransfer -> ""
+                        tx.isExpense -> "-"
+                        else -> "+"
+                    }
+                    val amountColor = when {
+                        isTransfer -> GlanceTheme.colors.onSurface
+                        tx.isExpense -> GlanceTheme.colors.onSurface
+                        else -> GlanceTheme.colors.primary
+                    }
+
                     Box(
                         modifier = GlanceModifier
                             .size(18.dp)
                             .cornerRadius(9.dp)
-                            .background(if (tx.isExpense) GlanceTheme.colors.surfaceVariant else GlanceTheme.colors.primaryContainer),
+                            .background(iconBg),
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
-                            provider = ImageProvider(if (tx.isExpense) R.drawable.ic_widget_expense else R.drawable.ic_widget_income),
+                            provider = ImageProvider(iconRes),
                             contentDescription = null,
                             modifier = GlanceModifier.size(10.dp)
                         )
@@ -597,11 +620,11 @@ private fun LargeDashboardWidget(snapshot: WidgetSnapshot, context: Context) {
                     )
                     Spacer(GlanceModifier.defaultWeight())
                     Text(
-                        text = (if (tx.isExpense) "-" else "+") + WidgetDataProvider.formatMoney(tx.amountPaise),
+                        text = prefix + WidgetDataProvider.formatMoney(tx.amountPaise),
                         style = TextStyle(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (tx.isExpense) GlanceTheme.colors.onSurface else GlanceTheme.colors.primary
+                            color = amountColor
                         )
                     )
                 }

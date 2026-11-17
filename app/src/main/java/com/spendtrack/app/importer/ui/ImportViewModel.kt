@@ -461,7 +461,7 @@ class ImportViewModel(
      * Final user confirmation.
      * ONLY HERE are accepted transactions committed to SpendTrack Room database.
      */
-    fun confirmImport() {
+    fun confirmImport(context: Context? = null) {
         val currentState = _state.value as? ImportState.Review ?: return
         logAction("confirmImport")
         val batch = currentState.batch
@@ -477,6 +477,9 @@ class ImportViewModel(
         scope.launch(Dispatchers.IO) {
             val result = importRepository.commitAcceptedBatch(batch, acceptedTransactions)
             if (result.isSuccess) {
+                if (context != null) {
+                    com.spendtrack.app.widget.SpendTrackWidgetUpdater.updateAll(context)
+                }
                 val excludedCount = batch.transactions.count { it.reviewStatus == ReviewStatus.REMOVED }
                 val duplicatesSkipped = batch.transactions.count {
                     (it.status == ImportStatus.DUPLICATE || it.status == ImportStatus.POSSIBLE_DUPLICATE) && !it.isAccepted

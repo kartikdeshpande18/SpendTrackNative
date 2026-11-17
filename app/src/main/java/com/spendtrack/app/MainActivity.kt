@@ -7,6 +7,7 @@ import android.content.Intent
 import android.os.Build
 import android.widget.Toast
 import android.net.Uri
+import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.biometric.BiometricManager
@@ -38,6 +39,9 @@ class MainActivity : FragmentActivity() {
         widgetAction = intent?.getStringExtra("extra_action")
         biometricEnabled = BiometricPreferences.isEnabled(this)
         isUnlocked = !biometricEnabled
+        if (biometricEnabled) {
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
+        }
         lifecycleScope.launch(Dispatchers.Default) {
             ReminderWorker.schedule(applicationContext)
         }
@@ -155,6 +159,7 @@ class MainActivity : FragmentActivity() {
             BiometricPreferences.setEnabled(this, false)
             biometricEnabled = false
             isUnlocked = true
+            window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
             return
         }
         val manager = BiometricManager.from(this)
@@ -166,6 +171,7 @@ class MainActivity : FragmentActivity() {
             BiometricPreferences.setEnabled(this, true)
             biometricEnabled = true
             isUnlocked = true
+            window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
         }
     }
 

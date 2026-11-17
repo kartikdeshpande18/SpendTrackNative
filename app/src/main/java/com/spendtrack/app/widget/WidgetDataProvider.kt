@@ -7,6 +7,7 @@ import com.spendtrack.app.data.local.OwedDirection
 import com.spendtrack.app.data.local.TransactionType
 import com.spendtrack.app.ui.dashboard.SavingsCalculator
 import com.spendtrack.app.ui.dashboard.TopBudgetsCalculator
+import com.spendtrack.app.ui.security.BiometricPreferences
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.YearMonth
@@ -19,7 +20,8 @@ data class WidgetTransaction(
     val categoryName: String,
     val amountPaise: Long,
     val isExpense: Boolean,
-    val dateText: String
+    val dateText: String,
+    val transactionType: TransactionType = if (isExpense) TransactionType.EXPENSE else TransactionType.INCOME
 )
 
 data class WidgetBudgetItem(
@@ -43,17 +45,24 @@ data class WidgetSnapshot(
     val topBudgetProgress: Float = 0f,
     val topBudgetPercentFormatted: String = "",
     val topBudgets: List<WidgetBudgetItem> = emptyList(),
-    val recentTransactions: List<WidgetTransaction> = emptyList()
+    val recentTransactions: List<WidgetTransaction> = emptyList(),
+    val isLocked: Boolean = false
 )
 
 object WidgetDataProvider {
 
     suspend fun loadSnapshot(context: Context): WidgetSnapshot {
         return runCatching {
+            val currentYm = YearMonth.now()
+            if (BiometricPreferences.isEnabled(context)) {
+                return WidgetSnapshot(
+                    monthName = currentYm.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.getDefault())),
+                    isLocked = true
+                )
+            }
             val db = DatabaseProvider.get(context)
             val today = LocalDate.now()
             val todayEpoch = today.toEpochDay()
-            val currentYm = YearMonth.now()
             val startOfMonthEpoch = currentYm.atDay(1).toEpochDay()
             val endOfMonthEpoch = currentYm.atEndOfMonth().toEpochDay()
 
@@ -122,7 +131,8 @@ object WidgetDataProvider {
                     categoryName = cat,
                     amountPaise = t.mySharePaise ?: t.amountPaise,
                     isExpense = t.type == TransactionType.EXPENSE,
-                    dateText = dateStr
+                    dateText = dateStr,
+                    transactionType = t.type
                 )
             }
 
@@ -148,12 +158,14 @@ object WidgetDataProvider {
         }
     }
 
-    fun formatMoney(paise: Long): String {
+    fun formatMoney(paise: Long, isLocked: Boolean = false): String {
+        if (isLocked) return "₹••••"
         val rupees = paise / 100.0
         return "₹" + String.format(Locale.US, "%,.0f", rupees)
     }
 
-    fun formatCompactMoney(paise: Long): String {
+    fun formatCompactMoney(paise: Long, isLocked: Boolean = false): String {
+        if (isLocked) return "₹••••"
         val rupees = paise / 100.0
         return when {
             rupees >= 10_000_000 -> "₹" + String.format(Locale.US, "%.1fCr", rupees / 10_000_000)

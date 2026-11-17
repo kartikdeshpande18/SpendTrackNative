@@ -1024,15 +1024,16 @@ private fun CreditCardBillAlertSection(
     val currentWeekMondayEpoch = remember(today) {
         today.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)).toEpochDay()
     }
+    val isAllDatesFilter = dateFilter.type == DateFilterType.ALL_DATES
     var weeksBack by rememberSaveable { mutableIntStateOf(0) }
     val minEpochToShow = remember(currentWeekMondayEpoch, weeksBack) {
         LocalDate.ofEpochDay(currentWeekMondayEpoch).minusWeeks(weeksBack.toLong()).toEpochDay()
     }
-    val displayedItems = remember(visible, minEpochToShow) {
-        visible.filter { it.dateEpochDay >= minEpochToShow }
+    val displayedItems = remember(visible, minEpochToShow, isAllDatesFilter) {
+        if (isAllDatesFilter) visible.filter { it.dateEpochDay >= minEpochToShow } else visible
     }
-    val hasOlderTransactions = remember(visible, minEpochToShow) {
-        visible.any { it.dateEpochDay < minEpochToShow }
+    val hasOlderTransactions = remember(visible, minEpochToShow, isAllDatesFilter) {
+        isAllDatesFilter && visible.any { it.dateEpochDay < minEpochToShow }
     }
     val classification = remember(transactions, categoryFilter, accountFilter, kindFilter, amountRange, dateFilter) {
         TransactionDateFilter.filterForChart(

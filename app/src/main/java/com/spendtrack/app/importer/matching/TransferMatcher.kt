@@ -14,9 +14,10 @@ object TransferMatcher {
             if (i in processedIndices) continue
             val tx1 = result[i]
 
-            // Try to find a matching transaction in the opposite direction
+            // Try to find a matching transaction in the opposite direction across different accounts
             val matchIndex = result.indices.firstOrNull { j ->
                 j != i && j !in processedIndices &&
+                        result[j].sourceAccountId != tx1.sourceAccountId &&
                         result[j].amountPaise == tx1.amountPaise &&
                         result[j].direction != tx1.direction &&
                         abs(result[j].dateEpochDay - tx1.dateEpochDay) <= 2

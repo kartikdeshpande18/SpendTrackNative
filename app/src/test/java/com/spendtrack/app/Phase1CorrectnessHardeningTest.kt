@@ -322,6 +322,35 @@ class Phase1CorrectnessHardeningTest {
         assertEquals(PersonEntity(60L, "Archived friend", "archived friend", false), destDb.people().getById(60L))
     }
 
+    @Test
+    fun testBackupRepository_restorePersonNamedKartikIsNotExcluded() = runBlocking {
+        val destDb = TestSpendTrackDatabase()
+        val repo = BackupRepository(destDb)
+        val backupJson = """
+        {
+          "format": "spendtrack-backup",
+          "version": 1,
+          "accounts": [],
+          "categories": [],
+          "transactions": [],
+          "budgets": [],
+          "loans": [],
+          "owed": [
+            { "id": 1, "person": "Kartik", "amount": 250000, "direction": "OWED_TO_ME" }
+          ],
+          "cardPayments": [],
+          "fixedDeposits": [],
+          "recurringTransactions": [],
+          "recurringOccurrences": [],
+          "people": []
+        }
+        """.trimIndent()
+        repo.restore(backupJson)
+        val person = destDb.people().getByNormalizedName("kartik")
+        assertNotNull("Person named Kartik should be recorded as a person, not skipped", person)
+        assertEquals("Kartik", person?.name)
+    }
+
     /**
      * Test in-memory database implementation that satisfies RoomDatabase's reflection requirements
      * without needing physical SQLite Android drivers during JVM unit tests.

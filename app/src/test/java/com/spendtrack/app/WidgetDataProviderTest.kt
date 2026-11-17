@@ -20,6 +20,7 @@ class WidgetDataProviderTest {
         assertEquals("₹500", WidgetDataProvider.formatMoney(50000L))
         assertEquals("₹1,250", WidgetDataProvider.formatMoney(125000L))
         assertEquals("₹10,000", WidgetDataProvider.formatMoney(1000000L))
+        assertEquals("₹••••", WidgetDataProvider.formatMoney(1000000L, isLocked = true))
     }
 
     @Test
@@ -28,6 +29,7 @@ class WidgetDataProviderTest {
         assertEquals("₹15.5K", WidgetDataProvider.formatCompactMoney(1550000L))
         assertEquals("₹1.5L", WidgetDataProvider.formatCompactMoney(15000000L))
         assertEquals("₹2.5Cr", WidgetDataProvider.formatCompactMoney(2500000000L))
+        assertEquals("₹••••", WidgetDataProvider.formatCompactMoney(2500000000L, isLocked = true))
     }
 
     @Test

@@ -44,7 +44,7 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
 
     private suspend fun ensurePerson(name: String) {
         val clean = name.trim().replace(Regex("\\s+"), " ")
-        if (clean.isBlank() || clean.equals("you", true) || clean.equals("me", true) || clean.equals("kartik", true)) return
+        if (clean.isBlank() || clean.equals("you", true) || clean.equals("me", true)) return
         val key = normalizePersonName(clean)
         val existing = database.people().getByNormalizedName(key)
         if (existing == null) database.people().insert(PersonEntity(name = clean, normalizedName = key))
@@ -333,11 +333,11 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
         val split = SharedExpenseHelper.deserialize(transaction.splitDetails)
         if (split != null && split.shares.isNotEmpty()) {
             val payer = split.payer
-            val isUserPayer = payer.equals("You", ignoreCase = true) || payer.equals("Kartik", ignoreCase = true) || payer.equals("Me", ignoreCase = true)
+            val isUserPayer = payer.equals("You", ignoreCase = true) || payer.equals("Me", ignoreCase = true)
             if (isUserPayer) {
                 // I paid for the group -> participants owe me their shares
                 for ((person, share) in split.shares) {
-                    if (!person.equals(payer, ignoreCase = true) && !person.equals("You", ignoreCase = true) && !person.equals("Kartik", ignoreCase = true) && !person.equals("Me", ignoreCase = true) && share > 0L) {
+                    if (!person.equals(payer, ignoreCase = true) && !person.equals("You", ignoreCase = true) && !person.equals("Me", ignoreCase = true) && share > 0L) {
                         database.owed().insert(
                             OwedEntity(
                                 personName = person.trim(),
@@ -353,7 +353,7 @@ class FinanceRepository(private val database: SpendTrackDatabase) {
                 }
             } else {
                 // Another person paid -> I owe the payer my share
-                val myShare = split.shares["You"] ?: split.shares["Kartik"] ?: split.shares["Me"] ?: (transaction.mySharePaise ?: 0L)
+                val myShare = split.shares["You"] ?: split.shares["Me"] ?: (transaction.mySharePaise ?: 0L)
                 if (myShare > 0L) {
                     database.owed().insert(
                         OwedEntity(

@@ -25,6 +25,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
         repository.matureDueDeposits(today.toEpochDay())
         repository.processDueRecurringTransactions(today.toEpochDay())
         repository.processDueSavingsInterest(today)
+        com.spendtrack.app.widget.SpendTrackWidgetUpdater.updateAll(applicationContext)
 
         if (!ReminderPreferences.isNotificationsEnabled(applicationContext)) {
             return Result.success()
