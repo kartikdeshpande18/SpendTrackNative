@@ -22,6 +22,7 @@ class BackupRepository(private val database: SpendTrackDatabase) {
             put("fixedDeposits", JSONArray().also { array -> database.fixedDeposits().observeAll().first().forEach { e -> array.put(JSONObject().apply { put("id",e.id); put("name",e.name); put("accountId",e.linkedAccountId); put("principal",e.principalPaise); put("rate",e.interestRateBps); put("startDate",e.startDateEpochDay); put("maturityDate",e.maturityDateEpochDay); put("maturityAmount",e.maturityAmountPaise); put("description",e.description); put("status",e.status.name); put("compoundingFrequency",e.compoundingFrequency.name); put("isExisting",e.isExisting) }) } })
             put("recurringTransactions", JSONArray().also { array -> database.recurringTransactions().observeAll().first().forEach { e -> array.put(JSONObject().apply { put("id",e.id); put("description",e.description); put("amount",e.amountPaise); put("category",e.categoryId); put("account",e.accountId); put("type",e.type.name); put("frequency",e.frequency.name); put("startDate",e.startDateEpochDay); put("endDate",e.endDateEpochDay); put("nextOccurrence",e.nextOccurrenceEpochDay); put("isEnabled",e.isEnabled); put("isShared",e.isShared); put("share",e.mySharePaise); put("sharedWith",e.sharedWith); put("destAccount",e.destinationAccountId) }) } })
             put("recurringOccurrences", JSONArray().also { array -> database.recurringOccurrences().getAll().forEach { e -> array.put(JSONObject().apply { put("id",e.id); put("scheduleId",e.scheduleId); put("occurrenceDate",e.occurrenceEpochDay); put("transactionId",e.transactionId) }) } })
+            put("importHistory", JSONArray().also { array -> database.importHistory().getAll().forEach { e -> array.put(JSONObject().apply { put("id", e.id); put("filename", e.filename); put("fileHash", e.fileHash); put("format", e.format); put("accountId", e.accountId); put("timestamp", e.importTimestampEpochMs); put("imported", e.transactionsImported); put("skipped", e.duplicatesSkipped) }) } })
         }.toString(2)
     }
 
@@ -30,7 +31,7 @@ class BackupRepository(private val database: SpendTrackDatabase) {
         require(root.optString("format") == "spendtrack-backup" && root.optInt("version") == 1) { "Unsupported backup file" }
         fun array(name: String) = root.optJSONArray(name) ?: JSONArray()
         database.withTransaction {
-            database.recurringOccurrences().clear(); database.recurringTransactions().clear(); database.fixedDeposits().clear(); database.cardPayments().clear(); database.transactions().clear(); database.budgets().clear(); database.loans().clear(); database.owed().clear(); database.people().clear(); database.accounts().clear(); database.categories().clear()
+            database.importHistory().clear(); database.recurringOccurrences().clear(); database.recurringTransactions().clear(); database.fixedDeposits().clear(); database.cardPayments().clear(); database.transactions().clear(); database.budgets().clear(); database.loans().clear(); database.owed().clear(); database.people().clear(); database.accounts().clear(); database.categories().clear()
             database.accounts().insertAll(array("accounts").objects { o ->
                 val isCard = o.getBoolean("card")
                 val minBalance = if (isCard) 0L else o.optLong("minimumBalancePaise", 0L).coerceAtLeast(0L)
@@ -157,6 +158,18 @@ class BackupRepository(private val database: SpendTrackDatabase) {
                     scheduleId = o.getLong("scheduleId"),
                     occurrenceEpochDay = o.getLong("occurrenceDate"),
                     transactionId = o.getLong("transactionId")
+                )
+            })
+            database.importHistory().insertAll(array("importHistory").objects { o ->
+                ImportHistoryEntity(
+                    id = o.getLong("id"),
+                    filename = o.getString("filename"),
+                    fileHash = o.getString("fileHash"),
+                    format = o.getString("format"),
+                    accountId = o.getLong("accountId"),
+                    importTimestampEpochMs = o.getLong("timestamp"),
+                    transactionsImported = o.getInt("imported"),
+                    duplicatesSkipped = o.getInt("skipped")
                 )
             })
             val historicalNames = database.owed().observeAll().first().map { it.personName } +

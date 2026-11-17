@@ -207,6 +207,15 @@ fun SpendTrackApp(
     val recurringTransactions by viewModel.recurringTransactions.collectAsState()
     val people by viewModel.people.collectAsState()
     val activePeople by viewModel.activePeople.collectAsState()
+    val errorMessage by viewModel.errorMessage.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(errorMessage) {
+        errorMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearError()
+        }
+    }
     BackHandler(enabled = overlay != Overlay.NONE || route != "home") {
         when {
             overlay != Overlay.NONE -> overlay = Overlay.NONE
@@ -491,6 +500,12 @@ fun SpendTrackApp(
                         }
                     }
                 }
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = bottomContentPadding)
+                )
                 if (isAppLocked) BiometricLockScreen(onUnlockRequest)
             }
         }

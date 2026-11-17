@@ -1067,6 +1067,14 @@ class ComprehensiveFeatureHardeningTest {
         val recurringOccurrencesDao = InMemoryRecurringOccurrenceDao(recurringOccurrencesList)
         val cardPaymentsDao = InMemoryCardPaymentDao(cardPaymentsList)
         val peopleDao = InMemoryPersonDao()
+        val importHistoryList = mutableListOf<com.spendtrack.app.data.local.ImportHistoryEntity>()
+        val importHistoryDao = object : com.spendtrack.app.data.local.ImportHistoryDao {
+            override suspend fun insert(history: com.spendtrack.app.data.local.ImportHistoryEntity): Long = 1L
+            override suspend fun insertAll(entities: List<com.spendtrack.app.data.local.ImportHistoryEntity>) { importHistoryList.addAll(entities) }
+            override suspend fun getAll(): List<com.spendtrack.app.data.local.ImportHistoryEntity> = importHistoryList.toList()
+            override suspend fun getByFileHash(hash: String): com.spendtrack.app.data.local.ImportHistoryEntity? = null
+            override suspend fun clear() { importHistoryList.clear() }
+        }
 
         val dummyDb = java.lang.reflect.Proxy.newProxyInstance(
             androidx.sqlite.db.SupportSQLiteDatabase::class.java.classLoader,
@@ -1119,7 +1127,7 @@ class ComprehensiveFeatureHardeningTest {
             override fun fixedDeposits(): FixedDepositDao = fixedDepositsDao
             override fun recurringTransactions(): RecurringTransactionDao = recurringDao
             override fun recurringOccurrences(): RecurringOccurrenceDao = recurringOccurrencesDao
-            override fun importHistory(): ImportHistoryDao = error("Not needed")
+            override fun importHistory(): com.spendtrack.app.data.local.ImportHistoryDao = importHistoryDao
             override fun people(): PersonDao = peopleDao
 
             override fun inTransaction(): Boolean = true

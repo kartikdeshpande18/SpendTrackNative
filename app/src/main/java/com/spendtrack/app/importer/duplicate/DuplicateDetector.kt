@@ -10,19 +10,22 @@ object DuplicateDetector {
         imported: List<NormalizedTransaction>,
         existingTransactions: List<TransactionEntity>
     ): List<NormalizedTransaction> {
+        val byAccount = existingTransactions.groupBy { it.accountId }
         return imported.map { newTx ->
-            // Look for matching date, amount, account
-            val exactMatch = existingTransactions.any { existing ->
-                existing.dateEpochDay == newTx.dateEpochDay &&
-                        existing.amountPaise == newTx.amountPaise &&
-                        existing.accountId == newTx.sourceAccountId
-            }
+            val candidates = byAccount[newTx.sourceAccountId] ?: emptyList()
+            var exactMatch = false
+            var fuzzyMatch = false
 
-            // Fuzzy match (within 1 day)
-            val fuzzyMatch = existingTransactions.any { existing ->
-                abs(existing.dateEpochDay - newTx.dateEpochDay) <= 1 &&
-                        existing.amountPaise == newTx.amountPaise &&
-                        existing.accountId == newTx.sourceAccountId
+            for (existing in candidates) {
+                if (existing.amountPaise == newTx.amountPaise) {
+                    val dayDiff = abs(existing.dateEpochDay - newTx.dateEpochDay)
+                    if (dayDiff == 0L) {
+                        exactMatch = true
+                        break
+                    } else if (dayDiff == 1L) {
+                        fuzzyMatch = true
+                    }
+                }
             }
 
             val status = when {

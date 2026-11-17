@@ -861,8 +861,15 @@ class ImportWorkflowTest {
                 importHistoryList.add(history.copy(id = id))
                 return id
             }
+            override suspend fun insertAll(entities: List<ImportHistoryEntity>) {
+                importHistoryList.addAll(entities)
+            }
+            override suspend fun getAll(): List<ImportHistoryEntity> = importHistoryList.toList()
             override suspend fun getByFileHash(hash: String): ImportHistoryEntity? =
                 importHistoryList.firstOrNull { it.fileHash == hash }
+            override suspend fun clear() {
+                importHistoryList.clear()
+            }
         }
 
         private val _categoriesDao = object : CategoryDao {

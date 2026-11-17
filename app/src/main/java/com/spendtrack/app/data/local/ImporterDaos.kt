@@ -8,7 +8,16 @@ import androidx.room.Query
 interface ImportHistoryDao {
     @Insert
     suspend fun insert(history: ImportHistoryEntity): Long
-    
+
+    @Insert
+    suspend fun insertAll(entities: List<ImportHistoryEntity>)
+
+    @Query("SELECT * FROM import_history")
+    suspend fun getAll(): List<ImportHistoryEntity>
+
     @Query("SELECT * FROM import_history WHERE fileHash = :hash LIMIT 1")
     suspend fun getByFileHash(hash: String): ImportHistoryEntity?
+
+    @Query("DELETE FROM import_history")
+    suspend fun clear()
 }

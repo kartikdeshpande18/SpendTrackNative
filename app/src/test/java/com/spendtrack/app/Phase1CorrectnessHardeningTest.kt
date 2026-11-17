@@ -351,6 +351,113 @@ class Phase1CorrectnessHardeningTest {
         assertEquals("Kartik", person?.name)
     }
 
+    @Test
+    fun testBackupRepository_exportAndRestoreImportHistory() = runBlocking {
+        val srcDb = TestSpendTrackDatabase()
+        val historyEntry = ImportHistoryEntity(
+            id = 1L,
+            filename = "bank_statement.pdf",
+            fileHash = "hash123abc",
+            format = "HDFC_SAVINGS",
+            accountId = 10L,
+            importTimestampEpochMs = 1700000000000L,
+            transactionsImported = 15,
+            duplicatesSkipped = 2
+        )
+        srcDb.importHistoryList.add(historyEntry)
+
+        val srcRepo = BackupRepository(srcDb)
+        val exported = srcRepo.export()
+        assertTrue("Exported backup must contain importHistory", exported.contains("\"importHistory\""))
+        assertTrue("Exported backup must contain fileHash", exported.contains("hash123abc"))
+
+        val destDb = TestSpendTrackDatabase()
+        // Put existing stale entry to verify it is cleared
+        destDb.importHistoryList.add(historyEntry.copy(id = 99L, fileHash = "old_stale_hash"))
+
+        val destRepo = BackupRepository(destDb)
+        destRepo.restore(exported)
+
+        assertEquals(1, destDb.importHistoryList.size)
+        assertEquals("hash123abc", destDb.importHistoryList[0].fileHash)
+        assertEquals("bank_statement.pdf", destDb.importHistoryList[0].filename)
+        assertEquals(15, destDb.importHistoryList[0].transactionsImported)
+    }
+
+    @Test
+    fun testDuplicateDetector_singlePassEfficiencyAndAccuracy() {
+        val existing = listOf(
+            TransactionEntity(
+                id = 1L,
+                dateEpochDay = 20000L,
+                description = "Swiggy",
+                amountPaise = 550_00L,
+                categoryId = 1L,
+                accountId = 10L,
+                type = TransactionType.EXPENSE
+            ),
+            TransactionEntity(
+                id = 2L,
+                dateEpochDay = 20005L,
+                description = "Zomato",
+                amountPaise = 300_00L,
+                categoryId = 1L,
+                accountId = 20L, // Different account
+                type = TransactionType.EXPENSE
+            )
+        )
+
+        val imported = listOf(
+            // Exact duplicate (same account, same amount, same date)
+            com.spendtrack.app.importer.model.NormalizedTransaction(
+                dateEpochDay = 20000L,
+                amountPaise = 550_00L,
+                direction = com.spendtrack.app.importer.model.Direction.DEBIT,
+                rawNarration = "Swiggy Order",
+                normalizedMerchant = "Swiggy",
+                referenceNumber = null,
+                transactionType = com.spendtrack.app.importer.model.ImporterTransactionType.EXPENSE,
+                sourceAccountId = 10L,
+                sourceFilename = "stmt.pdf",
+                parserIdentifier = "test",
+                duplicateFingerprint = "fp1"
+            ),
+            // Fuzzy duplicate (same account, same amount, within 1 day)
+            com.spendtrack.app.importer.model.NormalizedTransaction(
+                dateEpochDay = 20001L,
+                amountPaise = 550_00L,
+                direction = com.spendtrack.app.importer.model.Direction.DEBIT,
+                rawNarration = "Swiggy Order",
+                normalizedMerchant = "Swiggy",
+                referenceNumber = null,
+                transactionType = com.spendtrack.app.importer.model.ImporterTransactionType.EXPENSE,
+                sourceAccountId = 10L,
+                sourceFilename = "stmt.pdf",
+                parserIdentifier = "test",
+                duplicateFingerprint = "fp2"
+            ),
+            // Not a duplicate (different account)
+            com.spendtrack.app.importer.model.NormalizedTransaction(
+                dateEpochDay = 20005L,
+                amountPaise = 300_00L,
+                direction = com.spendtrack.app.importer.model.Direction.DEBIT,
+                rawNarration = "Zomato Order",
+                normalizedMerchant = "Zomato",
+                referenceNumber = null,
+                transactionType = com.spendtrack.app.importer.model.ImporterTransactionType.EXPENSE,
+                sourceAccountId = 10L, // Different account than existing (20L)
+                sourceFilename = "stmt.pdf",
+                parserIdentifier = "test",
+                duplicateFingerprint = "fp3"
+            )
+        )
+
+        val results = com.spendtrack.app.importer.duplicate.DuplicateDetector.flagDuplicates(imported, existing)
+        assertEquals(com.spendtrack.app.importer.model.ImportStatus.DUPLICATE, results[0].status)
+        assertEquals(com.spendtrack.app.importer.model.ImportStatus.POSSIBLE_DUPLICATE, results[1].status)
+        assertEquals(com.spendtrack.app.importer.model.ImportStatus.NEW, results[2].status)
+    }
+
     /**
      * Test in-memory database implementation that satisfies RoomDatabase's reflection requirements
      * without needing physical SQLite Android drivers during JVM unit tests.

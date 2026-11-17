@@ -18,6 +18,8 @@ import com.spendtrack.app.data.repository.BackupRepository
 import com.spendtrack.app.widget.SpendTrackWidgetUpdater
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -25,6 +27,25 @@ import kotlinx.coroutines.withContext
 class FinanceViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = FinanceRepository(DatabaseProvider.get(application))
     private val backupRepository = BackupRepository(DatabaseProvider.get(application))
+    private val _errorMessage = MutableStateFlow<String?>(null)
+    val errorMessage = _errorMessage.asStateFlow()
+
+    fun clearError() {
+        _errorMessage.value = null
+    }
+
+    fun reportError(message: String) {
+        _errorMessage.value = message
+    }
+
+    private fun launchAction(action: suspend () -> Unit) = viewModelScope.launch {
+        runCatching { action() }
+            .onFailure {
+                it.printStackTrace()
+                _errorMessage.value = it.localizedMessage ?: "An unexpected error occurred"
+            }
+    }
+
     val accounts = repository.accounts.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val categories = repository.categories.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val transactions = repository.transactions.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -57,97 +78,97 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         description: String = "",
         compoundingFrequency: CompoundingFrequency = CompoundingFrequency.QUARTERLY,
         isExisting: Boolean = false
-    ) = viewModelScope.launch {
+    ) = launchAction {
         repository.addFixedDeposit(name, linkedAccountId, principalPaise, interestRateBps, startDateEpochDay, maturityDateEpochDay, maturityAmountPaise, description, compoundingFrequency, isExisting)
         notifyWidgets()
     }
-    fun updateFixedDeposit(fd: FixedDepositEntity) = viewModelScope.launch { repository.updateFixedDeposit(fd); notifyWidgets() }
-    fun deleteFixedDeposit(fd: FixedDepositEntity) = viewModelScope.launch { repository.deleteFixedDeposit(fd); notifyWidgets() }
-    fun matureFixedDeposit(fdId: Long) = viewModelScope.launch { repository.matureFixedDeposit(fdId); notifyWidgets() }
-    fun matureDueDeposits() = viewModelScope.launch { repository.matureDueDeposits(); notifyWidgets() }
+    fun updateFixedDeposit(fd: FixedDepositEntity) = launchAction { repository.updateFixedDeposit(fd); notifyWidgets() }
+    fun deleteFixedDeposit(fd: FixedDepositEntity) = launchAction { repository.deleteFixedDeposit(fd); notifyWidgets() }
+    fun matureFixedDeposit(fdId: Long) = launchAction { repository.matureFixedDeposit(fdId); notifyWidgets() }
+    fun matureDueDeposits() = launchAction { repository.matureDueDeposits(); notifyWidgets() }
     private fun notifyWidgets() {
         viewModelScope.launch {
             SpendTrackWidgetUpdater.updateAll(getApplication())
         }
     }
 
-    fun addTransaction(value: TransactionEntity) = viewModelScope.launch {
-        runCatching { repository.addTransaction(value) }.onFailure { it.printStackTrace() }
+    fun addTransaction(value: TransactionEntity) = launchAction {
+        repository.addTransaction(value)
         notifyWidgets()
     }
-    fun deleteTransaction(id: Long) = viewModelScope.launch {
-        runCatching { repository.deleteTransaction(id) }.onFailure { it.printStackTrace() }
+    fun deleteTransaction(id: Long) = launchAction {
+        repository.deleteTransaction(id)
         notifyWidgets()
     }
-    fun updateTransaction(value: TransactionEntity) = viewModelScope.launch {
-        runCatching { repository.updateTransaction(value) }.onFailure { it.printStackTrace() }
+    fun updateTransaction(value: TransactionEntity) = launchAction {
+        repository.updateTransaction(value)
         notifyWidgets()
     }
-    fun addAccount(name: String, card: Boolean, opening: Long, maskedNumber: String = "", creditLimit: Long? = null, statementCycle: Int? = null, dueDay: Int? = null, minimumBalance: Long = 0) = viewModelScope.launch {
+    fun addAccount(name: String, card: Boolean, opening: Long, maskedNumber: String = "", creditLimit: Long? = null, statementCycle: Int? = null, dueDay: Int? = null, minimumBalance: Long = 0) = launchAction {
         repository.addAccount(name, card, opening, maskedNumber, creditLimit, statementCycle, dueDay, minimumBalance)
         notifyWidgets()
     }
-    fun addCategory(name: String, income: Boolean, colorHex: String? = null) = viewModelScope.launch {
+    fun addCategory(name: String, income: Boolean, colorHex: String? = null) = launchAction {
         repository.addCategory(name, income, colorHex)
         notifyWidgets()
     }
-    fun updateAccount(account: AccountEntity) = viewModelScope.launch {
+    fun updateAccount(account: AccountEntity) = launchAction {
         repository.updateAccount(account)
         notifyWidgets()
     }
-    fun deleteAccount(account: AccountEntity) = viewModelScope.launch {
+    fun deleteAccount(account: AccountEntity) = launchAction {
         repository.deleteAccount(account)
         notifyWidgets()
     }
-    fun updateCategory(category: CategoryEntity) = viewModelScope.launch {
+    fun updateCategory(category: CategoryEntity) = launchAction {
         repository.updateCategory(category)
         notifyWidgets()
     }
-    fun deleteCategory(category: CategoryEntity) = viewModelScope.launch {
+    fun deleteCategory(category: CategoryEntity) = launchAction {
         repository.deleteCategory(category)
         notifyWidgets()
     }
-    fun saveBudget(categoryId: Long, monthKey: String, limitPaise: Long) = viewModelScope.launch {
+    fun saveBudget(categoryId: Long, monthKey: String, limitPaise: Long) = launchAction {
         repository.saveBudget(categoryId, monthKey, limitPaise)
         notifyWidgets()
     }
-    fun ensureBudgetMonth(monthKey: String) = viewModelScope.launch {
+    fun ensureBudgetMonth(monthKey: String) = launchAction {
         repository.ensureBudgetMonth(monthKey)
         notifyWidgets()
     }
-    fun deleteBudget(budget: BudgetEntity) = viewModelScope.launch {
+    fun deleteBudget(budget: BudgetEntity) = launchAction {
         repository.deleteBudget(budget)
         notifyWidgets()
     }
-    fun addLoan(loan: LoanEntity) = viewModelScope.launch { repository.addLoan(loan); notifyWidgets() }
-    fun addOwed(owed: OwedEntity) = viewModelScope.launch { repository.addOwed(owed); notifyWidgets() }
-    fun createPerson(name: String) = viewModelScope.launch { repository.createPerson(name) }
-    fun renamePerson(personId: Long, name: String) = viewModelScope.launch { repository.renamePerson(personId, name) }
-    fun setPersonActive(personId: Long, active: Boolean) = viewModelScope.launch { repository.setPersonActive(personId, active) }
-    fun deletePerson(personId: Long) = viewModelScope.launch { runCatching { repository.deletePerson(personId) }.onFailure { it.printStackTrace() } }
-    fun updateLoan(loan: LoanEntity) = viewModelScope.launch { repository.updateLoan(loan); notifyWidgets() }
-    fun deleteLoan(loan: LoanEntity) = viewModelScope.launch { repository.deleteLoan(loan); notifyWidgets() }
-    fun updateOwed(owed: OwedEntity) = viewModelScope.launch { repository.updateOwed(owed); notifyWidgets() }
-    fun deleteOwed(owed: OwedEntity) = viewModelScope.launch { repository.deleteOwed(owed); notifyWidgets() }
-    fun settleOwed(owed: OwedEntity, amountPaise: Long) = viewModelScope.launch { repository.settleOwed(owed, amountPaise); notifyWidgets() }
-    fun settleOwed(owedId: Long, amountPaise: Long, accountId: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay(), settlementNote: String = "") = viewModelScope.launch {
-        runCatching { repository.settleOwed(owedId, amountPaise, accountId, dateEpochDay, settlementNote) }.onFailure { it.printStackTrace() }
+    fun addLoan(loan: LoanEntity) = launchAction { repository.addLoan(loan); notifyWidgets() }
+    fun addOwed(owed: OwedEntity) = launchAction { repository.addOwed(owed); notifyWidgets() }
+    fun createPerson(name: String) = launchAction { repository.createPerson(name) }
+    fun renamePerson(personId: Long, name: String) = launchAction { repository.renamePerson(personId, name) }
+    fun setPersonActive(personId: Long, active: Boolean) = launchAction { repository.setPersonActive(personId, active) }
+    fun deletePerson(personId: Long) = launchAction { repository.deletePerson(personId) }
+    fun updateLoan(loan: LoanEntity) = launchAction { repository.updateLoan(loan); notifyWidgets() }
+    fun deleteLoan(loan: LoanEntity) = launchAction { repository.deleteLoan(loan); notifyWidgets() }
+    fun updateOwed(owed: OwedEntity) = launchAction { repository.updateOwed(owed); notifyWidgets() }
+    fun deleteOwed(owed: OwedEntity) = launchAction { repository.deleteOwed(owed); notifyWidgets() }
+    fun settleOwed(owed: OwedEntity, amountPaise: Long) = launchAction { repository.settleOwed(owed, amountPaise); notifyWidgets() }
+    fun settleOwed(owedId: Long, amountPaise: Long, accountId: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay(), settlementNote: String = "") = launchAction {
+        repository.settleOwed(owedId, amountPaise, accountId, dateEpochDay, settlementNote)
         notifyWidgets()
     }
-    fun repayLoan(loanId: Long, accountId: Long, amountPaise: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay(), note: String = "") = viewModelScope.launch {
-        runCatching { repository.repayLoan(loanId, accountId, amountPaise, dateEpochDay, note) }.onFailure { it.printStackTrace() }
+    fun repayLoan(loanId: Long, accountId: Long, amountPaise: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay(), note: String = "") = launchAction {
+        repository.repayLoan(loanId, accountId, amountPaise, dateEpochDay, note)
         notifyWidgets()
     }
-    fun postSavingsInterest(accountId: Long, amountPaise: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay()) = viewModelScope.launch {
-        runCatching { repository.postSavingsInterest(accountId, amountPaise, dateEpochDay) }.onFailure { it.printStackTrace() }
+    fun postSavingsInterest(accountId: Long, amountPaise: Long, dateEpochDay: Long = java.time.LocalDate.now().toEpochDay()) = launchAction {
+        repository.postSavingsInterest(accountId, amountPaise, dateEpochDay)
         notifyWidgets()
     }
-    fun payCard(cardId: Long, sourceId: Long, amountPaise: Long, dateEpochDay: Long) = viewModelScope.launch { repository.payCard(cardId, sourceId, amountPaise, dateEpochDay); notifyWidgets() }
-    fun addRecurringTransaction(schedule: RecurringTransactionEntity) = viewModelScope.launch { repository.addRecurringTransaction(schedule); notifyWidgets() }
-    fun updateRecurringTransaction(schedule: RecurringTransactionEntity) = viewModelScope.launch { repository.updateRecurringTransaction(schedule); notifyWidgets() }
-    fun deleteRecurringTransaction(schedule: RecurringTransactionEntity) = viewModelScope.launch { repository.deleteRecurringTransaction(schedule); notifyWidgets() }
-    fun toggleRecurringTransaction(id: Long, isEnabled: Boolean) = viewModelScope.launch { repository.toggleRecurringTransaction(id, isEnabled); notifyWidgets() }
-    fun processDueRecurringTransactions() = viewModelScope.launch { repository.processDueRecurringTransactions(); notifyWidgets() }
+    fun payCard(cardId: Long, sourceId: Long, amountPaise: Long, dateEpochDay: Long) = launchAction { repository.payCard(cardId, sourceId, amountPaise, dateEpochDay); notifyWidgets() }
+    fun addRecurringTransaction(schedule: RecurringTransactionEntity) = launchAction { repository.addRecurringTransaction(schedule); notifyWidgets() }
+    fun updateRecurringTransaction(schedule: RecurringTransactionEntity) = launchAction { repository.updateRecurringTransaction(schedule); notifyWidgets() }
+    fun deleteRecurringTransaction(schedule: RecurringTransactionEntity) = launchAction { repository.deleteRecurringTransaction(schedule); notifyWidgets() }
+    fun toggleRecurringTransaction(id: Long, isEnabled: Boolean) = launchAction { repository.toggleRecurringTransaction(id, isEnabled); notifyWidgets() }
+    fun processDueRecurringTransactions() = launchAction { repository.processDueRecurringTransactions(); notifyWidgets() }
     fun exportBackup(onResult: (Result<String>) -> Unit) = viewModelScope.launch { runCatching { backupRepository.export() }.also(onResult) }
     fun restoreBackup(text: String, onResult: (Result<Unit>) -> Unit) = viewModelScope.launch { runCatching { withContext(Dispatchers.IO) { backupRepository.restore(text) } }.also { onResult(it); notifyWidgets() } }
 }

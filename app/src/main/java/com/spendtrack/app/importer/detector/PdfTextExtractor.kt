@@ -19,22 +19,21 @@ object PdfTextExtractor {
 
     fun extractText(context: Context, uri: Uri): String? {
         init(context)
-        var document: PDDocument? = null
         return try {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
-            if (inputStream != null) {
-                document = PDDocument.load(inputStream)
-                val stripper = PDFTextStripper()
-                stripper.sortByPosition = true
-                stripper.getText(document)
-            } else {
-                null
+            context.contentResolver.openInputStream(uri)?.use { inputStream ->
+                var document: PDDocument? = null
+                try {
+                    document = PDDocument.load(inputStream)
+                    val stripper = PDFTextStripper()
+                    stripper.sortByPosition = true
+                    stripper.getText(document)
+                } finally {
+                    document?.close()
+                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
             null
-        } finally {
-            document?.close()
         }
     }
 }
